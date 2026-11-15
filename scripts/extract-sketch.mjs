@@ -8,5 +8,3 @@ let html = original.replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" 
   .replace(/    <script src="https:[^\n]+\n/, '')
   .replace(/    <script>[\s\S]*?<\/script>/, '    <script type="module" src="/src/app.js"></script>');
 fs.writeFileSync('index.html', html);
-const subjects = original.slice(original.indexOf('            const SUBJECTS ='), original.indexOf('            // Primary sample PDF files'));
-fs.writeFileSync('src/subjects.js', subjects + '\nexport { SUBJECTS };\n');

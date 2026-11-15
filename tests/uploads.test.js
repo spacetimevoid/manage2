@@ -29,6 +29,7 @@ function form(view) {
   vm.runInContext('setModal(true)', context);
   return { $, context, browseLabel, stored, get pdfLoads() { return pdfLoads; }, async submit(file) {
     $('pdfFileInput').files = [file]; $('modalPathFileNameInput').value = file.name;
+    $('modalPathSubjectInput').value = 'math';
     $('modalTopicInput').value = 'Geometry'; $('modalDueDateInput').value = ''; $('modalDifficultyInput').value = 'hard';
     await $('uploadPdfForm').onsubmit({ preventDefault() {}, submitter: save });
   } };

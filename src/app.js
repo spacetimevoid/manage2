@@ -1,6 +1,5 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { SUBJECTS } from './subjects.js';
 import { createProblemDetail } from './problem-detail.js';
 import { closeReader } from './reader-transition.js';
 import { validateUpload, uploadName } from './uploads.js';
@@ -28,7 +27,7 @@ $('pdfViewerPage').setAttribute('role', 'dialog');
 $('pdfViewerPage').setAttribute('aria-modal', 'true');
 $('pdfNotesTextarea').setAttribute('aria-label', 'Document notes');
 
-function subjects() { return [...new Set([...SUBJECTS, ...visibleFiles().map(f => f.subject)])]; }
+function subjects() { return [...new Set(visibleFiles().map(f => f.subject))]; }
 function renderSidebar() {
   const q = searchQuery.trim().toLocaleLowerCase();
   const documents = visibleFiles();
@@ -183,7 +182,7 @@ function setModal(open) {
     $('pdfFileInput').accept = problems ? 'image/*,application/pdf,.pdf' : 'application/pdf,.pdf';
     $('modalPathFileNameInput').placeholder = problems ? 'new-problem' : 'new-file.pdf';
     document.querySelector('label[for="modalDueDateInput"]').textContent = activeView === 'problems' ? 'Added date' : 'Due date';
-    $('modalPathSubjectInput').value = activeSubject === 'all' ? 'math' : activeSubject;
+    $('modalPathSubjectInput').value = activeSubject === 'all' ? '' : activeSubject;
     $('modalPathFileNameInput').value = '';
     $('modalErrorMsg').textContent = '';
     $('modalFileStatus').textContent = 'No file selected';
