@@ -18,3 +18,18 @@ test('PDF bytes, notes, and status survive a database close/reopen', async () =>
   assert.equal((await readDocuments(db)).length, 1);
   db.close();
 });
+
+test('sample cleanup deletes only flagged demo records and never real uploads', async () => {
+  const factory = new IDBFactory(), db = await openLibrary(factory);
+  await saveDocuments(db, [
+    { id: 'sample-1', sample: true, name: 'Demo.pdf' },
+    { id: 'problem-sample-1', sample: true, name: 'Demo problem.pdf' },
+    { id: 'real', sample: false, name: 'My exam.pdf', notes: 'Keep', blob: new Blob(['%PDF-real']) },
+    { id: 'sample-name-but-real', name: 'sample.pdf', notes: 'Also keep' },
+  ]);
+  const records = await readDocuments(db);
+  assert.deepEqual(records.map(record => record.id).sort(), ['real', 'sample-name-but-real']);
+  assert.equal(await records.find(record => record.id === 'real').blob.text(), '%PDF-real');
+  assert.equal((await readDocuments(db)).length, 2);
+  db.close();
+});

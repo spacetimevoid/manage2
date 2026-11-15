@@ -5,7 +5,7 @@ import http from 'node:http';
 import vm from 'node:vm';
 // PDF.js provides this build for Node's missing browser runtime features.
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
-import { buildSamplePdfBlobUrl } from '../src/sample-pdf.js';
+import { buildSamplePdfBlobUrl } from './fixtures/sample-pdf.js';
 
 test('viewer opens a PDF URL with the installed PDF.js API, including after reopening', async () => {
   const file = { name: 'uploaded.pdf', subject: 'math', topic: 'General Notes', dueDate: '', done: false };

@@ -49,7 +49,22 @@ export function openLibrary(factory = indexedDB) {
     req.onblocked = () => reject(new Error('Close other Sources tabs and try again.'));
   });
 }
-export function readDocuments(db) {
+export async function removeSampleDocuments(db) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('documents', 'readwrite');
+    const request = tx.objectStore('documents').openCursor();
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) return;
+      if (cursor.value.sample === true) cursor.delete();
+      cursor.continue();
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = tx.onabort = () => reject(tx.error || new Error('Unable to remove sample records.'));
+  });
+}
+export async function readDocuments(db) {
+  await removeSampleDocuments(db);
   return new Promise((resolve, reject) => {
     const req = db.transaction('documents').objectStore('documents').getAll();
     req.onsuccess = () => resolve(req.result);

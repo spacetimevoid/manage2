@@ -1,12 +1,10 @@
 import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-import { SUBJECTS, ALL_FILES } from './seed.js';
-import { PROBLEM_FILES } from './problems-seed.js';
+import { SUBJECTS } from './subjects.js';
 import { createProblemDetail } from './problem-detail.js';
 import { closeReader } from './reader-transition.js';
 import { validateUpload, uploadName } from './uploads.js';
 import { problemTitle } from './problem-data.js';
-import { buildSamplePdfBlobUrl } from './sample-pdf.js';
 import { escapeHtml as esc, parseDate, queryFiles, validatePdf, viewFromHash, collectionFiles, dateOf, readerRoute, readerHash, snapshotDocument } from './library.js';
 import { openLibrary, readDocuments, saveDocuments } from './storage.js';
 
@@ -359,14 +357,15 @@ async function openViewer(file) {
   activeFile = file; viewerPage = 1; zoom = 100;
   rememberReader(file);
   const token = ++viewerToken;
-  const url = file.blobUrl || (file.blob ? file.blobUrl = URL.createObjectURL(file.blob) : buildSamplePdfBlobUrl(file));
+  const url = file.blobUrl || (file.blob ? file.blobUrl = URL.createObjectURL(file.blob) : null);
   const collection = file.kind === 'problem' ? 'Problems' : 'Sources';
   $('viewerBackBtn').title = `Back to ${collection}`;
   $('pdfViewerTitle').innerHTML = `${collection}<span class="sep">/</span>${esc(file.subject)}<span class="sep">/</span>${esc(file.name)}`;
   $('pdfViewerSub').textContent = file.kind === 'problem' ? `${file.topic}  ·  Added ${file.addedDate}  ·  ${difficultyLabel(file.difficulty)}` : `${file.topic}  ·  Due ${file.dueDate}`;
   $('pdfNotesTextarea').value = file.notes || '';
   $('pdfNotesSavedLabel').textContent = file.notes ? 'Saved' : 'Empty';
-  $('viewerDownloadBtn').href = url; $('viewerDownloadBtn').download = file.name;
+  if (url) $('viewerDownloadBtn').href = url; else $('viewerDownloadBtn').removeAttribute('href');
+  $('viewerDownloadBtn').download = file.name;
   app.inert = true; document.body.style.overflow = 'hidden';
   $('pdfCanvasViewport').textContent = 'Loading PDF…';
   syncToolbar();
@@ -550,12 +549,6 @@ async function initialize() {
   try {
     db = await openLibrary();
     files = await readDocuments(db);
-    if (!files.length) {
-      files = ALL_FILES.map((f, i) => ({ ...f, id: `sample-${i}`, sample: true, notes: '', createdAt: 0 }));
-      await saveDocuments(db, files);
-    }
-    const missingProblems = PROBLEM_FILES.filter(problem => !files.some(file => file.id === problem.id));
-    if (missingProblems.length) { await saveDocuments(db, missingProblems); files.push(...missingProblems); }
     files.sort((a, b) => b.createdAt - a.createdAt);
     libraryReady = true;
     $('uploadPdfBtn').disabled = false;

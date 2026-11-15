@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseDate, queryFiles, escapeHtml, validatePdf } from '../src/library.js';
-import { ALL_FILES } from '../src/seed.js';
+import { ALL_FILES } from './fixtures/library-seed.js';
 
 test('All includes every document counted by the sidebar', () => {
   assert.equal(queryFiles(ALL_FILES).total, ALL_FILES.length);

@@ -8,7 +8,5 @@ let html = original.replace(/<style>[\s\S]*?<\/style>/, '<link rel="stylesheet" 
   .replace(/    <script src="https:[^\n]+\n/, '')
   .replace(/    <script>[\s\S]*?<\/script>/, '    <script type="module" src="/src/app.js"></script>');
 fs.writeFileSync('index.html', html);
-const seed = original.slice(original.indexOf('            const SUBJECTS ='), original.indexOf('            // Compute document counts'));
-fs.writeFileSync('src/seed.js', seed + '\nexport { SUBJECTS, ALL_FILES };\n');
-const sample = original.slice(original.indexOf('            function buildSamplePdfBlobUrl'), original.indexOf('            // Render left sidebar'));
-fs.writeFileSync('src/sample-pdf.js', sample.replace('function buildSamplePdfBlobUrl', 'export function buildSamplePdfBlobUrl'));
+const subjects = original.slice(original.indexOf('            const SUBJECTS ='), original.indexOf('            // Primary sample PDF files'));
+fs.writeFileSync('src/subjects.js', subjects + '\nexport { SUBJECTS };\n');
