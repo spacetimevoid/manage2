@@ -11,6 +11,11 @@ export const readerHash = (view, id = null) => `#${view}${id ? `/${encodeURIComp
 export const collectionFiles = (files, view) => files.filter(file => (file.kind === 'problem' ? 'problems' : 'sources') === view);
 export const dateOf = file => file.kind === 'problem' ? file.addedDate : file.dueDate;
 export const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+export function snapshotDocument(value) {
+  if (value instanceof Blob || value === null || typeof value !== 'object') return value;
+  if (Array.isArray(value)) return value.map(snapshotDocument);
+  return Object.fromEntries(Object.entries(value).filter(([key]) => key !== 'blobUrl').map(([key, child]) => [key, snapshotDocument(child)]));
+}
 export function parseDate(value) {
   if (!value) return null;
   if (!/^\d{2}\/\d{2}\/\d{4}$/.test(value)) return NaN;

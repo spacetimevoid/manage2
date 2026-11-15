@@ -7,7 +7,8 @@ import { closeReader } from './reader-transition.js';
 import { validateUpload, uploadName } from './uploads.js';
 import { problemTitle } from './problem-data.js';
 import { buildSamplePdfBlobUrl } from './sample-pdf.js';
-import { escapeHtml as esc, parseDate, queryFiles, openLibrary, readDocuments, saveDocuments, validatePdf, viewFromHash, collectionFiles, dateOf, readerRoute, readerHash } from './library.js';
+import { escapeHtml as esc, parseDate, queryFiles, validatePdf, viewFromHash, collectionFiles, dateOf, readerRoute, readerHash, snapshotDocument } from './library.js';
+import { openLibrary, readDocuments, saveDocuments } from './storage.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 const $ = id => document.getElementById(id);
@@ -128,7 +129,7 @@ $('nextPageBtn').onclick = () => { currentPage++; renderFiles(); };
 
 // Serialize snapshots so an earlier note edit can never overwrite a later edit.
 function persist(file) {
-  const snapshot = structuredClone(Object.fromEntries(Object.entries(file).filter(([key]) => key !== 'blobUrl')));
+  const snapshot = snapshotDocument(file);
   const result = saveQueue.catch(() => {}).then(() => {
     if (!db) throw new Error('Browser storage is unavailable.');
     return saveDocuments(db, [snapshot]);

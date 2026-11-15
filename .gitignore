@@ -2,3 +2,6 @@ node_modules/
 .npm-cache/
 dist/
 *.log
+.env*
+!.env.example
+.vercel/
