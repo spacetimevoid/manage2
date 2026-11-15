@@ -99,3 +99,28 @@ test('zoom at its existing value or limit does not restart rendering', () => {
   zoom.zoom(100); assert.equal(zoom.frames.size, 0);
   zoom.context.zoom = 300; zoom.zoom(310); assert.equal(zoom.frames.size, 0);
 });
+
+test('initial page preparation waits for visible canvas rendering instead of returning blank sheets', async () => {
+  const setupResult = setup(), { context, viewport, tasks } = setupResult;
+  viewport.children = []; viewport.scrollTop = 0;
+  viewport.replaceChildren = fragment => { viewport.children = fragment.children; };
+  context.goPage = n => { context.viewerPage = n; viewport.scrollTop = 0; };
+  const canvasFactory = context.document.createElement;
+  context.document.createDocumentFragment = () => ({ children: [], append(sheet) { this.children.push(sheet); } });
+  context.document.createElement = tag => tag !== 'div' ? canvasFactory() : {
+    style: {}, dataset: {},
+    get offsetHeight() { return parseFloat(this.style.height); },
+    get offsetTop() { return 24 + viewport.children.slice(0, viewport.children.indexOf(this)).reduce((sum, sheet) => sum + sheet.offsetHeight + 20, 0); },
+    querySelector() { return this.bitmap; },
+    replaceChildren(canvas) { this.bitmap = canvas; },
+  };
+  let ready = false;
+  const prepared = vm.runInContext('renderPages()', context).then(() => { ready = true; });
+  await tick();
+  assert.equal(tasks.length, 1);
+  assert.equal(ready, false);
+  assert.equal(viewport.children[0].bitmap, undefined);
+  tasks[0].finish(); await prepared;
+  assert.equal(ready, true);
+  assert.equal(viewport.children[0].bitmap.width, 750);
+});

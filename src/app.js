@@ -3,6 +3,7 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { SUBJECTS, ALL_FILES } from './seed.js';
 import { PROBLEM_FILES } from './problems-seed.js';
 import { createProblemDetail } from './problem-detail.js';
+import { closeReader } from './reader-transition.js';
 import { buildSamplePdfBlobUrl } from './sample-pdf.js';
 import { escapeHtml as esc, parseDate, queryFiles, openLibrary, readDocuments, saveDocuments, validatePdf, viewFromHash, collectionFiles, dateOf } from './library.js';
 
@@ -16,6 +17,7 @@ const difficultyLabel = value => ({ easy: 'Easy', med: 'Med', hard: 'Hard' })[va
 let db, files = [], activeSubject = 'all', searchQuery = '', sortKey = null, sortDir = 'asc', currentPage = 1;
 let activeFile = null, pdfDoc = null, loadingTask = null, viewerPage = 1, zoom = 100, viewerToken = 0;
 let isPageNavigation = false;
+let viewerClosing = false;
 let zoomFrame = null;
 let observer = null, renderTasks = new Set(), notesOpen = true, selectMode = false, selection = null;
 let lastFocus, noteTimer, saveQueue = Promise.resolve();
@@ -274,6 +276,28 @@ async function renderPages(anchorPage = 1, preservePosition = false) {
       behavior: 'instant',
     });
   } else goPage(anchorPage, false);
+  async function renderSheet(sheet) {
+    if (sheet.dataset.rendering || token !== viewerToken) return;
+    sheet.dataset.rendering = 'true';
+    const page = await doc.getPage(Number(sheet.dataset.pageNumber));
+    if (token !== viewerToken) return;
+    const vp = page.getViewport({ scale });
+    sheet.dataset.pdfWidth = vp.width / scale;
+    sheet.dataset.pdfHeight = vp.height / scale;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(12_000_000 / (vp.width * vp.height)));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.ceil(vp.width * dpr); canvas.height = Math.ceil(vp.height * dpr);
+    canvas.style.width = `${vp.width}px`; canvas.style.height = `${vp.height}px`;
+    sheet.style.width = `${vp.width}px`; sheet.style.height = `${vp.height}px`;
+    const task = page.render({ canvasContext: canvas.getContext('2d'), viewport: vp, transform: [dpr, 0, 0, dpr, 0, 0] });
+    renderTasks.add(task);
+    try { await task.promise; } finally { renderTasks.delete(task); }
+    if (token === viewerToken) sheet.replaceChildren(canvas);
+  }
+  // Prepare visible pages before revealing the reader, avoiding empty white sheets.
+  const initialPaint = !oldSheets.length ? Promise.all(sheets
+    .filter(sheet => sheet === sheets[anchorPage - 1] || (sheet.offsetTop < viewport.scrollTop + viewport.clientHeight && sheet.offsetTop + sheet.offsetHeight > viewport.scrollTop))
+    .map(renderSheet)) : null;
   const visible = new Set();
   observer = new IntersectionObserver(entries => {
     if (token !== viewerToken) return;
@@ -281,24 +305,7 @@ async function renderPages(anchorPage = 1, preservePosition = false) {
       const sheet = entry.target;
       if (!entry.isIntersecting) { visible.delete(sheet); continue; }
       visible.add(sheet);
-      if (sheet.dataset.rendering) continue;
-      sheet.dataset.rendering = 'true';
-      (async () => {
-        const page = await doc.getPage(Number(sheet.dataset.pageNumber));
-        if (token !== viewerToken) return;
-        const vp = page.getViewport({ scale });
-        sheet.dataset.pdfWidth = vp.width / scale;
-        sheet.dataset.pdfHeight = vp.height / scale;
-        const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(12_000_000 / (vp.width * vp.height)));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.ceil(vp.width * dpr); canvas.height = Math.ceil(vp.height * dpr);
-        canvas.style.width = `${vp.width}px`; canvas.style.height = `${vp.height}px`;
-        sheet.style.width = `${vp.width}px`; sheet.style.height = `${vp.height}px`;
-        const task = page.render({ canvasContext: canvas.getContext('2d'), viewport: vp, transform: [dpr, 0, 0, dpr, 0, 0] });
-        renderTasks.add(task);
-        try { await task.promise; } finally { renderTasks.delete(task); }
-        if (token === viewerToken) sheet.replaceChildren(canvas);
-      })().catch(error => {
+      renderSheet(sheet).catch(error => {
         if (token === viewerToken && error.name !== 'RenderingCancelledException' && !sheet.querySelector('canvas')) sheet.textContent = 'Unable to render this page. Download the PDF to view it.';
       });
     }
@@ -309,8 +316,10 @@ async function renderPages(anchorPage = 1, preservePosition = false) {
     }
   }, { root: viewport, rootMargin: '500px 0px' });
   for (const sheet of viewport.children) observer.observe(sheet);
+  await initialPaint;
 }
 async function openViewer(file) {
+  if (viewerClosing || activeFile) return;
   lastFocus = document.activeElement;
   activeFile = file; viewerPage = 1; zoom = 100;
   const token = ++viewerToken;
@@ -322,28 +331,41 @@ async function openViewer(file) {
   $('pdfNotesTextarea').value = file.notes || '';
   $('pdfNotesSavedLabel').textContent = file.notes ? 'Saved' : 'Empty';
   $('viewerDownloadBtn').href = url; $('viewerDownloadBtn').download = file.name;
-  $('pdfViewerPage').classList.add('is-open'); $('pdfViewerPage').setAttribute('aria-hidden', 'false');
   app.inert = true; document.body.style.overflow = 'hidden';
   $('pdfCanvasViewport').textContent = 'Loading PDF…';
-  $('viewerBackBtn').focus(); syncToolbar();
+  syncToolbar();
   try {
     const task = pdfjsLib.getDocument({ url }); loadingTask = task;
     const doc = await task.promise;
     if (token !== viewerToken) { await doc.destroy(); return; }
     pdfDoc = doc; syncToolbar(); await renderPages();
+    if (activeFile !== file || pdfDoc !== doc || viewerClosing) return;
+    $('pdfViewerPage').classList.add('is-open'); $('pdfViewerPage').setAttribute('aria-hidden', 'false');
+    $('viewerBackBtn').focus();
   } catch (error) {
     console.error('Unable to open PDF:', error);
-    if (activeFile === file) $('pdfCanvasViewport').textContent = 'Unable to read this PDF. Use Download to open the original file.';
+    if (activeFile === file && !viewerClosing) {
+      $('pdfCanvasViewport').textContent = 'Unable to read this PDF. Use Download to open the original file.';
+      $('pdfViewerPage').classList.add('is-open'); $('pdfViewerPage').setAttribute('aria-hidden', 'false');
+      $('viewerBackBtn').focus();
+    }
   }
 }
 function closeViewer() {
+  if (viewerClosing || !activeFile) return;
+  viewerClosing = true;
   saveNote(); ++viewerToken; cancelRenders();
   const task = loadingTask; loadingTask = null; pdfDoc = null; activeFile = null;
-  task?.destroy().catch(() => {});
-  $('pdfCanvasViewport').replaceChildren();
-  $('pdfViewerPage').classList.remove('is-open'); $('pdfViewerPage').setAttribute('aria-hidden', 'true');
-  app.inert = false; document.body.style.overflow = ''; setSelectMode(false);
-  renderFiles(); lastFocus?.focus();
+  $('pdfViewerPage').inert = true;
+  $('pdfViewerPage').setAttribute('aria-hidden', 'true');
+  return closeReader($('pdfViewerPage'), () => {
+    task?.destroy().catch(() => {});
+    $('pdfCanvasViewport').replaceChildren();
+    $('pdfViewerPage').inert = false;
+    app.inert = false; document.body.style.overflow = ''; setSelectMode(false);
+    renderFiles(); lastFocus?.focus();
+    viewerClosing = false;
+  });
 }
 $('fileList').onclick = e => {
   const row = e.target.closest('[data-id]');
