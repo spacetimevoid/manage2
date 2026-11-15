@@ -50,12 +50,13 @@ test('opening waits for page rendering; closing keeps the bitmap and background 
   const doc = { numPages: 3 };
   const task = { promise: Promise.resolve(doc), async destroy() { destroyed = true; } };
   const context = vm.createContext({
-    $, viewerClosing: false, activeFile: null, viewerToken: 0, loadingTask: null, pdfDoc: null,
+    $, viewerClosing: false, viewerClosePromise: null, activeFile: null, viewerToken: 0, loadingTask: null, pdfDoc: null,
     lastFocus: null, viewerPage: 1, zoom: 100,
     file: { name: 'test.pdf', subject: 'math', topic: 'Math', dueDate: '', blobUrl: 'blob:test' },
     pdfjsLib: { getDocument: () => task }, esc: value => value, console,
     document: { activeElement: null, body: { style: {} } }, app: {},
     syncToolbar() {}, renderPages: () => firstPaint, saveNote() {}, cancelRenders() {}, setSelectMode() {}, renderFiles() {},
+    rememberReader() {}, forgetReader() {},
     closeReader(_page, finish) { $ ('pdfViewerPage').classList.remove('is-open'); finishClose = finish; },
   });
   const source = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');

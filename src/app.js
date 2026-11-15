@@ -5,7 +5,7 @@ import { PROBLEM_FILES } from './problems-seed.js';
 import { createProblemDetail } from './problem-detail.js';
 import { closeReader } from './reader-transition.js';
 import { buildSamplePdfBlobUrl } from './sample-pdf.js';
-import { escapeHtml as esc, parseDate, queryFiles, openLibrary, readDocuments, saveDocuments, validatePdf, viewFromHash, collectionFiles, dateOf } from './library.js';
+import { escapeHtml as esc, parseDate, queryFiles, openLibrary, readDocuments, saveDocuments, validatePdf, viewFromHash, collectionFiles, dateOf, readerRoute, readerHash } from './library.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 const $ = id => document.getElementById(id);
@@ -18,6 +18,7 @@ let db, files = [], activeSubject = 'all', searchQuery = '', sortKey = null, sor
 let activeFile = null, pdfDoc = null, loadingTask = null, viewerPage = 1, zoom = 100, viewerToken = 0;
 let isPageNavigation = false;
 let viewerClosing = false;
+let viewerClosePromise = null, libraryReady = false, routeSequence = 0;
 let zoomFrame = null;
 let observer = null, renderTasks = new Set(), notesOpen = true, selectMode = false, selection = null;
 let lastFocus, noteTimer, saveQueue = Promise.resolve();
@@ -37,7 +38,7 @@ function renderSidebar() {
 function renderFiles() {
   const result = queryFiles(visibleFiles(), { subject: activeSubject, sortKey, sortDir, page: currentPage });
   currentPage = result.page;
-  $('fileList').innerHTML = result.items.map(f => `<a class="file-row" href="#${activeView}" data-id="${esc(f.id)}"><div class="file-info"><span class="filename">${esc(activeView === 'problems' ? f.name.replace(/\.pdf$/i, '') : f.name)}</span></div><span class="topic-cell">${esc(f.topic)}</span><span class="due-date">${esc(dateOf(f))}</span><div class="status-cell"><span class="${activeView === 'problems' ? `difficulty difficulty-${esc(f.difficulty || 'easy')}` : `badge ${f.done ? 'badge-done' : 'badge-pending'}`}">${activeView === 'problems' ? difficultyLabel(f.difficulty) : f.done ? 'Completed' : 'Pending'}</span></div></a>`).join('') || '<div class="sidebar-empty" style="padding: 18px 10px;">No files in this subject</div>';
+  $('fileList').innerHTML = result.items.map(f => `<a class="file-row" href="${esc(readerHash(activeView, f.id))}" data-id="${esc(f.id)}"><div class="file-info"><span class="filename">${esc(activeView === 'problems' ? f.name.replace(/\.pdf$/i, '') : f.name)}</span></div><span class="topic-cell">${esc(f.topic)}</span><span class="due-date">${esc(dateOf(f))}</span><div class="status-cell"><span class="${activeView === 'problems' ? `difficulty difficulty-${esc(f.difficulty || 'easy')}` : `badge ${f.done ? 'badge-done' : 'badge-pending'}`}">${activeView === 'problems' ? difficultyLabel(f.difficulty) : f.done ? 'Completed' : 'Pending'}</span></div></a>`).join('') || '<div class="sidebar-empty" style="padding: 18px 10px;">No files in this subject</div>';
   $('paginationBar').hidden = result.pages <= 1;
   $('paginationInfo').textContent = `${result.page} / ${result.pages}`;
   $('prevPageBtn').disabled = currentPage <= 1;
@@ -61,16 +62,37 @@ function renderView() {
   status.setAttribute('aria-label', problems ? 'Sort by difficulty' : 'Sort by status');
   renderSidebar(); renderFiles();
 }
-window.addEventListener('hashchange', () => {
-  const next = viewFromHash(location.hash);
-  if (next === activeView) return;
-  if (problemDetail.isOpen) problemDetail.close();
-  if (activeFile) closeViewer();
-  activeView = next; activeSubject = 'all'; currentPage = 1; sortKey = null; sortDir = 'asc';
-  searchQuery = ''; $('subjectSearch').value = ''; $('searchClear').classList.remove('is-visible');
-  document.querySelectorAll('.sort-btn').forEach(btn => { btn.classList.remove('is-active'); delete btn.dataset.dir; });
+function rememberReader(file) {
+  const view = file.kind === 'problem' ? 'problems' : 'sources';
+  history.replaceState(null, '', readerHash(view, file.id));
+}
+function forgetReader(file) {
+  const route = readerRoute(location.hash);
+  const view = file.kind === 'problem' ? 'problems' : 'sources';
+  // Closing an old reader must not overwrite a newer navigation destination.
+  if (route.view === view && route.id === file.id) history.replaceState(null, '', readerHash(view));
+}
+async function applyRoute() {
+  if (!libraryReady) return;
+  const route = readerRoute(location.hash), sequence = ++routeSequence;
+  if (problemDetail.isOpen && (route.view !== 'problems' || route.id !== problemDetail.activeId)) await problemDetail.close();
+  if (activeFile && (route.view !== 'sources' || route.id !== activeFile.id)) await closeViewer();
+  if (viewerClosing) await viewerClosePromise;
+  if (sequence !== routeSequence) return;
+  if (activeView !== route.view) {
+    activeView = route.view; activeSubject = 'all'; currentPage = 1; sortKey = null; sortDir = 'asc';
+    searchQuery = ''; $('subjectSearch').value = ''; $('searchClear').classList.remove('is-visible');
+    document.querySelectorAll('.sort-btn').forEach(btn => { btn.classList.remove('is-active'); delete btn.dataset.dir; });
+  }
   renderView();
-});
+  if (!route.id) return;
+  const file = collectionFiles(files, route.view).find(file => file.id === route.id);
+  if (!file) { history.replaceState(null, '', readerHash(route.view)); return; }
+  if (file.kind === 'problem') {
+    if (problemDetail.activeId !== file.id) problemDetail.open(file);
+  } else if (activeFile?.id !== file.id) await openViewer(file);
+}
+window.addEventListener('hashchange', () => applyRoute().catch(error => console.error('Unable to restore reader:', error)));
 function selectSubject(subject) {
   activeSubject = subject; currentPage = 1;
   renderSidebar(); renderFiles();
@@ -117,6 +139,8 @@ const problemDetail = createProblemDetail({
   background: app,
   getItems: () => queryFiles(collectionFiles(files, 'problems'), { subject: activeSubject, sortKey, sortDir }).allItems,
   onChange: () => { renderSidebar(); renderFiles(); },
+  onOpen: rememberReader,
+  onClose: forgetReader,
   async checkPdf(blob) {
     await validatePdf(blob);
     const task = pdfjsLib.getDocument({ data: await blob.arrayBuffer() });
@@ -322,6 +346,7 @@ async function openViewer(file) {
   if (viewerClosing || activeFile) return;
   lastFocus = document.activeElement;
   activeFile = file; viewerPage = 1; zoom = 100;
+  rememberReader(file);
   const token = ++viewerToken;
   const url = file.blobUrl || (file.blob ? file.blobUrl = URL.createObjectURL(file.blob) : buildSamplePdfBlobUrl(file));
   const collection = file.kind === 'problem' ? 'Problems' : 'Sources';
@@ -352,13 +377,15 @@ async function openViewer(file) {
   }
 }
 function closeViewer() {
-  if (viewerClosing || !activeFile) return;
+  if (viewerClosing) return viewerClosePromise;
+  if (!activeFile) return;
   viewerClosing = true;
   saveNote(); ++viewerToken; cancelRenders();
+  forgetReader(activeFile);
   const task = loadingTask; loadingTask = null; pdfDoc = null; activeFile = null;
   $('pdfViewerPage').inert = true;
   $('pdfViewerPage').setAttribute('aria-hidden', 'true');
-  return closeReader($('pdfViewerPage'), () => {
+  viewerClosePromise = closeReader($('pdfViewerPage'), () => {
     task?.destroy().catch(() => {});
     $('pdfCanvasViewport').replaceChildren();
     $('pdfViewerPage').inert = false;
@@ -366,6 +393,7 @@ function closeViewer() {
     renderFiles(); lastFocus?.focus();
     viewerClosing = false;
   });
+  return viewerClosePromise;
 }
 $('fileList').onclick = e => {
   const row = e.target.closest('[data-id]');
@@ -518,10 +546,12 @@ async function initialize() {
     const missingProblems = PROBLEM_FILES.filter(problem => !files.some(file => file.id === problem.id));
     if (missingProblems.length) { await saveDocuments(db, missingProblems); files.push(...missingProblems); }
     files.sort((a, b) => b.createdAt - a.createdAt);
+    libraryReady = true;
     $('uploadPdfBtn').disabled = false;
   } catch {
     console.error('Browser storage is unavailable. Enable site storage, then reload to use your library.');
   }
   renderView(); syncToolbar();
+  if (libraryReady) await applyRoute();
 }
 initialize();

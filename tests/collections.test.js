@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { IDBFactory } from 'fake-indexeddb';
-import { viewFromHash, collectionFiles, queryFiles, openLibrary, readDocuments, saveDocuments, dateOf, escapeHtml } from '../src/library.js';
+import { viewFromHash, collectionFiles, queryFiles, openLibrary, readDocuments, saveDocuments, dateOf, escapeHtml, readerHash, readerRoute } from '../src/library.js';
 
 test('URL preserves the selected view across reload and recognizes both navigation destinations', () => {
   for (const view of ['sources', 'problems']) {
@@ -40,7 +40,7 @@ test('Problems sorts by added date and ordered difficulty in both directions', (
   assert.deepEqual(queryFiles(records, { sortKey: 'date' }).items.map(f => f.name), ['Hard', 'Med', 'Easy']);
 });
 
-test('runtime navigation and reload keep headings, columns, counts and records in the selected collection', () => {
+test('runtime navigation and reload keep headings, columns, counts and records in the selected collection', async () => {
   const source = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
   function mount(hash) {
     const makeElement = () => ({ textContent: '', innerHTML: '', dataset: {}, attrs: {}, classList: { remove() {} }, setAttribute(k, v) { this.attrs[k] = v; }, removeAttribute(k) { delete this.attrs[k]; } });
@@ -56,7 +56,10 @@ test('runtime navigation and reload keep headings, columns, counts and records i
         { id: 's', name: 'Source.pdf', subject: 'math', topic: 'Source topic', dueDate: '20/11/2026', done: true },
         { id: 'p', kind: 'problem', name: 'Problem.pdf', subject: 'math', topic: 'Problem topic', addedDate: '15/11/2026', difficulty: 'hard' },
       ],
-      location: { hash }, $, queryFiles, dateOf, esc: escapeHtml, viewFromHash, problemDetail: { isOpen: false },
+      location: { hash }, $, queryFiles, collectionFiles, dateOf, esc: escapeHtml, viewFromHash, readerHash, readerRoute,
+      libraryReady: true, routeSequence: 0, viewerClosing: false, viewerClosePromise: null,
+      history: { replaceState(_state, _title, hash) { context.location.hash = hash; } },
+      problemDetail: { isOpen: false, activeId: null },
       viewName: () => context.activeView === 'problems' ? 'Problems' : 'Sources',
       visibleFiles: () => collectionFiles(context.files, context.activeView),
       difficultyLabel: value => ({ easy: 'Easy', med: 'Med', hard: 'Hard' })[value],
@@ -66,15 +69,23 @@ test('runtime navigation and reload keep headings, columns, counts and records i
         querySelector: selector => ({ '[data-sort="date"] span': dateLabel, '[data-sort="date"]': date, '.footer-status': status })[selector],
       },
     });
+    context.openViewer = async file => { context.activeFile = file; context.rememberReader(file); };
+    context.closeViewer = async () => { context.forgetReader(context.activeFile); context.activeFile = null; };
+    context.problemDetail.open = file => { context.problemDetail.isOpen = true; context.problemDetail.activeId = file.id; context.rememberReader(file); };
+    context.problemDetail.close = async () => {
+      const file = context.files.find(file => file.id === context.problemDetail.activeId);
+      if (file) context.forgetReader(file);
+      context.problemDetail.isOpen = false; context.problemDetail.activeId = null;
+    };
     vm.runInContext(source.slice(source.indexOf('function subjects('), source.indexOf('function selectSubject(')), context);
     vm.runInContext('renderView()', context);
-    return { context, $, dateLabel, statusLabel, links, navigate(hash) { context.location.hash = hash; onHashChange(); } };
+    return { context, $, dateLabel, statusLabel, links, navigate(hash) { context.location.hash = hash; return onHashChange(); } };
   }
   const app = mount('#sources');
   assert.equal(app.$('breadcrumbReset').textContent, 'Sources');
   assert.match(app.$('fileList').innerHTML, /Source\.pdf/);
   assert.doesNotMatch(app.$('fileList').innerHTML, /Problem/);
-  app.navigate('#problems');
+  await app.navigate('#problems');
   assert.equal(app.$('breadcrumbReset').textContent, 'Problems');
   assert.equal(app.dateLabel.textContent, 'Added Date');
   assert.equal(app.statusLabel.textContent, 'Difficulty');
@@ -84,7 +95,24 @@ test('runtime navigation and reload keep headings, columns, counts and records i
   assert.match(app.$('subjectList').innerHTML, /subject-count">1</);
   const reloaded = mount(app.context.location.hash);
   assert.equal(reloaded.$('fileList').innerHTML, app.$('fileList').innerHTML);
-  reloaded.navigate('#sources');
+  await reloaded.navigate('#sources');
   assert.equal(reloaded.statusLabel.textContent, 'Status');
   assert.equal(reloaded.dateLabel.textContent, 'Due Date');
+  // Restore each reader after a fresh mount, then close without reopening it on reload.
+  for (const [view, id] of [['sources', 's'], ['problems', 'p']]) {
+    const restored = mount(readerHash(view, id));
+    await restored.context.applyRoute();
+    assert.equal(view === 'sources' ? restored.context.activeFile?.id : restored.context.problemDetail.activeId, id);
+    if (view === 'sources') await restored.context.closeViewer(); else await restored.context.problemDetail.close();
+    assert.equal(restored.context.location.hash, readerHash(view));
+    const closed = mount(restored.context.location.hash);
+    await closed.context.applyRoute();
+    assert.equal(closed.context.activeFile, null); assert.equal(closed.context.problemDetail.isOpen, false);
+  }
+  const missing = mount('#problems/missing'); await missing.context.applyRoute();
+  assert.equal(missing.context.location.hash, '#problems');
+  const switching = mount('#problems/p'); await switching.context.applyRoute();
+  await switching.navigate('#sources/s');
+  assert.equal(switching.context.activeFile.id, 's');
+  assert.equal(switching.context.location.hash, '#sources/s');
 });

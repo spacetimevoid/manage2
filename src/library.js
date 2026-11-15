@@ -1,5 +1,13 @@
 export const PAGE_SIZE = 10;
-export const viewFromHash = hash => hash === '#problems' ? 'problems' : 'sources';
+export function readerRoute(hash) {
+  const [section, encodedId] = hash.replace(/^#/, '').split('/');
+  const view = section === 'problems' ? 'problems' : 'sources';
+  if (!['sources', 'problems'].includes(section)) return { view, id: null };
+  try { return { view, id: encodedId ? decodeURIComponent(encodedId) : null }; }
+  catch { return { view, id: null }; }
+}
+export const viewFromHash = hash => readerRoute(hash).view;
+export const readerHash = (view, id = null) => `#${view}${id ? `/${encodeURIComponent(id)}` : ''}`;
 export const collectionFiles = (files, view) => files.filter(file => (file.kind === 'problem' ? 'problems' : 'sources') === view);
 export const dateOf = file => file.kind === 'problem' ? file.addedDate : file.dueDate;
 export const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);

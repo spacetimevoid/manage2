@@ -1,13 +1,15 @@
 import { escapeHtml as esc, validatePdf } from './library.js';
 import { ensureProblemData, renameProblem, renderMarkdown } from './problem-data.js';
 import { createImageZoom } from './image-zoom.js';
+import { closeReader } from './reader-transition.js';
 
-export function createProblemDetail({ persist, getItems, onChange, background, checkPdf = validatePdf }) {
+export function createProblemDetail({ persist, getItems, onChange, background, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
   const $ = id => document.getElementById(id);
   const page = $('problemDetailPage');
   const imageZoom = createImageZoom();
   let active = null, items = [], returnFocus = null;
   let contentAnimation = null;
+  let closing = false, closingPromise = null;
   const urls = new Map(), timers = new Map(), pickerTargets = new Map();
   page.inert = true;
   page.setAttribute('role', 'dialog');
@@ -99,6 +101,7 @@ export function createProblemDetail({ persist, getItems, onChange, background, c
     $('solutionAddMenu').hidden = true;
     renderDifficulty(); renderStatement(); renderSolution(); markdownMode('write');
     page.scrollTop = 0;
+    onOpen(file);
     if (direction && !window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
       contentAnimation = page.querySelector('.problem-detail-container')?.animate?.([
         { opacity: 0.75, transform: `translateX(${direction * 6}px)` },
@@ -107,6 +110,7 @@ export function createProblemDetail({ persist, getItems, onChange, background, c
     }
   }
   function open(file) {
+    if (closing) return;
     if (!active) returnFocus = document.activeElement;
     items = getItems();
     if (!items.some(item => item.id === file.id)) items = [file];
@@ -116,15 +120,22 @@ export function createProblemDetail({ persist, getItems, onChange, background, c
     $('problemDetailBackBtn').focus();
   }
   function close() {
+    if (closing) return closingPromise;
     if (!active) return;
+    closing = true;
     contentAnimation?.cancel(); contentAnimation = null;
-    const id = active.id;
-    flush(); releaseUrls(); active = null; pickerTargets.clear();
+    const file = active, id = file.id;
+    flush(); imageZoom.close(); active = null; pickerTargets.clear();
+    onClose(file);
     $('solutionAddMenu').hidden = true;
-    page.inert = true; page.classList.remove('is-open'); page.setAttribute('aria-hidden', 'true');
-    background.inert = false; document.body.style.overflow = '';
-    const row = [...document.querySelectorAll('[data-id]')].find(el => el.dataset.id === id);
-    (row || (returnFocus?.isConnected ? returnFocus : document.getElementById('breadcrumbReset')))?.focus();
+    page.inert = true; page.setAttribute('aria-hidden', 'true');
+    closingPromise = hideReader(page, () => {
+      releaseUrls(); background.inert = false; document.body.style.overflow = '';
+      const row = [...document.querySelectorAll('[data-id]')].find(el => el.dataset.id === id);
+      (row || (returnFocus?.isConnected ? returnFocus : document.getElementById('breadcrumbReset')))?.focus();
+      closing = false;
+    });
+    return closingPromise;
   }
   $('problemDetailBackBtn').onclick = close;
   for (const [id, step] of [['problemPrevItemBtn', -1], ['problemNextItemBtn', 1]]) $(id).onclick = () => {
@@ -246,5 +257,5 @@ export function createProblemDetail({ persist, getItems, onChange, background, c
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
   window.addEventListener('pagehide', flush);
-  return { open, close, get isOpen() { return !!active; } };
+  return { open, close, get isOpen() { return !!active || closing; }, get activeId() { return active?.id || null; } };
 }

@@ -5,7 +5,7 @@ import { ensureProblemData, renameProblem, renderMarkdown } from '../src/problem
 import { IDBFactory } from 'fake-indexeddb';
 import { openLibrary, readDocuments, saveDocuments } from '../src/library.js';
 
-function mount(files) {
+function mount(files, options = {}) {
   const previous = { document: globalThis.document, window: globalThis.window };
   const elements = new Map(), writes = [];
   const make = () => ({
@@ -26,7 +26,9 @@ function mount(files) {
   globalThis.document = { getElementById: $, activeElement: null, body: { style: {} }, addEventListener() {}, querySelectorAll: () => [] };
   globalThis.window = { addEventListener() {} };
   const background = {};
-  const detail = createProblemDetail({ background, getItems: () => files, onChange() {}, async persist(file) { writes.push(structuredClone(file)); } });
+  const detail = createProblemDetail({ background, getItems: () => files, onChange() {},
+    hideReader(page, finish) { page.classList.remove('is-open'); finish(); return Promise.resolve(); },
+    async persist(file) { writes.push(structuredClone(file)); }, ...options });
   return { $, detail, background, writes, choices, modes,
     async attach(id, file) {
       $(id).files = [file];
@@ -115,4 +117,33 @@ test('Markdown escapes HTML and preserves code; renaming prevents empty and dupl
   assert.equal(renameProblem(file, ' ', []), false);
   assert.throws(() => renameProblem(file, 'folder/title', []), /slashes/);
   assert.throws(() => renameProblem(file, 'b', [file, problem('b')]), /already exists/);
+});
+
+test('problem close preserves media until the fade ends and reports the current item on next/previous navigation', async () => {
+  const a = problem('a'), b = problem('b');
+  a.blob = new Blob(['%PDF-1.7']);
+  const opened = [], closed = [];
+  let finishFade, settle;
+  const app = mount([a, b], {
+    onOpen: file => opened.push(file.id), onClose: file => closed.push(file.id),
+    hideReader(_page, finish) {
+      return new Promise(resolve => { finishFade = finish; settle = resolve; });
+    },
+  });
+  try {
+    app.detail.open(a);
+    app.$('problemNextItemBtn').onclick(); app.$('problemPrevItemBtn').onclick();
+    assert.deepEqual(opened, ['a', 'b', 'a']);
+    const statementUrl = app.$('statementPdfIframe').src;
+    const done = app.detail.close();
+    assert.equal(app.detail.isOpen, true);
+    assert.equal(app.background.inert, true);
+    assert.equal(app.$('statementPdfIframe').src, statementUrl);
+    assert.deepEqual(closed, ['a']);
+    assert.equal(app.detail.close(), done, 'repeated close waits for the same animation');
+    finishFade(); settle(); await done;
+    assert.equal(app.detail.isOpen, false);
+    assert.equal(app.$('statementPdfIframe').src, undefined);
+    assert.equal(app.background.inert, false);
+  } finally { app.cleanup(); }
 });
