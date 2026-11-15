@@ -39,4 +39,12 @@ Không tự suy diễn hoặc triển khai phần mở rộng. Hỏi ngắn gọ
 - Thiết kế và chức năng không liên quan được giữ nguyên.
 - Các kiểm tra phù hợp đã được thực hiện; phần chưa kiểm tra được phải nêu rõ.
 
+## 7. Bắt buộc commit sau thay đổi lớn
+
+- Sau mỗi thay đổi lớn, bắt buộc tạo Git commit khi phần công việc đó đã hoàn thành và vượt qua các kiểm tra phù hợp. Commit trước khi bắt đầu công việc khác hoặc báo hoàn tất; không chờ người dùng nhắc.
+- Thay đổi lớn gồm thêm tính năng, sửa lỗi ảnh hưởng hành vi hoặc dữ liệu, thay đổi đáng kể về giao diện, kiến trúc hay cấu trúc dự án. Đánh giá theo tác động, không chỉ số dòng mã.
+- Mỗi commit ghi nhận một nhóm thay đổi liên quan, có thông điệp mô tả rõ nội dung. Chỉ đưa vào commit các file thuộc công việc được giao, không gộp thay đổi không liên quan của người dùng.
+- Commit là ghi nhận cục bộ. Push lên remote theo yêu cầu của người dùng.
+- Nếu không thể commit, phải báo rõ nguyên nhân và phần thay đổi còn chưa được commit; không được tuyên bố đã commit khi chưa thực hiện thành công.
+
 Yêu cầu trực tiếp mới nhất của người dùng được ưu tiên khi có khác biệt với file này.

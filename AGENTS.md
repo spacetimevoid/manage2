@@ -29,6 +29,7 @@ Dự án phục vụ việc lưu trữ file đề và bài tập hay, khó đư�
 - Không tự đăng tải, triển khai hoặc truyền file và dữ liệu của người dùng ra ngoài khi chưa được yêu cầu.
 - Kiểm tra phù hợp với thay đổi; với thay đổi mã chạy, dùng các lệnh có sẵn như `npm.cmd test` và `npm.cmd run build` khi cần.
 - Khi sửa giao diện theo yêu cầu, đối chiếu với thiết kế đã được người dùng chấp thuận. Không tuyên bố đã kiểm tra trực quan nếu chưa thực hiện được.
+- Bắt buộc tạo Git commit sau mỗi thay đổi lớn đã hoàn thành và kiểm tra, trước khi chuyển sang công việc khác hoặc báo hoàn tất. Thực hiện chủ động, không chờ người dùng nhắc; áp dụng chi tiết tại mục 7 của `RULES.md`.
 - Báo cáo ngắn gọn bằng tiếng Việt: đã sửa gì, kết quả kiểm tra và giới hạn còn lại nếu có.
 
 ## Phạm vi áp dụng
