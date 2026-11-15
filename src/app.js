@@ -4,6 +4,8 @@ import { SUBJECTS, ALL_FILES } from './seed.js';
 import { PROBLEM_FILES } from './problems-seed.js';
 import { createProblemDetail } from './problem-detail.js';
 import { closeReader } from './reader-transition.js';
+import { validateUpload, uploadName } from './uploads.js';
+import { problemTitle } from './problem-data.js';
 import { buildSamplePdfBlobUrl } from './sample-pdf.js';
 import { escapeHtml as esc, parseDate, queryFiles, openLibrary, readDocuments, saveDocuments, validatePdf, viewFromHash, collectionFiles, dateOf, readerRoute, readerHash } from './library.js';
 
@@ -38,7 +40,7 @@ function renderSidebar() {
 function renderFiles() {
   const result = queryFiles(visibleFiles(), { subject: activeSubject, sortKey, sortDir, page: currentPage });
   currentPage = result.page;
-  $('fileList').innerHTML = result.items.map(f => `<a class="file-row" href="${esc(readerHash(activeView, f.id))}" data-id="${esc(f.id)}"><div class="file-info"><span class="filename">${esc(activeView === 'problems' ? f.name.replace(/\.pdf$/i, '') : f.name)}</span></div><span class="topic-cell">${esc(f.topic)}</span><span class="due-date">${esc(dateOf(f))}</span><div class="status-cell"><span class="${activeView === 'problems' ? `difficulty difficulty-${esc(f.difficulty || 'easy')}` : `badge ${f.done ? 'badge-done' : 'badge-pending'}`}">${activeView === 'problems' ? difficultyLabel(f.difficulty) : f.done ? 'Completed' : 'Pending'}</span></div></a>`).join('') || '<div class="sidebar-empty" style="padding: 18px 10px;">No files in this subject</div>';
+  $('fileList').innerHTML = result.items.map(f => `<a class="file-row" href="${esc(readerHash(activeView, f.id))}" data-id="${esc(f.id)}"><div class="file-info"><span class="filename">${esc(activeView === 'problems' ? problemTitle(f) : f.name)}</span></div><span class="topic-cell">${esc(f.topic)}</span><span class="due-date">${esc(dateOf(f))}</span><div class="status-cell"><span class="${activeView === 'problems' ? `difficulty difficulty-${esc(f.difficulty || 'easy')}` : `badge ${f.done ? 'badge-done' : 'badge-pending'}`}">${activeView === 'problems' ? difficultyLabel(f.difficulty) : f.done ? 'Completed' : 'Pending'}</span></div></a>`).join('') || '<div class="sidebar-empty" style="padding: 18px 10px;">No files in this subject</div>';
   $('paginationBar').hidden = result.pages <= 1;
   $('paginationInfo').textContent = `${result.page} / ${result.pages}`;
   $('prevPageBtn').disabled = currentPage <= 1;
@@ -177,6 +179,10 @@ function setModal(open) {
     $('uploadPdfForm').reset(); $('pdfFileInput').value = '';
     $('modalCollectionName').textContent = viewName();
     $('modalDifficultyField').hidden = activeView !== 'problems';
+    const problems = activeView === 'problems';
+    document.querySelector('label[for="modalBrowseBtn"]').textContent = problems ? 'Select image or PDF' : 'Select PDF';
+    $('pdfFileInput').accept = problems ? 'image/*,application/pdf,.pdf' : 'application/pdf,.pdf';
+    $('modalPathFileNameInput').placeholder = problems ? 'new-problem' : 'new-file.pdf';
     document.querySelector('label[for="modalDueDateInput"]').textContent = activeView === 'problems' ? 'Added date' : 'Due date';
     $('modalPathSubjectInput').value = activeSubject === 'all' ? 'math' : activeSubject;
     $('modalPathFileNameInput').value = '';
@@ -205,12 +211,11 @@ $('uploadPdfForm').onsubmit = async e => {
   let validation;
   try {
     const blob = $('pdfFileInput').files[0];
-    await validatePdf(blob);
+    const mediaType = await validateUpload(blob, activeView);
     const subject = $('modalPathSubjectInput').value.trim().toLocaleLowerCase().replace(/\s+/g, '-');
     if (!subject || subject === 'all' || /[\\/\x00-\x1f]/.test(subject)) throw new Error('Enter a subject without slashes. “all” is reserved.');
-    let name = $('modalPathFileNameInput').value.trim() || blob.name;
+    const name = uploadName($('modalPathFileNameInput').value, blob, mediaType);
     if (/[\\/\x00-\x1f]/.test(name)) throw new Error('File name cannot contain slashes or control characters.');
-    if (!name.toLowerCase().endsWith('.pdf')) name += '.pdf';
     if (visibleFiles().some(f => !f.sample && f.subject === subject && f.name.toLocaleLowerCase() === name.toLocaleLowerCase())) throw new Error('A PDF with this name already exists in that subject.');
     let dueDate = $('modalDueDateInput').value.trim();
     if (Number.isNaN(parseDate(dueDate))) throw new Error('Enter a real date in DD/MM/YYYY format, or leave it blank.');
@@ -218,9 +223,14 @@ $('uploadPdfForm').onsubmit = async e => {
       const now = new Date();
       dueDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
     }
-    validation = pdfjsLib.getDocument({ data: await blob.arrayBuffer() });
-    const doc = await validation.promise;
-    const file = { id: crypto.randomUUID(), name, subject, topic: $('modalTopicInput').value.trim() || 'General Notes', dueDate, done: false, notes: '', blob, pageCount: doc.numPages, sample: false, createdAt: Date.now() };
+    const file = { id: crypto.randomUUID(), name, subject, topic: $('modalTopicInput').value.trim() || 'General Notes', dueDate, done: false, notes: '', sample: false, createdAt: Date.now() };
+    if (mediaType === 'pdf') {
+      validation = pdfjsLib.getDocument({ data: await blob.arrayBuffer() });
+      const doc = await validation.promise;
+      file.blob = blob; file.pageCount = doc.numPages;
+    } else {
+      file.statementImages = [{ id: crypto.randomUUID(), name: blob.name, blob }];
+    }
     if (activeView === 'problems') {
       file.kind = 'problem'; file.addedDate = dueDate;
       file.difficulty = $('modalDifficultyInput').value;

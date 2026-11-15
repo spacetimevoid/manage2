@@ -1,5 +1,5 @@
 import { escapeHtml as esc, validatePdf } from './library.js';
-import { ensureProblemData, renameProblem, renderMarkdown } from './problem-data.js';
+import { ensureProblemData, renameProblem, renderMarkdown, problemTitle } from './problem-data.js';
 import { createImageZoom } from './image-zoom.js';
 import { closeReader } from './reader-transition.js';
 
@@ -92,7 +92,7 @@ export function createProblemDetail({ persist, getItems, onChange, background, c
     $('problemPrevItemBtn').disabled = index <= 0;
     $('problemNextItemBtn').disabled = index < 0 || index >= items.length - 1;
     $('problemDetailBreadcrumb').textContent = `Problems / ${file.subject} / ${file.topic}`;
-    $('problemDetailTitleInput').value = file.name.replace(/\.pdf$/i, '');
+    $('problemDetailTitleInput').value = problemTitle(file);
     $('problemDetailTitleInput').setCustomValidity(''); $('problemDetailTitleInput').title = '';
     $('problemDetailAddedDate').textContent = `Added ${file.addedDate}`;
     $('problemStatementNoteInput').value = file.notes;
@@ -148,12 +148,12 @@ export function createProblemDetail({ persist, getItems, onChange, background, c
     if (!active) return;
     try {
       if (renameProblem(active, $('problemDetailTitleInput').value, getItems())) { save(active); onChange(); }
-      $('problemDetailTitleInput').value = active.name.replace(/\.pdf$/i, '');
+      $('problemDetailTitleInput').value = problemTitle(active);
     } catch (error) { $('problemDetailTitleInput').setCustomValidity(error.message); $('problemDetailTitleInput').reportValidity(); }
   }
   $('problemDetailTitleInput').onchange = commitTitle;
   $('problemDetailTitleInput').onblur = () => {
-    if (active && !$('problemDetailTitleInput').value.trim()) $('problemDetailTitleInput').value = active.name.replace(/\.pdf$/i, '');
+    if (active && !$('problemDetailTitleInput').value.trim()) $('problemDetailTitleInput').value = problemTitle(active);
   };
   $('problemDetailTitleInput').onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); commitTitle(); } };
   $('problemStatementNoteInput').oninput = e => { if (active) { active.notes = e.target.value; schedule(active); } };

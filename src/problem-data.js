@@ -1,4 +1,5 @@
 import { escapeHtml } from './library.js';
+export const problemTitle = problem => problem.name.replace(/\.(pdf|png|jpe?g|webp|gif|avif|svg|bmp|ico|tiff?|heic|heif)$/i, '');
 
 export function ensureProblemData(problem) {
   if (typeof problem.notes !== 'string') problem.notes = problem.statementNote || '';
@@ -17,7 +18,8 @@ export function renameProblem(problem, title, files) {
   const trimmed = title.trim();
   if (!trimmed) return false;
   if (/[\\/\x00-\x1f]/.test(trimmed)) throw new Error('File name cannot contain slashes or control characters.');
-  const name = /\.pdf$/i.test(trimmed) ? trimmed : `${trimmed}.pdf`;
+  const extension = /\.[a-z0-9]+$/i.exec(problem.name)?.[0] || '.pdf';
+  const name = trimmed.toLowerCase().endsWith(extension.toLowerCase()) ? trimmed : `${trimmed}${extension}`;
   if (files.some(f => f.id !== problem.id && f.subject === problem.subject && f.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
     throw new Error('A problem with this name already exists in that subject.');
   }
