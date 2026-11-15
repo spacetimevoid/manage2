@@ -1,0 +1,2989 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sources</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        /* Reset và thiết lập hệ thống font chuẩn Apple HIG */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #ffffff;
+            color: #1d1d1f;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: max(32px, 6vh) 24px 48px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+
+        /* Thanh điều hướng tối giản phía trên: Manage | Sources Problems */
+        .top-nav-wrap {
+            width: 100%;
+            max-width: 989px;
+            margin: 0 auto 32px;
+            display: flex;
+            align-items: center;
+        }
+
+        .top-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .top-nav-brand {
+            font-weight: 700;
+            color: #1d1d1f;
+            letter-spacing: -0.012em;
+            user-select: none;
+        }
+
+        .top-nav-sep {
+            color: #86868b;
+            font-weight: 300;
+            user-select: none;
+        }
+
+        .top-nav-item {
+            background: transparent;
+            border: none;
+            padding: 4px 9px;
+            margin: 0 -4px;
+            border-radius: 7px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 400;
+            letter-spacing: -0.01em;
+            color: #6e6e73;
+            text-decoration: none;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .top-nav-item:hover {
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+        }
+
+        .top-nav-item.is-active {
+            background-color: #f5f5f7;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+
+        /* Bố cục 2 cột căn giữa theo chuẩn tầm nhìn khoa học */
+        .app-layout {
+            width: 100%;
+            max-width: 989px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 44px;
+        }
+
+        .app-layout[hidden] {
+            display: none;
+        }
+
+        /* =========================================================
+           CỘT TRÁI: SIDEBAR DANH SÁCH MÔN HỌC (THU GỌN VỪA TẦM NHÌN)
+           ========================================================= */
+        .sidebar {
+            width: 185px;
+            flex-shrink: 0;
+            position: sticky;
+            top: max(32px, 6vh);
+            align-self: flex-start;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #86868b;
+            margin: 0 0 8px 8px;
+            user-select: none;
+        }
+
+        /* Ô tìm kiếm nhanh môn học phong cách Spotlight thu nhỏ */
+        .sidebar-search-wrap {
+            position: relative;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-search {
+            width: 100%;
+            background-color: #f5f5f7;
+            border: 1px solid transparent;
+            border-radius: 7px;
+            padding: 6px 26px 6px 9px;
+            font-family: inherit;
+            font-size: 12.5px;
+            color: #1d1d1f;
+            outline: none;
+            transition: background-color 0.16s ease, border-color 0.16s ease;
+        }
+
+        .sidebar-search::placeholder {
+            color: #86868b;
+        }
+
+        .sidebar-search:focus {
+            background-color: #ffffff;
+            border-color: #d2d2d7;
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 15px;
+            height: 15px;
+            border: none;
+            border-radius: 50%;
+            background-color: #d2d2d7;
+            color: #ffffff;
+            font-size: 10.5px;
+            line-height: 1;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .search-clear.is-visible {
+            display: inline-flex;
+        }
+
+        /* Danh sách cuộn dọc thanh mảnh kéo dài thẳng hàng đáy tối đa của thanh sắp xếp */
+        .subject-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            max-height: 452px;
+            overflow-y: auto;
+            padding-right: 3px;
+        }
+
+        .subject-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .subject-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .subject-list::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.12);
+            border-radius: 999px;
+        }
+
+        .subject-list::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.24);
+        }
+
+        .subject-item {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 5px 8px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 400;
+            color: #424245;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .subject-item:hover {
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+        }
+
+        .subject-item.is-active {
+            background-color: #f5f5f7;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+
+        .subject-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: -0.008em;
+        }
+
+        .subject-count {
+            font-size: 11.5px;
+            font-weight: 400;
+            color: #86868b;
+            font-variant-numeric: tabular-nums;
+            flex-shrink: 0;
+        }
+
+        .subject-item.is-active .subject-count {
+            color: #6e6e73;
+            font-weight: 500;
+        }
+
+        .sidebar-empty {
+            padding: 10px 8px;
+            font-size: 12.5px;
+            color: #86868b;
+        }
+
+        /* =========================================================
+           CỘT PHẢI: KHUNG NỘI DUNG CHÍNH CỐ ĐỊNH CHIỀU RỘNG 760PX
+           ========================================================= */
+        .main-content {
+            flex: 1;
+            width: 760px;
+            max-width: 760px;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .breadcrumb-title {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            line-height: 1.15;
+            margin: 0;
+            color: #1d1d1f;
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .upload-link-btn {
+            background: transparent;
+            border: none;
+            padding: 4px 8px;
+            margin-right: -8px;
+            border-radius: 7px;
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 400;
+            letter-spacing: -0.008em;
+            color: #0066cc;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            text-decoration-thickness: 1px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background-color 0.16s ease, color 0.16s ease;
+        }
+
+        .upload-link-btn:hover {
+            background-color: #f5f5f7;
+            color: #004999;
+        }
+
+        .upload-link-btn:active {
+            background-color: #ebebf0;
+        }
+
+        .breadcrumb-root {
+            background: transparent;
+            border: none;
+            padding: 2px 6px;
+            margin-left: -6px;
+            border-radius: 7px;
+            font: inherit;
+            letter-spacing: inherit;
+            color: #1d1d1f;
+            cursor: pointer;
+            transition: background-color 0.16s ease;
+        }
+
+        .breadcrumb-root:hover {
+            background-color: #f5f5f7;
+        }
+
+        .breadcrumb-sep {
+            color: #86868b;
+            font-weight: 400;
+            margin: 0 6px;
+            user-select: none;
+        }
+
+        .breadcrumb-subject {
+            color: #1d1d1f;
+            font-weight: 700;
+        }
+
+        hr.divider {
+            border: 0;
+            height: 1px;
+            background-color: #d2d2d7;
+            margin: 0;
+        }
+
+        /* Danh sách tệp PDF 4 cột co giãn tự nhiên theo phần tử cuối cùng */
+        .file-list {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-row {
+            display: grid;
+            grid-template-columns: minmax(200px, 2.1fr) minmax(130px, 1.35fr) 90px 88px;
+            column-gap: 18px;
+            align-items: center;
+            padding: 11px 10px;
+            margin: 1px 0;
+            border-radius: 8px;
+            text-decoration: none;
+            color: inherit;
+            position: relative;
+            transition: background-color 0.16s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        .file-row:not(:last-child)::after {
+            content: "";
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            bottom: -1px;
+            height: 1px;
+            background-color: #ececee;
+            transition: opacity 0.15s ease;
+        }
+
+        .file-row:hover {
+            background-color: #f5f5f7;
+        }
+
+        .file-row:hover::after {
+            opacity: 0;
+        }
+
+        .file-row:active {
+            background-color: #ebebf0;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .filename {
+            font-size: 13.5px;
+            font-weight: 400;
+            color: #1d1d1f;
+            letter-spacing: -0.01em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: color 0.16s ease;
+        }
+
+        .file-row:hover .filename {
+            color: #0066cc;
+        }
+
+        .topic-cell {
+            font-size: 13px;
+            font-weight: 400;
+            color: #6e6e73;
+            letter-spacing: -0.005em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .due-date {
+            font-size: 13px;
+            font-weight: 400;
+            color: #86868b;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.005em;
+            white-space: nowrap;
+        }
+
+        .status-cell {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 0;
+            font-size: 13px;
+            font-weight: 500;
+            letter-spacing: -0.005em;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+
+        .badge-done {
+            color: #1b7a43;
+        }
+
+        .badge-pending {
+            color: #86868b;
+        }
+
+        .difficulty-text {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 0;
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.25;
+            letter-spacing: -0.005em;
+            white-space: nowrap;
+        }
+
+        .difficulty-text.is-easy {
+            color: #1b7a43;
+        }
+
+        .difficulty-text.is-med {
+            color: #b25900;
+        }
+
+        .difficulty-text.is-hard {
+            color: #c92a2a;
+        }
+
+        /* Thanh footer sắp xếp ở cuối danh sách */
+        .list-footer {
+            display: grid;
+            grid-template-columns: minmax(200px, 2.1fr) minmax(130px, 1.35fr) 90px 88px;
+            column-gap: 18px;
+            align-items: center;
+            padding: 11px 10px 0;
+            margin-top: 2px;
+            border-top: 1px solid #d2d2d7;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #1d1d1f;
+            letter-spacing: -0.008em;
+        }
+
+        .sort-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: transparent;
+            border: none;
+            padding: 4px 6px;
+            margin: -4px -6px;
+            border-radius: 7px;
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #1d1d1f;
+            letter-spacing: -0.008em;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.16s ease, color 0.16s ease;
+        }
+
+        .sort-btn:hover {
+            background-color: #f5f5f7;
+        }
+
+        .sort-btn:active {
+            background-color: #ebebf0;
+        }
+
+        .sort-btn.is-active {
+            color: #0066cc;
+        }
+
+        .sort-btn.footer-status {
+            justify-self: end;
+        }
+
+        .sort-triangle {
+            width: 8px;
+            height: 8px;
+            fill: currentColor;
+            opacity: 0.35;
+            transition: transform 0.22s cubic-bezier(0.25, 0.1, 0.25, 1),
+                        opacity 0.18s ease,
+                        color 0.18s ease;
+        }
+
+        .sort-btn.is-active .sort-triangle {
+            opacity: 1;
+            color: #0066cc;
+        }
+
+        .sort-btn[data-dir="asc"] .sort-triangle {
+            transform: rotate(180deg);
+        }
+
+        .sort-btn[data-dir="desc"] .sort-triangle {
+            transform: rotate(0deg);
+        }
+
+        /* Minimalist Apple-style Pagination Bar centered right below the bottom divider (<  1 / 4  >) */
+        .pagination-bar {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            padding-top: 14px;
+            margin-top: 0;
+        }
+
+        .pagination-bar[hidden] {
+            display: none;
+        }
+
+        .pagination-info {
+            font-size: 13px;
+            font-weight: 400;
+            color: #1d1d1f;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.01em;
+            user-select: none;
+        }
+
+        .page-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            padding: 0;
+            color: #86868b;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.16s ease, color 0.16s ease, opacity 0.16s ease;
+        }
+
+        .page-btn svg {
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+        }
+
+        .page-btn:active:not(:disabled) {
+            background-color: #ebebf0;
+        }
+
+        .page-btn:disabled {
+            color: #d2d2d7;
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        /* =========================================================
+           FLAT MINIMALIST APPLE MODAL FOR UPLOAD PDF (NO SHADOWS)
+           ========================================================= */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(29, 29, 31, 0.22);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.16s ease;
+        }
+
+        .modal-backdrop.is-open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .apple-modal {
+            width: 100%;
+            max-width: 460px;
+            background-color: #ffffff;
+            border: 1px solid #d2d2d7;
+            border-radius: 10px;
+            box-shadow: none;
+            padding: 18px 20px 17px;
+            transform: translateY(-6px);
+            transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .modal-backdrop.is-open .apple-modal {
+            transform: translateY(0);
+        }
+
+        .modal-breadcrumb {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #1d1d1f;
+            margin: 0 0 14px 0;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2px;
+        }
+
+        .modal-breadcrumb .sep {
+            color: #86868b;
+            font-weight: 400;
+            margin: 0 4px;
+            user-select: none;
+        }
+
+        /* Inline editable path segments inside Sources / <subject> / <file-name> */
+        .path-inline-input {
+            font-family: inherit;
+            font-size: 14.5px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #1d1d1f;
+            background-color: #f5f5f7;
+            border: 1px solid #d2d2d7;
+            border-radius: 6px;
+            padding: 3px 8px;
+            box-shadow: none;
+            outline: none;
+            transition: background-color 0.14s ease, border-color 0.14s ease;
+        }
+
+        .path-inline-input::placeholder {
+            color: #86868b;
+            font-weight: 500;
+        }
+
+        .path-inline-input:focus {
+            background-color: #ffffff;
+            border-color: #0066cc;
+            box-shadow: none;
+        }
+
+        .path-subject-input {
+            width: 112px;
+        }
+
+        .path-filename-input {
+            flex: 1;
+            min-width: 135px;
+        }
+
+        .modal-field {
+            margin-bottom: 11px;
+        }
+
+        .modal-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #1d1d1f;
+            letter-spacing: -0.008em;
+            margin-bottom: 5px;
+        }
+
+        .classic-browse-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Flat Minimalist Apple Button */
+        .classic-aqua-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 14px;
+            border-radius: 7px;
+            border: 1px solid #d2d2d7;
+            background-color: #f5f5f7;
+            box-shadow: none;
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #1d1d1f;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.14s ease, border-color 0.14s ease;
+        }
+
+        .classic-aqua-btn:hover {
+            background-color: #ebebf0;
+        }
+
+        .classic-aqua-btn:active {
+            background-color: #e2e2e7;
+        }
+
+        /* Primary Save Button in classic Apple blue */
+        .classic-aqua-btn.is-primary {
+            border-color: #0066cc;
+            background-color: #0066cc;
+            box-shadow: none;
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        .classic-aqua-btn.is-primary:hover {
+            background-color: #0055b3;
+            border-color: #0055b3;
+        }
+
+        .classic-aqua-btn.is-primary:active {
+            background-color: #004499;
+            border-color: #004499;
+        }
+
+        .classic-file-status {
+            font-size: 12.5px;
+            color: #86868b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Flat Minimalist Apple Input Field */
+        .classic-input {
+            width: 100%;
+            background-color: #f5f5f7;
+            border: 1px solid #d2d2d7;
+            border-radius: 7px;
+            padding: 6px 9px;
+            font-family: inherit;
+            font-size: 13px;
+            color: #1d1d1f;
+            box-shadow: none;
+            outline: none;
+            transition: background-color 0.14s ease, border-color 0.14s ease;
+        }
+
+        .classic-input::placeholder {
+            color: #86868b;
+        }
+
+        .classic-input:focus {
+            background-color: #ffffff;
+            border-color: #0066cc;
+            box-shadow: none;
+        }
+
+        .modal-error {
+            font-size: 12px;
+            color: #c92a2a;
+            margin: -2px 0 8px 0;
+            min-height: 0;
+        }
+
+        .modal-error:empty {
+            display: none;
+        }
+
+        .modal-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .classic-cancel-link {
+            background: transparent;
+            border: none;
+            padding: 4px 6px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 400;
+            color: #0066cc;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            cursor: pointer;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .classic-cancel-link:hover {
+            background-color: #f5f5f7;
+            color: #004999;
+        }
+
+        /* =========================================================
+           FULL-SCREEN APPLE / MAC OS X PDF VIEWER PAGE (100VW x 100VH)
+           ========================================================= */
+        .pdf-fullscreen-page {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #ffffff;
+            z-index: 150;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.16s ease;
+        }
+
+        .pdf-fullscreen-page.is-open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .pdf-viewer-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 10px 24px;
+            background-color: #282828;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            color: #f5f5f7;
+            flex-shrink: 0;
+        }
+
+        .pdf-viewer-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .pdf-viewer-controls {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+        }
+
+        .viewer-control-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-size: 13px;
+            font-weight: 400;
+            color: #f5f5f7;
+            font-variant-numeric: tabular-nums;
+            user-select: none;
+        }
+
+        .viewer-controls-divider {
+            width: 1px;
+            height: 16px;
+            background-color: rgba(255, 255, 255, 0.24);
+            flex-shrink: 0;
+        }
+
+        .viewer-ctrl-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border: none;
+            border-radius: 5px;
+            background: transparent;
+            color: #d2d2d7;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 400;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .viewer-ctrl-btn:hover:not(:disabled) {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .viewer-ctrl-btn:active:not(:disabled) {
+            background-color: rgba(255, 255, 255, 0.16);
+        }
+
+        .viewer-ctrl-btn:disabled {
+            opacity: 0.32;
+            cursor: default;
+        }
+
+        .viewer-ctrl-btn svg {
+            width: 12px;
+            height: 12px;
+            stroke: currentColor;
+            stroke-width: 1.9;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .viewer-ctrl-label {
+            padding: 0 2px;
+            color: #f5f5f7;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+        }
+
+        .pdf-viewer-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .viewer-back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: transparent;
+            border: none;
+            padding: 6px 10px;
+            margin-left: -10px;
+            border-radius: 7px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            color: #7cc0ff;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background-color 0.16s ease, color 0.16s ease;
+        }
+
+        .viewer-back-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #a3d3ff;
+        }
+
+        .viewer-back-btn:active {
+            background-color: rgba(255, 255, 255, 0.16);
+        }
+
+        .viewer-back-btn svg {
+            width: 15px;
+            height: 15px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .viewer-toolbar-divider {
+            width: 1px;
+            height: 20px;
+            background-color: rgba(255, 255, 255, 0.18);
+            flex-shrink: 0;
+        }
+
+        .pdf-viewer-meta {
+            min-width: 0;
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .pdf-viewer-path {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -0.015em;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pdf-viewer-path .sep {
+            color: #b8b8be;
+            font-weight: 400;
+            margin: 0 5px;
+        }
+
+        .pdf-viewer-sub {
+            font-size: 12.5px;
+            color: #d2d2d7;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pdf-viewer-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            flex: 1;
+            flex-shrink: 0;
+        }
+
+        .viewer-status-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 28px;
+            background: transparent;
+            border: none;
+            padding: 0 8px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 500;
+            line-height: 1;
+            letter-spacing: -0.008em;
+            cursor: pointer;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .viewer-status-toggle.badge-done {
+            background: transparent;
+            color: #32d74b;
+        }
+
+        .viewer-status-toggle.badge-pending {
+            background: transparent;
+            color: #98989d;
+        }
+
+        .viewer-status-toggle.is-difficulty {
+            background: transparent;
+            font-weight: 500;
+        }
+
+        .viewer-status-toggle.is-difficulty.is-easy {
+            color: #32d74b;
+        }
+
+        .viewer-status-toggle.is-difficulty.is-med {
+            color: #ff9f0a;
+        }
+
+        .viewer-status-toggle.is-difficulty.is-hard {
+            color: #ff453a;
+        }
+
+        .viewer-status-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .viewer-status-toggle:active {
+            background-color: rgba(255, 255, 255, 0.16);
+        }
+
+        .viewer-link-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 28px;
+            padding: 0 8px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 400;
+            line-height: 1;
+            letter-spacing: -0.008em;
+            color: #f5f5f7;
+            text-decoration: none;
+            cursor: pointer;
+            white-space: nowrap;
+            user-select: none;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .viewer-link-action:hover,
+        .viewer-link-action.is-active:hover,
+        .viewer-link-action.is-primary:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .viewer-link-action:active,
+        .viewer-link-action.is-active:active,
+        .viewer-link-action.is-primary:active {
+            background-color: rgba(255, 255, 255, 0.16);
+            color: #ffffff;
+        }
+
+        .viewer-link-action.is-active {
+            background: transparent;
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        .viewer-tool-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 26px;
+            padding: 0 8px;
+            border: none;
+            border-radius: 5px;
+            background: transparent;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 400;
+            line-height: 1;
+            color: #d2d2d7;
+            cursor: pointer;
+            white-space: nowrap;
+            user-select: none;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .viewer-tool-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .viewer-tool-btn.is-active {
+            background-color: rgba(255, 255, 255, 0.14);
+            color: #ffffff;
+        }
+
+        .pdf-viewer-body {
+            flex: 1;
+            width: 100%;
+            min-height: 0;
+            background-color: #282828;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pdf-canvas-viewport {
+            flex: 1;
+            min-width: 0;
+            height: 100%;
+            overflow: auto;
+            background-color: #282828;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 24px 40px;
+            gap: 20px;
+        }
+
+        .pdf-page-sheet {
+            position: relative;
+            background-color: #ffffff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+            flex-shrink: 0;
+        }
+
+        .pdf-page-sheet canvas {
+            display: block;
+        }
+
+        .pdf-canvas-viewport.is-selecting {
+            cursor: crosshair;
+            user-select: none;
+        }
+
+        .pdf-area-selection-box {
+            position: absolute;
+            border: 1px solid rgba(124, 192, 255, 0.9);
+            background-color: rgba(124, 192, 255, 0.16);
+            pointer-events: none;
+            z-index: 15;
+            display: none;
+        }
+
+        /* Floating Draggable & Resizable Apple-style Notes Window */
+        .pdf-notes-pane {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            width: 340px;
+            height: 440px;
+            min-width: 260px;
+            min-height: 220px;
+            max-width: calc(100vw - 32px);
+            max-height: calc(100vh - 80px);
+            background: rgba(251, 251, 253, 0.94);
+            backdrop-filter: blur(22px) saturate(180%);
+            -webkit-backdrop-filter: blur(22px) saturate(180%);
+            border: 1px solid #b8b8be;
+            border-radius: 12px;
+            box-shadow:
+                0 20px 48px rgba(0, 0, 0, 0.22),
+                0 4px 12px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.92);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            resize: both;
+            z-index: 20;
+            transition: opacity 0.16s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .pdf-notes-pane.is-collapsed {
+            opacity: 0;
+            transform: scale(0.96);
+            pointer-events: none;
+        }
+
+        .pdf-notes-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: linear-gradient(180deg, #ffffff 0%, #f1f1f4 100%);
+            border-bottom: 1px solid #d8d8de;
+            flex-shrink: 0;
+            cursor: grab;
+            user-select: none;
+        }
+
+        .pdf-notes-header:active {
+            cursor: grabbing;
+        }
+
+        .pdf-notes-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pdf-notes-close {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.16);
+            background-color: #ff5f57;
+            padding: 0;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: filter 0.12s ease;
+        }
+
+        .pdf-notes-close:hover {
+            filter: brightness(0.92);
+        }
+
+        .pdf-notes-title {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #6e6e73;
+            user-select: none;
+        }
+
+        .pdf-notes-saved {
+            font-size: 11.5px;
+            color: #86868b;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .pdf-notes-textarea {
+            flex: 1;
+            width: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            background: transparent;
+            padding: 14px 16px 20px;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #1d1d1f;
+        }
+
+        .pdf-notes-textarea::placeholder {
+            color: #9a9aa0;
+        }
+
+        .pdf-notes-resize-grip {
+            position: absolute;
+            right: 4px;
+            bottom: 4px;
+            width: 10px;
+            height: 10px;
+            pointer-events: none;
+            opacity: 0.45;
+            background: linear-gradient(135deg, transparent 45%, #86868b 45%, #86868b 55%, transparent 55%, transparent 72%, #86868b 72%, #86868b 82%, transparent 82%);
+        }
+
+        /* Tối ưu giao diện trên màn hình nhỏ (< 760px) */
+        @media (max-width: 760px) {
+            body {
+                align-items: flex-start;
+                padding: 24px 16px 36px;
+            }
+            .top-nav-wrap {
+                margin-bottom: 24px;
+            }
+            .app-layout {
+                flex-direction: column;
+                gap: 24px;
+            }
+            .sidebar {
+                width: 100%;
+                position: static;
+            }
+            .subject-list {
+                max-height: 170px;
+            }
+            .main-content {
+                width: 100%;
+                max-width: 100%;
+            }
+            .breadcrumb-title {
+                font-size: 25px;
+            }
+            .file-row,
+            .list-footer {
+                grid-template-columns: minmax(0, 1fr) 90px;
+                padding-left: 8px;
+                padding-right: 8px;
+            }
+            .topic-cell,
+            .footer-topic,
+            .due-date,
+            .footer-due-date {
+                display: none;
+            }
+            .pagination-bar {
+                padding-top: 14px;
+            }
+            .pdf-viewer-toolbar {
+                flex-wrap: wrap;
+                padding: 10px 14px;
+            }
+            .pdf-viewer-sub {
+                display: none;
+            }
+            .pdf-notes-pane {
+                top: 12px;
+                right: 12px;
+                width: calc(100vw - 24px);
+                height: 44vh;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Top Navigation Bar: Clean Tab Switcher (Sources / Problems) -->
+    <div class="top-nav-wrap">
+        <nav class="top-nav" aria-label="Primary navigation">
+            <span class="top-nav-brand">Manage</span>
+            <span class="top-nav-sep" aria-hidden="true">|</span>
+            <button type="button" class="top-nav-item is-active" data-nav-target="sources">Sources</button>
+            <button type="button" class="top-nav-item" data-nav-target="problems">Problems</button>
+        </nav>
+    </div>
+
+    <div class="app-layout" id="sourcesView">
+        <!-- Left column: Subject directory sidebar with instant search -->
+        <aside class="sidebar" aria-label="Subjects directory">
+            <div class="sidebar-label">Subjects</div>
+            <div class="sidebar-search-wrap">
+                <input
+                    type="text"
+                    class="sidebar-search"
+                    id="subjectSearch"
+                    placeholder="Filter subjects..."
+                    autocomplete="off"
+                    spellcheck="false"
+                    aria-label="Filter subjects"
+                >
+                <button type="button" class="search-clear" id="searchClear" aria-label="Clear search query">&times;</button>
+            </div>
+            <nav class="subject-list" id="subjectList"></nav>
+        </aside>
+
+        <!-- Right column: Ergonomic centered content area Sources / <subject> -->
+        <main class="main-content">
+            <header>
+                <div class="header-row">
+                    <h1 class="breadcrumb-title">
+                        <button type="button" class="breadcrumb-root" id="breadcrumbReset" title="View all documents">Sources</button>
+                        <span id="breadcrumbDynamic" hidden><span class="breadcrumb-sep">/</span><span class="breadcrumb-subject" id="breadcrumbSubject"></span></span>
+                    </h1>
+                    <button type="button" class="upload-link-btn" id="uploadPdfBtn">Upload</button>
+                </div>
+                <hr class="divider">
+            </header>
+
+            <section class="file-list" id="fileList" aria-label="PDF files list"></section>
+
+            <footer class="list-footer" aria-label="Sort by column">
+                <div>
+                    <button type="button" class="sort-btn" data-sort="name" aria-label="Sort by file name">
+                        <span>File name</span>
+                        <svg class="sort-triangle" viewBox="0 0 10 10" aria-hidden="true">
+                            <polygon points="1,3 9,3 5,8" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="footer-topic">
+                    <button type="button" class="sort-btn" data-sort="topic" aria-label="Sort by topic">
+                        <span>Topic</span>
+                        <svg class="sort-triangle" viewBox="0 0 10 10" aria-hidden="true">
+                            <polygon points="1,3 9,3 5,8" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="footer-due-date">
+                    <button type="button" class="sort-btn" data-sort="date" aria-label="Sort by due date">
+                        <span>Due Date</span>
+                        <svg class="sort-triangle" viewBox="0 0 10 10" aria-hidden="true">
+                            <polygon points="1,3 9,3 5,8" />
+                        </svg>
+                    </button>
+                </div>
+                <button type="button" class="sort-btn footer-status" data-sort="status" aria-label="Sort by status">
+                    <span>Status</span>
+                    <svg class="sort-triangle" viewBox="0 0 10 10" aria-hidden="true">
+                        <polygon points="1,3 9,3 5,8" />
+                    </svg>
+                </button>
+            </footer>
+
+            <!-- Centered bottom pagination bar aligned with the divider above (<  1 / 4  >) -->
+            <nav class="pagination-bar" id="paginationBar" aria-label="Pagination">
+                <button type="button" class="page-btn" id="prevPageBtn" aria-label="Previous page">
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <polyline points="10 3.5 5.5 8 10 12.5"></polyline>
+                    </svg>
+                </button>
+                <span class="pagination-info" id="paginationInfo">1 / 1</span>
+                <button type="button" class="page-btn" id="nextPageBtn" aria-label="Next page">
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <polyline points="6 3.5 10.5 8 6 12.5"></polyline>
+                    </svg>
+                </button>
+            </nav>
+        </main>
+    </div>
+
+    <!-- Problems View (toggled via top navigation bar) -->
+    <div class="app-layout" id="problemsView" hidden>
+        <aside class="sidebar" aria-label="Problem subjects directory">
+            <div class="sidebar-label">Subjects</div>
+            <div class="sidebar-search-wrap">
+                <input
+                    type="text"
+                    class="sidebar-search"
+                    id="problemSubjectSearch"
+                    placeholder="Filter subjects..."
+                    autocomplete="off"
+                    spellcheck="false"
+                    aria-label="Filter problem subjects"
+                >
+                <button type="button" class="search-clear" id="problemSearchClear" aria-label="Clear search query">&times;</button>
+            </div>
+            <nav class="subject-list" id="problemSubjectList"></nav>
+        </aside>
+
+        <main class="main-content">
+            <header>
+                <div class="header-row">
+                    <h1 class="breadcrumb-title">
+                        <button type="button" class="breadcrumb-root" id="problemBreadcrumbReset" title="View all problems">Problems</button>
+                        <span id="problemBreadcrumbDynamic" hidden><span class="breadcrumb-sep">/</span><span class="breadcrumb-subject" id="problemBreadcrumbSubject"></span></span>
+                    </h1>
+                    <button type="button" class="upload-link-btn" id="uploadProblemBtn">Upload</button>
+                </div>
+                <hr class="divider">
+            </header>
+
+            <section class="file-list" id="problemFileList" aria-label="Problems PDF files list"></section>
+
+            <footer class="list-footer" aria-label="Sort problems by column">
+                <div>
+                    <button type="button" class="sort-btn" data-problem-sort="name" aria-label="Sort by file name">
+                        <span>File name</span>
+                        <svg class="sort-triangle" viewBox="0 0 10 10" aria-hidden="true">
+                            <polygon points="1,3 9,3 5,8" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="footer-topic">
+                    <button type="button" class="sort-btn" data-problem-sort="topic" aria-label="Sort by topic">
+                        <span>Topic</span>
+                        <svg class="sort-triangle" viewBox="0 0 10 10" aria-hidden="true">
+                            <polygon points="1,3 9,3 5,8" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="footer-due-date">
+                    <button type="button" class="sort-btn" data-problem-sort="date" aria-label="Sort by added date">
+                        <span>Added Date</span>
+                        <svg class="sort-triangle" viewBox="0 0 10 10" aria-hidden="true">
+                            <polygon points="1,3 9,3 5,8" />
+                        </svg>
+                    </button>
+                </div>
+                <button type="button" class="sort-btn footer-status" data-problem-sort="difficulty" aria-label="Sort by difficulty">
+                    <span>Difficulty</span>
+                    <svg class="sort-triangle" viewBox="0 0 10 10" aria-hidden="true">
+                        <polygon points="1,3 9,3 5,8" />
+                    </svg>
+                </button>
+            </footer>
+
+            <nav class="pagination-bar" id="problemPaginationBar" aria-label="Problems pagination">
+                <button type="button" class="page-btn" id="problemPrevPageBtn" aria-label="Previous page">
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <polyline points="10 3.5 5.5 8 10 12.5"></polyline>
+                    </svg>
+                </button>
+                <span class="pagination-info" id="problemPaginationInfo">1 / 1</span>
+                <button type="button" class="page-btn" id="problemNextPageBtn" aria-label="Next page">
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <polyline points="6 3.5 10.5 8 6 12.5"></polyline>
+                    </svg>
+                </button>
+            </nav>
+        </main>
+    </div>
+
+    <!-- Compact Vintage Mac OS X Upload Modal -->
+    <div class="modal-backdrop" id="uploadModalBackdrop" aria-hidden="true">
+        <div class="apple-modal" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle">
+            <h2 class="modal-breadcrumb" id="uploadModalTitle">
+                <span id="modalPathRoot">Sources</span><span class="sep">/</span><input
+                    type="text"
+                    class="path-inline-input path-subject-input"
+                    id="modalPathSubjectInput"
+                    list="modalSubjectsDatalist"
+                    placeholder="subject"
+                    autocomplete="off"
+                    spellcheck="false"
+                    aria-label="Subject in path"
+                ><span class="sep">/</span><input
+                    type="text"
+                    class="path-inline-input path-filename-input"
+                    id="modalPathFileNameInput"
+                    placeholder="new-file.pdf"
+                    autocomplete="off"
+                    spellcheck="false"
+                    aria-label="File name in path"
+                >
+            </h2>
+            <datalist id="modalSubjectsDatalist"></datalist>
+
+            <form id="uploadPdfForm" novalidate>
+                <div class="modal-field">
+                    <label class="modal-label" for="modalBrowseBtn">Select PDF</label>
+                    <div class="classic-browse-row">
+                        <button type="button" class="classic-aqua-btn" id="modalBrowseBtn">Browse...</button>
+                        <span class="classic-file-status" id="modalFileStatus">No file selected</span>
+                        <input type="file" id="pdfFileInput" accept="application/pdf,.pdf" hidden>
+                    </div>
+                </div>
+
+                <div class="modal-field">
+                    <label class="modal-label" for="modalTopicInput">Topic</label>
+                    <input
+                        type="text"
+                        class="classic-input"
+                        id="modalTopicInput"
+                        placeholder="Topic"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="modal-field" id="modalDifficultyField" hidden>
+                    <label class="modal-label" for="modalDifficultySelect">Difficulty</label>
+                    <select class="classic-input" id="modalDifficultySelect">
+                        <option value="easy">Easy</option>
+                        <option value="med" selected>Med</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+
+                <div class="modal-field">
+                    <label class="modal-label" id="modalDateLabel" for="modalDueDateInput">Due date</label>
+                    <input
+                        type="text"
+                        class="classic-input"
+                        id="modalDueDateInput"
+                        placeholder="DD/MM/YYYY"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="modal-error" id="modalErrorMsg" role="alert"></div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="classic-aqua-btn is-primary">Save</button>
+                    <button type="button" class="classic-cancel-link" id="modalCancelBtn">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Full-Screen Apple PDF Viewer Page (100vw x 100vh) -->
+    <section class="pdf-fullscreen-page" id="pdfViewerPage" aria-hidden="true" aria-label="Full screen PDF reader">
+        <header class="pdf-viewer-toolbar">
+            <div class="pdf-viewer-left">
+                <button type="button" class="viewer-back-btn" id="viewerBackBtn" title="Back to Sources">
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <polyline points="10 3.5 5.5 8 10 12.5"></polyline>
+                    </svg>
+                    <span>Back</span>
+                </button>
+                <span class="viewer-toolbar-divider" aria-hidden="true"></span>
+                <div class="pdf-viewer-meta">
+                    <div class="pdf-viewer-path" id="pdfViewerTitle"></div>
+                    <div class="pdf-viewer-sub" id="pdfViewerSub"></div>
+                </div>
+            </div>
+
+            <!-- Pages & Zoom Controls -->
+            <div class="pdf-viewer-controls" aria-label="Document navigation and zoom">
+                <div class="viewer-control-group" title="Page navigation">
+                    <button type="button" class="viewer-ctrl-btn" id="viewerPrevPageBtn" aria-label="Previous PDF page">
+                        <svg viewBox="0 0 16 16"><polyline points="10 3.5 5.5 8 10 12.5"></polyline></svg>
+                    </button>
+                    <span class="viewer-ctrl-label" id="viewerPageLabel">1 / 3</span>
+                    <button type="button" class="viewer-ctrl-btn" id="viewerNextPageBtn" aria-label="Next PDF page">
+                        <svg viewBox="0 0 16 16"><polyline points="6 3.5 10.5 8 6 12.5"></polyline></svg>
+                    </button>
+                </div>
+
+                <span class="viewer-controls-divider" aria-hidden="true"></span>
+
+                <div class="viewer-control-group" title="Zoom level (Ctrl + Scroll)">
+                    <button type="button" class="viewer-ctrl-btn" id="viewerZoomOutBtn" aria-label="Zoom out">&minus;</button>
+                    <span class="viewer-ctrl-label" id="viewerZoomLabel">100%</span>
+                    <button type="button" class="viewer-ctrl-btn" id="viewerZoomInBtn" aria-label="Zoom in">+</button>
+                </div>
+
+                <span class="viewer-controls-divider" aria-hidden="true"></span>
+
+                <button type="button" class="viewer-tool-btn" id="viewerSelectAreaBtn" aria-pressed="false" title="Select area on PDF">Select area</button>
+            </div>
+
+            <div class="pdf-viewer-actions">
+                <button type="button" class="badge viewer-status-toggle" id="viewerStatusToggle" title="Click to toggle completion status"></button>
+                <button type="button" class="viewer-link-action is-active" id="viewerNotesToggleBtn" aria-expanded="true" title="Toggle floating notes window">Notes</button>
+                <a class="viewer-link-action is-primary" id="viewerDownloadBtn" download>Download</a>
+            </div>
+        </header>
+        <div class="pdf-viewer-body" id="pdfViewerBody">
+            <div class="pdf-canvas-viewport" id="pdfCanvasViewport" tabindex="0" aria-label="PDF document pages"></div>
+            <div class="pdf-area-selection-box" id="pdfAreaSelectionBox" aria-hidden="true"></div>
+            <aside class="pdf-notes-pane" id="pdfNotesPane" aria-label="Floating document notes">
+                <div class="pdf-notes-header" id="pdfNotesHeader" title="Drag to move window">
+                    <div class="pdf-notes-header-left">
+                        <button type="button" class="pdf-notes-close" id="pdfNotesCloseBtn" aria-label="Close notes window" title="Close Notes"></button>
+                        <span class="pdf-notes-title">Notes</span>
+                    </div>
+                    <span class="pdf-notes-saved" id="pdfNotesSavedLabel">Saved</span>
+                </div>
+                <textarea
+                    class="pdf-notes-textarea"
+                    id="pdfNotesTextarea"
+                    placeholder="Write your notes, key formulas, or page references for this PDF..."
+                    spellcheck="false"
+                ></textarea>
+                <span class="pdf-notes-resize-grip" aria-hidden="true"></span>
+            </aside>
+        </div>
+    </section>
+
+    <script>
+        (function () {
+            // Configurable number of PDF items per page
+            const PAGE_SIZE = 10;
+
+            // 52 lowercase English academic subjects for sidebar navigation and instant filtering
+            const SUBJECTS = [
+                "math", "physics", "chemistry", "ielts",
+                "computer-science", "algorithms", "data-structures", "linear-algebra",
+                "calculus", "differential-equations", "probability", "statistics",
+                "discrete-math", "number-theory", "geometry", "mechanics",
+                "electromagnetism", "thermodynamics", "quantum-physics", "optics",
+                "organic-chemistry", "inorganic-chemistry", "physical-chemistry", "analytical-chemistry",
+                "biochemistry", "mechatronics", "control-systems", "robotics",
+                "embedded-systems", "microcontrollers", "circuit-analysis", "digital-logic",
+                "signal-processing", "materials-science", "fluid-mechanics", "machine-learning",
+                "deep-learning", "natural-language", "computer-vision", "operating-systems",
+                "databases", "computer-networks", "web-development", "software-engineering",
+                "economics", "microeconomics", "macroeconomics", "philosophy",
+                "academic-writing", "reading-comprehension", "speaking-practice", "logic"
+            ];
+
+            // Primary sample PDF files (includes 14 files in 'math' and 32 total across key subjects)
+            const PRIMARY_FILES = [
+                { name: "Calculus_12_Chapter_1_Limits.pdf", topic: "Limits & Continuity", subject: "math", dueDate: "18/11/2026", done: true },
+                { name: "Calculus_12_Chapter_2_Derivatives.pdf", topic: "Differentiation", subject: "math", dueDate: "19/11/2026", done: true },
+                { name: "Combinatorics_and_Probability.pdf", topic: "Combinatorics", subject: "math", dueDate: "20/11/2026", done: false },
+                { name: "Analytic_Geometry_3D_Vectors.pdf", topic: "3D Vectors", subject: "math", dueDate: "21/11/2026", done: true },
+                { name: "Complex_Numbers_Problem_Set.pdf", topic: "Complex Plane", subject: "math", dueDate: "23/11/2026", done: false },
+                { name: "Definite_Integrals_Applications.pdf", topic: "Integration", subject: "math", dueDate: "24/11/2026", done: true },
+                { name: "Logarithmic_and_Exponential_Functions.pdf", topic: "Transcendental", subject: "math", dueDate: "26/11/2026", done: false },
+                { name: "Sequences_and_Series_Convergence.pdf", topic: "Infinite Series", subject: "math", dueDate: "28/11/2026", done: true },
+                { name: "Euclidean_Solid_Geometry_Volumes.pdf", topic: "Solid Geometry", subject: "math", dueDate: "29/11/2026", done: false },
+                { name: "Trigonometric_Identities_Workshop.pdf", topic: "Trigonometry", subject: "math", dueDate: "01/12/2026", done: true },
+                { name: "Matrices_and_Determinants_Review.pdf", topic: "Matrix Theory", subject: "math", dueDate: "03/12/2026", done: false },
+                { name: "Differential_Calculus_Optimization.pdf", topic: "Optimization", subject: "math", dueDate: "05/12/2026", done: true },
+                { name: "Multivariable_Partial_Derivatives.pdf", topic: "Multivariable", subject: "math", dueDate: "07/12/2026", done: false },
+                { name: "Vector_Spaces_and_Basis_Proofs.pdf", topic: "Vector Spaces", subject: "math", dueDate: "09/12/2026", done: true },
+                { name: "Mechanical_Oscillations_Waves.pdf", topic: "Harmonic Motion", subject: "physics", dueDate: "22/11/2026", done: true },
+                { name: "AC_Circuits_Advanced.pdf", topic: "AC Resonance", subject: "physics", dueDate: "25/11/2026", done: false },
+                { name: "Electromagnetic_Induction_Notes.pdf", topic: "Faraday's Law", subject: "physics", dueDate: "02/12/2026", done: true },
+                { name: "Quantum_Mechanics_Wavefunctions.pdf", topic: "Wave Mechanics", subject: "physics", dueDate: "11/12/2026", done: false },
+                { name: "Organic_Chemistry_Esters_Lipids.pdf", topic: "Esters & Lipids", subject: "chemistry", dueDate: "27/11/2026", done: true },
+                { name: "Inorganic_Chemistry_Electrolysis.pdf", topic: "Electrochemistry", subject: "chemistry", dueDate: "04/12/2026", done: false },
+                { name: "Chemical_Equilibrium_and_Kinetics.pdf", topic: "Reaction Kinetics", subject: "chemistry", dueDate: "13/12/2026", done: true },
+                { name: "IELTS_Writing_Task2_Templates.pdf", topic: "Argumentative Essay", subject: "ielts", dueDate: "30/11/2026", done: false },
+                { name: "IELTS_Reading_Academic_Practice.pdf", topic: "Matching Headings", subject: "ielts", dueDate: "06/12/2026", done: true },
+                { name: "IELTS_Listening_Section4_Notes.pdf", topic: "Academic Lecture", subject: "ielts", dueDate: "15/12/2026", done: false },
+                { name: "Linear_Algebra_Eigenvalues.pdf", topic: "Spectral Theory", subject: "linear-algebra", dueDate: "08/12/2026", done: true },
+                { name: "Singular_Value_Decomposition.pdf", topic: "Matrix Factorization", subject: "linear-algebra", dueDate: "17/12/2026", done: false },
+                { name: "Algorithms_Dynamic_Programming.pdf", topic: "Memoization & DP", subject: "algorithms", dueDate: "10/12/2026", done: false },
+                { name: "Graph_Shortest_Paths_Dijkstra.pdf", topic: "Graph Traversal", subject: "algorithms", dueDate: "19/12/2026", done: true },
+                { name: "Embedded_ESP32_Drivers.pdf", topic: "Peripheral I/O", subject: "embedded-systems", dueDate: "12/12/2026", done: true },
+                { name: "Control_Systems_PID_Tuning.pdf", topic: "Feedback Loops", subject: "control-systems", dueDate: "14/12/2026", done: false },
+                { name: "Robotics_Inverse_Kinematics.pdf", topic: "Manipulator Arms", subject: "robotics", dueDate: "16/12/2026", done: true },
+                { name: "Data_Structures_Segment_Trees.pdf", topic: "Range Queries", subject: "data-structures", dueDate: "18/12/2026", done: false }
+            ];
+
+            // Generate consistent sample English PDF files for all remaining subjects
+            const ALL_FILES = [...PRIMARY_FILES];
+            SUBJECTS.forEach((subj, idx) => {
+                const existing = ALL_FILES.filter((f) => f.subject === subj);
+                if (existing.length === 0) {
+                    const titleWords = subj
+                        .split('-')
+                        .map((part) => part.charAt(0).toUpperCase() + part.slice(1));
+                    const slug = titleWords.join('_');
+                    const topicLabel = titleWords.join(' ');
+                    const day1 = String((idx % 25) + 1).padStart(2, '0');
+                    const day2 = String(((idx + 4) % 25) + 1).padStart(2, '0');
+                    const month = idx % 2 === 0 ? '11' : '12';
+
+                    ALL_FILES.push(
+                        { name: `${slug}_Lecture_Notes_01.pdf`, topic: `${topicLabel} Core`, subject: subj, dueDate: `${day1}/${month}/2026`, done: idx % 2 === 0 },
+                        { name: `${slug}_Problem_Set_Solutions.pdf`, topic: `${topicLabel} Practice`, subject: subj, dueDate: `${day2}/${month}/2026`, done: idx % 3 === 0 }
+                    );
+                }
+            });
+
+            // Compute document counts per subject
+            const subjectCounts = {};
+            SUBJECTS.forEach((subj) => {
+                subjectCounts[subj] = ALL_FILES.filter((f) => f.subject === subj).length;
+            });
+
+            // Sample Problems dataset (Added Date + Easy/Med/Hard difficulty)
+            const DIFFICULTIES = ['easy', 'med', 'hard'];
+            const DIFFICULTY_LABELS = { easy: 'Easy', med: 'Med', hard: 'Hard' };
+            const DIFFICULTY_RANK = { easy: 1, med: 2, hard: 3 };
+
+            const PRIMARY_PROBLEMS = [
+                { name: "Limits_Indeterminate_Forms_Set", topic: "Limits & Continuity", subject: "math", addedDate: "02/11/2026", difficulty: "easy", isProblem: true },
+                { name: "Derivative_Parametric_Extrema", topic: "Differentiation", subject: "math", addedDate: "03/11/2026", difficulty: "hard", isProblem: true },
+                { name: "Counting_Principles_Olympiad", topic: "Combinatorics", subject: "math", addedDate: "04/11/2026", difficulty: "med", isProblem: true },
+                { name: "3D_Line_Plane_Intersection", topic: "3D Vectors", subject: "math", addedDate: "05/11/2026", difficulty: "easy", isProblem: true },
+                { name: "Complex_Locus_Minimum_Modulus", topic: "Complex Plane", subject: "math", addedDate: "06/11/2026", difficulty: "hard", isProblem: true },
+                { name: "Area_Between_Curves_Drills", topic: "Integration", subject: "math", addedDate: "07/11/2026", difficulty: "easy", isProblem: true },
+                { name: "Exponential_Equation_Parameters", topic: "Transcendental", subject: "math", addedDate: "08/11/2026", difficulty: "med", isProblem: true },
+                { name: "Series_Convergence_Tests_Mix", topic: "Infinite Series", subject: "math", addedDate: "09/11/2026", difficulty: "med", isProblem: true },
+                { name: "Pyramid_Inscribed_Sphere_Problems", topic: "Solid Geometry", subject: "math", addedDate: "10/11/2026", difficulty: "hard", isProblem: true },
+                { name: "Trig_Equations_Interval_Roots", topic: "Trigonometry", subject: "math", addedDate: "11/11/2026", difficulty: "easy", isProblem: true },
+                { name: "Eigenvalue_Diagonalization_Set", topic: "Matrix Theory", subject: "math", addedDate: "12/11/2026", difficulty: "med", isProblem: true },
+                { name: "Constrained_Optimization_Lagrange", topic: "Optimization", subject: "math", addedDate: "14/11/2026", difficulty: "hard", isProblem: true },
+                { name: "Damped_Harmonic_Motion_Problems", topic: "Harmonic Motion", subject: "physics", addedDate: "04/11/2026", difficulty: "med", isProblem: true },
+                { name: "RLC_Series_Resonance_Drills", topic: "AC Resonance", subject: "physics", addedDate: "07/11/2026", difficulty: "hard", isProblem: true },
+                { name: "Magnetic_Flux_Rod_Sliding", topic: "Faraday's Law", subject: "physics", addedDate: "11/11/2026", difficulty: "easy", isProblem: true },
+                { name: "Ester_Hydrolysis_Stoichiometry", topic: "Esters & Lipids", subject: "chemistry", addedDate: "05/11/2026", difficulty: "med", isProblem: true },
+                { name: "Electrolysis_Solution_Mass_Change", topic: "Electrochemistry", subject: "chemistry", addedDate: "12/11/2026", difficulty: "hard", isProblem: true },
+                { name: "IELTS_Task2_Opinion_Prompts", topic: "Argumentative Essay", subject: "ielts", addedDate: "06/11/2026", difficulty: "easy", isProblem: true },
+                { name: "IELTS_TFNG_Inference_Drills", topic: "Matching Headings", subject: "ielts", addedDate: "13/11/2026", difficulty: "med", isProblem: true },
+                { name: "Tree_Rerooting_DP_Contest_Set", topic: "Memoization & DP", subject: "algorithms", addedDate: "09/11/2026", difficulty: "hard", isProblem: true },
+                { name: "Lazy_Segment_Tree_Range_Updates", topic: "Range Queries", subject: "data-structures", addedDate: "13/11/2026", difficulty: "hard", isProblem: true }
+            ];
+
+            const ALL_PROBLEMS = [...PRIMARY_PROBLEMS];
+            SUBJECTS.forEach((subj, idx) => {
+                const existing = ALL_PROBLEMS.filter((p) => p.subject === subj);
+                if (existing.length === 0) {
+                    const titleWords = subj
+                        .split('-')
+                        .map((part) => part.charAt(0).toUpperCase() + part.slice(1));
+                    const slug = titleWords.join('_');
+                    const topicLabel = titleWords.join(' ');
+                    const day1 = String((idx % 14) + 1).padStart(2, '0');
+                    const day2 = String(((idx + 3) % 14) + 1).padStart(2, '0');
+
+                    ALL_PROBLEMS.push(
+                        { name: `${slug}_Practice_Set_A`, topic: `${topicLabel} Drills`, subject: subj, addedDate: `${day1}/11/2026`, difficulty: DIFFICULTIES[idx % 3], isProblem: true },
+                        { name: `${slug}_Challenge_Problems`, topic: `${topicLabel} Mastery`, subject: subj, addedDate: `${day2}/11/2026`, difficulty: DIFFICULTIES[(idx + 1) % 3], isProblem: true }
+                    );
+                }
+            });
+
+            const problemSubjectCounts = {};
+            SUBJECTS.forEach((subj) => {
+                problemSubjectCounts[subj] = ALL_PROBLEMS.filter((p) => p.subject === subj).length;
+            });
+
+            let activeWorkspaceTab = 'sources';
+
+            // Navigation bar tab switching (Switches view cleanly without hyperlink styling)
+            const navItems = document.querySelectorAll('.top-nav-item[data-nav-target]');
+            const sourcesViewEl = document.getElementById('sourcesView');
+            const problemsViewEl = document.getElementById('problemsView');
+
+            function switchWorkspacePage(target, updateHash = true) {
+                activeWorkspaceTab = target === 'problems' ? 'problems' : 'sources';
+                navItems.forEach((nav) => {
+                    nav.classList.toggle('is-active', nav.dataset.navTarget === activeWorkspaceTab);
+                });
+                sourcesViewEl.hidden = activeWorkspaceTab !== 'sources';
+                problemsViewEl.hidden = activeWorkspaceTab !== 'problems';
+                document.title = activeWorkspaceTab === 'sources' ? 'Sources' : 'Problems';
+                window.scrollTo({ top: 0, behavior: 'instant' });
+
+                if (updateHash && window.location.hash !== `#${activeWorkspaceTab}`) {
+                    history.replaceState(null, '', `#${activeWorkspaceTab}`);
+                }
+            }
+
+            navItems.forEach((item) => {
+                item.addEventListener('click', () => {
+                    const target = item.dataset.navTarget;
+                    switchWorkspacePage(target, true);
+                    if (target === 'sources') {
+                        selectSubject('all');
+                    } else if (target === 'problems') {
+                        selectProblemSubject('all');
+                    }
+                });
+            });
+
+            window.addEventListener('hashchange', () => {
+                const hashTarget = window.location.hash.replace('#', '');
+                if (hashTarget === 'problems' || hashTarget === 'sources') {
+                    switchWorkspacePage(hashTarget, false);
+                }
+            });
+
+            const subjectListEl = document.getElementById('subjectList');
+            const subjectSearchEl = document.getElementById('subjectSearch');
+            const searchClearEl = document.getElementById('searchClear');
+            const breadcrumbResetEl = document.getElementById('breadcrumbReset');
+            const breadcrumbDynamicEl = document.getElementById('breadcrumbDynamic');
+            const breadcrumbSubjectEl = document.getElementById('breadcrumbSubject');
+            const fileListEl = document.getElementById('fileList');
+            const sortButtons = document.querySelectorAll('.sort-btn');
+            const paginationBarEl = document.getElementById('paginationBar');
+            const paginationInfoEl = document.getElementById('paginationInfo');
+            const prevPageBtn = document.getElementById('prevPageBtn');
+            const nextPageBtn = document.getElementById('nextPageBtn');
+            const uploadPdfBtn = document.getElementById('uploadPdfBtn');
+
+            // Problems tab DOM elements
+            const problemSubjectListEl = document.getElementById('problemSubjectList');
+            const problemSubjectSearchEl = document.getElementById('problemSubjectSearch');
+            const problemSearchClearEl = document.getElementById('problemSearchClear');
+            const problemBreadcrumbResetEl = document.getElementById('problemBreadcrumbReset');
+            const problemBreadcrumbDynamicEl = document.getElementById('problemBreadcrumbDynamic');
+            const problemBreadcrumbSubjectEl = document.getElementById('problemBreadcrumbSubject');
+            const problemFileListEl = document.getElementById('problemFileList');
+            const problemSortButtons = document.querySelectorAll('[data-problem-sort]');
+            const problemPaginationBarEl = document.getElementById('problemPaginationBar');
+            const problemPaginationInfoEl = document.getElementById('problemPaginationInfo');
+            const problemPrevPageBtn = document.getElementById('problemPrevPageBtn');
+            const problemNextPageBtn = document.getElementById('problemNextPageBtn');
+            const uploadProblemBtn = document.getElementById('uploadProblemBtn');
+
+            const pdfFileInput = document.getElementById('pdfFileInput');
+            const uploadModalBackdrop = document.getElementById('uploadModalBackdrop');
+            const modalPathRootEl = document.getElementById('modalPathRoot');
+            const modalPathSubjectInput = document.getElementById('modalPathSubjectInput');
+            const modalPathFileNameInput = document.getElementById('modalPathFileNameInput');
+            const modalSubjectsDatalist = document.getElementById('modalSubjectsDatalist');
+            const uploadPdfForm = document.getElementById('uploadPdfForm');
+            const modalBrowseBtn = document.getElementById('modalBrowseBtn');
+            const modalFileStatus = document.getElementById('modalFileStatus');
+            const modalTopicInput = document.getElementById('modalTopicInput');
+            const modalDifficultyField = document.getElementById('modalDifficultyField');
+            const modalDifficultySelect = document.getElementById('modalDifficultySelect');
+            const modalDateLabel = document.getElementById('modalDateLabel');
+            const modalDueDateInput = document.getElementById('modalDueDateInput');
+            const modalErrorMsg = document.getElementById('modalErrorMsg');
+            const modalCancelBtn = document.getElementById('modalCancelBtn');
+            const pdfViewerPage = document.getElementById('pdfViewerPage');
+            const pdfViewerTitle = document.getElementById('pdfViewerTitle');
+            const pdfViewerSub = document.getElementById('pdfViewerSub');
+            const viewerStatusToggle = document.getElementById('viewerStatusToggle');
+            const viewerNotesToggleBtn = document.getElementById('viewerNotesToggleBtn');
+            const pdfViewerBody = document.getElementById('pdfViewerBody');
+            const pdfNotesPane = document.getElementById('pdfNotesPane');
+            const pdfNotesHeader = document.getElementById('pdfNotesHeader');
+            const pdfNotesCloseBtn = document.getElementById('pdfNotesCloseBtn');
+            const pdfNotesTextarea = document.getElementById('pdfNotesTextarea');
+            const pdfNotesSavedLabel = document.getElementById('pdfNotesSavedLabel');
+            const viewerDownloadBtn = document.getElementById('viewerDownloadBtn');
+            const viewerBackBtn = document.getElementById('viewerBackBtn');
+            const pdfCanvasViewport = document.getElementById('pdfCanvasViewport');
+            const viewerPrevPageBtn = document.getElementById('viewerPrevPageBtn');
+            const viewerNextPageBtn = document.getElementById('viewerNextPageBtn');
+            const viewerPageLabel = document.getElementById('viewerPageLabel');
+            const viewerZoomOutBtn = document.getElementById('viewerZoomOutBtn');
+            const viewerZoomInBtn = document.getElementById('viewerZoomInBtn');
+            const viewerZoomLabel = document.getElementById('viewerZoomLabel');
+            const viewerSelectAreaBtn = document.getElementById('viewerSelectAreaBtn');
+            const pdfAreaSelectionBox = document.getElementById('pdfAreaSelectionBox');
+
+            // Populate datalist suggestions for the inline subject path input
+            function refreshSubjectDatalist() {
+                modalSubjectsDatalist.innerHTML = SUBJECTS
+                    .map((subj) => `<option value="${subj}"></option>`)
+                    .join('');
+            }
+            refreshSubjectDatalist();
+
+            let activeSubject = 'all';
+            let searchQuery = '';
+            let sortKey = null;
+            let sortDir = 'asc';
+            let currentPage = 1;
+
+            // Problems view state
+            let activeProblemSubject = 'all';
+            let problemSearchQuery = '';
+            let problemSortKey = null;
+            let problemSortDir = 'asc';
+            let problemCurrentPage = 1;
+            let uploadTargetMode = 'sources';
+
+            let activeViewingFile = null;
+            let isNotesOpen = true;
+            let viewerCurrentPage = 1;
+            let viewerTotalPages = 3;
+            let viewerZoomLevel = 100;
+            let activePdfDoc = null;
+            let renderSequenceId = 0;
+            let isSelectAreaMode = false;
+
+            if (window.pdfjsLib) {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            }
+
+            function parseDateDMY(dateStr) {
+                const [day, month, year] = dateStr.split('/').map(Number);
+                return new Date(year, month - 1, day).getTime();
+            }
+
+            // Generate a multi-page (3 pages) self-contained PDF Blob URL for sample records
+            function buildSamplePdfBlobUrl(file) {
+                if (file.blobUrl) {
+                    if (!file.pageCount) file.pageCount = 3;
+                    return file.blobUrl;
+                }
+
+                const sanitize = (str) => String(str)
+                    .replace(/[^\x20-\x7E]/g, '-')
+                    .replace(/\\/g, '\\\\')
+                    .replace(/\(/g, '\\(')
+                    .replace(/\)/g, '\\)');
+
+                const title = sanitize(file.name);
+                const rootLabel = file.isProblem ? 'Problems' : 'Sources';
+                const pathLine = sanitize(`${rootLabel} / ${file.subject} / ${file.name}`);
+                const topicLine = sanitize(`Topic: ${file.topic}`);
+                const dueLine = file.isProblem
+                    ? sanitize(`Added Date: ${file.addedDate}`)
+                    : sanitize(`Due Date: ${file.dueDate}`);
+                const statusLine = file.isProblem
+                    ? sanitize(`Difficulty: ${DIFFICULTY_LABELS[file.difficulty] || 'Med'}`)
+                    : sanitize(`Status: ${file.done ? 'Completed' : 'Pending'}`);
+
+                const page1Stream = [
+                    'BT',
+                    '/F2 11 Tf 56 770 Td (APPLE ARCHIVE  -  PAGE 1 OF 3) Tj',
+                    '/F1 18 Tf 0 -30 Td (' + title + ') Tj',
+                    'ET',
+                    '0.82 0.82 0.84 RG 1 w 56 726 m 556 726 l S',
+                    'BT',
+                    '/F2 11 Tf 56 704 Td (Path: ' + pathLine + ') Tj',
+                    '0 -20 Td (' + topicLine + ') Tj',
+                    '0 -20 Td (' + dueLine + ') Tj',
+                    '0 -20 Td (' + statusLine + ') Tj',
+                    '/F1 12 Tf 0 -38 Td (1. Overview & Key Concepts) Tj',
+                    '/F2 10.5 Tf 0 -20 Td (This document is rendered inside the built-in browser PDF viewer.) Tj',
+                    '0 -17 Td (Use the Pages and Zoom controls in the dark toolbar above to navigate.) Tj',
+                    '/F1 12 Tf 0 -34 Td (2. Study Notes & Problem Outline) Tj',
+                    '/F2 10.5 Tf 0 -20 Td (- Review core definitions, theorems, and worked examples for ' + sanitize(file.topic) + '.) Tj',
+                    '0 -17 Td (- Complete practice exercises before ' + dueLine.replace('Due Date: ', '') + '.) Tj',
+                    '0 -17 Td (- Toggle status in the top toolbar once finished.) Tj',
+                    'ET'
+                ].join('\n');
+
+                const page2Stream = [
+                    'BT',
+                    '/F2 11 Tf 56 770 Td (APPLE ARCHIVE  -  PAGE 2 OF 3) Tj',
+                    '/F1 16 Tf 0 -28 Td (Core Formulas & Theoretical Framework) Tj',
+                    'ET',
+                    '0.82 0.82 0.84 RG 1 w 56 730 m 556 730 l S',
+                    'BT',
+                    '/F2 10.5 Tf 56 706 Td (Subject Area: ' + sanitize(file.subject) + '  |  Topic: ' + sanitize(file.topic) + ') Tj',
+                    '0 -26 Td (- Fundamental definitions, axioms, and boundary conditions.) Tj',
+                    '0 -18 Td (- Step-by-step derivation methodology and edge-case verification.) Tj',
+                    '0 -18 Td (- Cross-references to lecture handouts and problem sets.) Tj',
+                    'ET'
+                ].join('\n');
+
+                const page3Stream = [
+                    'BT',
+                    '/F2 11 Tf 56 770 Td (APPLE ARCHIVE  -  PAGE 3 OF 3) Tj',
+                    '/F1 16 Tf 0 -28 Td (Practice Exercises & Self-Assessment) Tj',
+                    'ET',
+                    '0.82 0.82 0.84 RG 1 w 56 730 m 556 730 l S',
+                    'BT',
+                    '/F2 10.5 Tf 56 706 Td (Checklist before ' + dueLine.replace('Due Date: ', '').replace('Added Date: ', '') + ':) Tj',
+                    '0 -24 Td (1. Solve standard drills and verify intermediate steps.) Tj',
+                    '0 -18 Td (2. Attempt synthesis problems under timed conditions.) Tj',
+                    '0 -18 Td (3. Record summary takeaways in the floating Notes window.) Tj',
+                    'ET'
+                ].join('\n');
+
+                const objects = [
+                    '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj',
+                    '2 0 obj\n<< /Type /Pages /Kids [3 0 R 4 0 R 5 0 R] /Count 3 >>\nendobj',
+                    '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Contents 6 0 R /Resources << /Font << /F1 9 0 R /F2 10 0 R >> >> >>\nendobj',
+                    '4 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Contents 7 0 R /Resources << /Font << /F1 9 0 R /F2 10 0 R >> >> >>\nendobj',
+                    '5 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Contents 8 0 R /Resources << /Font << /F1 9 0 R /F2 10 0 R >> >> >>\nendobj',
+                    `6 0 obj\n<< /Length ${page1Stream.length} >>\nstream\n${page1Stream}\nendstream\nendobj`,
+                    `7 0 obj\n<< /Length ${page2Stream.length} >>\nstream\n${page2Stream}\nendstream\nendobj`,
+                    `8 0 obj\n<< /Length ${page3Stream.length} >>\nstream\n${page3Stream}\nendstream\nendobj`,
+                    '9 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>\nendobj',
+                    '10 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj'
+                ];
+
+                let pdf = '%PDF-1.4\n';
+                const offsets = [0];
+                objects.forEach((obj) => {
+                    offsets.push(pdf.length);
+                    pdf += obj + '\n';
+                });
+
+                const xrefStart = pdf.length;
+                pdf += `xref\n0 ${objects.length + 1}\n`;
+                pdf += '0000000000 65535 f \n';
+                for (let i = 1; i < offsets.length; i++) {
+                    pdf += String(offsets[i]).padStart(10, '0') + ' 00000 n \n';
+                }
+                pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+
+                const blob = new Blob([pdf], { type: 'application/pdf' });
+                file.blobUrl = URL.createObjectURL(blob);
+                file.pageCount = 3;
+                return file.blobUrl;
+            }
+
+            // Render left sidebar subject list
+            function renderSidebar() {
+                const query = searchQuery.trim().toLowerCase();
+                const matchedSubjects = SUBJECTS.filter((subj) => subj.includes(query));
+
+                let html = '';
+
+                if (!query || 'all'.includes(query)) {
+                    html += `
+                        <button type="button" class="subject-item ${activeSubject === 'all' ? 'is-active' : ''}" data-subject="all">
+                            <span class="subject-name">All</span>
+                            <span class="subject-count">${ALL_FILES.length}</span>
+                        </button>
+                    `;
+                }
+
+                matchedSubjects.forEach((subj) => {
+                    html += `
+                        <button type="button" class="subject-item ${activeSubject === subj ? 'is-active' : ''}" data-subject="${subj}">
+                            <span class="subject-name">${subj}</span>
+                            <span class="subject-count">${subjectCounts[subj]}</span>
+                        </button>
+                    `;
+                });
+
+                if (html === '') {
+                    html = `<div class="sidebar-empty">No subjects found</div>`;
+                }
+
+                subjectListEl.innerHTML = html;
+            }
+
+            // Render right PDF file list with sorting and pagination
+            function renderFiles() {
+                let items = activeSubject === 'all'
+                    ? [...PRIMARY_FILES]
+                    : ALL_FILES.filter((file) => file.subject === activeSubject);
+
+                if (sortKey) {
+                    items.sort((a, b) => {
+                        let comparison = 0;
+                        if (sortKey === 'name') {
+                            comparison = a.name.localeCompare(b.name, 'en');
+                        } else if (sortKey === 'topic') {
+                            comparison = a.topic.localeCompare(b.topic, 'en');
+                        } else if (sortKey === 'date') {
+                            comparison = parseDateDMY(a.dueDate) - parseDateDMY(b.dueDate);
+                        } else if (sortKey === 'status') {
+                            comparison = (a.done ? 1 : 0) - (b.done ? 1 : 0);
+                        }
+                        return sortDir === 'asc' ? comparison : -comparison;
+                    });
+                }
+
+                if (items.length === 0) {
+                    fileListEl.innerHTML = `<div class="sidebar-empty" style="padding: 18px 10px;">No files in this subject</div>`;
+                    paginationBarEl.hidden = true;
+                    return;
+                }
+
+                const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+                if (currentPage > totalPages) currentPage = totalPages;
+                if (currentPage < 1) currentPage = 1;
+
+                const startIdx = (currentPage - 1) * PAGE_SIZE;
+                const paginatedItems = items.slice(startIdx, startIdx + PAGE_SIZE);
+
+                fileListEl.innerHTML = paginatedItems.map((file, idx) => `
+                    <a class="file-row" href="${file.name}" data-file-index="${startIdx + idx}">
+                        <div class="file-info">
+                            <span class="filename">${file.name}</span>
+                        </div>
+                        <span class="topic-cell">${file.topic}</span>
+                        <span class="due-date">${file.dueDate}</span>
+                        <div class="status-cell">
+                            <span class="badge ${file.done ? 'badge-done' : 'badge-pending'}">
+                                ${file.done ? 'Completed' : 'Pending'}
+                            </span>
+                        </div>
+                    </a>
+                `).join('');
+
+                // Store currently filtered & sorted items for quick row click lookup
+                fileListEl._currentItems = items;
+
+                // Update pagination bar visibility, status text, and button boundaries
+                paginationBarEl.hidden = totalPages <= 1;
+                paginationInfoEl.textContent = `${currentPage} / ${totalPages}`;
+                prevPageBtn.disabled = currentPage <= 1;
+                nextPageBtn.disabled = currentPage >= totalPages;
+            }
+
+            // Render Problems left sidebar subject list
+            function renderProblemSidebar() {
+                const query = problemSearchQuery.trim().toLowerCase();
+                const matchedSubjects = SUBJECTS.filter((subj) => subj.includes(query));
+
+                let html = '';
+
+                if (!query || 'all'.includes(query)) {
+                    html += `
+                        <button type="button" class="subject-item ${activeProblemSubject === 'all' ? 'is-active' : ''}" data-subject="all">
+                            <span class="subject-name">All</span>
+                            <span class="subject-count">${ALL_PROBLEMS.length}</span>
+                        </button>
+                    `;
+                }
+
+                matchedSubjects.forEach((subj) => {
+                    html += `
+                        <button type="button" class="subject-item ${activeProblemSubject === subj ? 'is-active' : ''}" data-subject="${subj}">
+                            <span class="subject-name">${subj}</span>
+                            <span class="subject-count">${problemSubjectCounts[subj] || 0}</span>
+                        </button>
+                    `;
+                });
+
+                if (html === '') {
+                    html = `<div class="sidebar-empty">No subjects found</div>`;
+                }
+
+                problemSubjectListEl.innerHTML = html;
+            }
+
+            // Render Problems right 4-column file list (Added Date + Easy/Med/Hard)
+            function renderProblems() {
+                let items = activeProblemSubject === 'all'
+                    ? [...PRIMARY_PROBLEMS]
+                    : ALL_PROBLEMS.filter((item) => item.subject === activeProblemSubject);
+
+                if (problemSortKey) {
+                    items.sort((a, b) => {
+                        let comparison = 0;
+                        if (problemSortKey === 'name') {
+                            comparison = a.name.localeCompare(b.name, 'en');
+                        } else if (problemSortKey === 'topic') {
+                            comparison = a.topic.localeCompare(b.topic, 'en');
+                        } else if (problemSortKey === 'date') {
+                            comparison = parseDateDMY(a.addedDate) - parseDateDMY(b.addedDate);
+                        } else if (problemSortKey === 'difficulty') {
+                            comparison = (DIFFICULTY_RANK[a.difficulty] || 0) - (DIFFICULTY_RANK[b.difficulty] || 0);
+                        }
+                        return problemSortDir === 'asc' ? comparison : -comparison;
+                    });
+                }
+
+                if (items.length === 0) {
+                    problemFileListEl.innerHTML = `<div class="sidebar-empty" style="padding: 18px 10px;">No problems in this subject</div>`;
+                    problemPaginationBarEl.hidden = true;
+                    return;
+                }
+
+                const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+                if (problemCurrentPage > totalPages) problemCurrentPage = totalPages;
+                if (problemCurrentPage < 1) problemCurrentPage = 1;
+
+                const startIdx = (problemCurrentPage - 1) * PAGE_SIZE;
+                const paginatedItems = items.slice(startIdx, startIdx + PAGE_SIZE);
+
+                problemFileListEl.innerHTML = paginatedItems.map((item, idx) => {
+                    const diffKey = item.difficulty || 'med';
+                    const diffLabel = DIFFICULTY_LABELS[diffKey] || 'Med';
+                    return `
+                        <a class="file-row" href="${item.name}" data-problem-index="${startIdx + idx}">
+                            <div class="file-info">
+                                <span class="filename">${item.name}</span>
+                            </div>
+                            <span class="topic-cell">${item.topic}</span>
+                            <span class="due-date">${item.addedDate}</span>
+                            <div class="status-cell">
+                                <span class="difficulty-text is-${diffKey}">${diffLabel}</span>
+                            </div>
+                        </a>
+                    `;
+                }).join('');
+
+                problemFileListEl._currentItems = items;
+
+                problemPaginationBarEl.hidden = totalPages <= 1;
+                problemPaginationInfoEl.textContent = `${problemCurrentPage} / ${totalPages}`;
+                problemPrevPageBtn.disabled = problemCurrentPage <= 1;
+                problemNextPageBtn.disabled = problemCurrentPage >= totalPages;
+            }
+
+            function syncViewerStatusBadge(file) {
+                if (file.isProblem) {
+                    const diffKey = file.difficulty || 'med';
+                    viewerStatusToggle.className = `viewer-status-toggle is-difficulty is-${diffKey}`;
+                    viewerStatusToggle.textContent = DIFFICULTY_LABELS[diffKey] || 'Med';
+                    viewerStatusToggle.title = 'Click to cycle difficulty (Easy / Med / Hard)';
+                } else {
+                    viewerStatusToggle.className = `badge viewer-status-toggle ${file.done ? 'badge-done' : 'badge-pending'}`;
+                    viewerStatusToggle.textContent = file.done ? 'Completed' : 'Pending';
+                    viewerStatusToggle.title = 'Click to toggle completion status';
+                }
+            }
+
+            function setViewerZoom(nextZoom) {
+                const clamped = Math.min(300, Math.max(25, Math.round(nextZoom)));
+                if (clamped === viewerZoomLevel) return;
+                viewerZoomLevel = clamped;
+                syncViewerToolbarUI();
+                renderAllPdfPages(true);
+            }
+
+            function scrollToPdfPage(pageNum) {
+                const targetPage = Math.min(viewerTotalPages, Math.max(1, pageNum));
+                viewerCurrentPage = targetPage;
+                syncViewerToolbarUI();
+                const sheet = pdfCanvasViewport.querySelector(`.pdf-page-sheet[data-page-number="${targetPage}"]`);
+                if (sheet) {
+                    sheet.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+
+            pdfCanvasViewport.addEventListener('scroll', () => {
+                const sheets = pdfCanvasViewport.querySelectorAll('.pdf-page-sheet');
+                if (!sheets.length) return;
+                const viewportCenter = pdfCanvasViewport.getBoundingClientRect().top + pdfCanvasViewport.clientHeight * 0.4;
+                let closestPage = viewerCurrentPage;
+                let minDistance = Infinity;
+
+                sheets.forEach((sheet) => {
+                    const rect = sheet.getBoundingClientRect();
+                    const dist = Math.abs(rect.top - viewportCenter);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        closestPage = Number(sheet.dataset.pageNumber);
+                    }
+                });
+
+                if (closestPage !== viewerCurrentPage) {
+                    viewerCurrentPage = closestPage;
+                    syncViewerToolbarUI();
+                }
+            });
+
+            pdfViewerPage.addEventListener('wheel', (e) => {
+                if (!activeViewingFile || !(e.ctrlKey || e.metaKey)) return;
+                e.preventDefault();
+                e.stopPropagation();
+                const step = e.deltaY < 0 ? 10 : -10;
+                setViewerZoom(viewerZoomLevel + step);
+            }, { passive: false });
+
+            window.addEventListener('keydown', (e) => {
+                if (!activeViewingFile || !(e.ctrlKey || e.metaKey)) return;
+                if (e.key === '=' || e.key === '+') {
+                    e.preventDefault();
+                    setViewerZoom(viewerZoomLevel + 15);
+                } else if (e.key === '-') {
+                    e.preventDefault();
+                    setViewerZoom(viewerZoomLevel - 15);
+                } else if (e.key === '0') {
+                    e.preventDefault();
+                    setViewerZoom(100);
+                }
+            });
+
+            // Open PDF document in a dedicated full-screen page (100vw x 100vh)
+            async function openPdfViewer(file) {
+                activeViewingFile = file;
+                const pdfUrl = buildSamplePdfBlobUrl(file);
+
+                viewerCurrentPage = 1;
+                viewerTotalPages = file.pageCount || 3;
+                viewerZoomLevel = 100;
+
+                const rootName = file.isProblem ? 'Problems' : 'Sources';
+                viewerBackBtn.title = `Back to ${rootName}`;
+                pdfViewerTitle.innerHTML = `${rootName}<span class="sep">/</span>${file.subject}<span class="sep">/</span>${file.name}`;
+                pdfViewerSub.textContent = file.isProblem
+                    ? `${file.topic}  ·  Added ${file.addedDate}`
+                    : `${file.topic}  ·  Due ${file.dueDate}`;
+                syncViewerStatusBadge(file);
+
+                pdfNotesTextarea.value = file.notes || '';
+                pdfNotesSavedLabel.textContent = file.notes ? 'Saved' : 'Empty';
+
+                viewerDownloadBtn.href = pdfUrl;
+                viewerDownloadBtn.download = file.name.toLowerCase().endsWith('.pdf') ? file.name : `${file.name}.pdf`;
+                pdfCanvasViewport.innerHTML = '';
+                syncViewerToolbarUI();
+
+                document.body.style.overflow = 'hidden';
+                pdfViewerPage.classList.add('is-open');
+                pdfViewerPage.setAttribute('aria-hidden', 'false');
+
+                if (window.pdfjsLib) {
+                    try {
+                        const loadingTask = pdfjsLib.getDocument(pdfUrl);
+                        activePdfDoc = await loadingTask.promise;
+                        if (activeViewingFile !== file) return;
+                        viewerTotalPages = activePdfDoc.numPages;
+                        file.pageCount = activePdfDoc.numPages;
+                        syncViewerToolbarUI();
+                        await renderAllPdfPages(false);
+                        pdfCanvasViewport.scrollTop = 0;
+                    } catch (err) {
+                        pdfCanvasViewport.innerHTML = `<div style="color:#d2d2d7;font-size:13px;padding:40px;">Unable to render PDF preview.</div>`;
+                    }
+                }
+            }
+
+            // Pages & Zoom event handlers
+            viewerPrevPageBtn.addEventListener('click', () => {
+                if (viewerCurrentPage > 1) {
+                    scrollToPdfPage(viewerCurrentPage - 1);
+                }
+            });
+
+            viewerNextPageBtn.addEventListener('click', () => {
+                if (viewerCurrentPage < viewerTotalPages) {
+                    scrollToPdfPage(viewerCurrentPage + 1);
+                }
+            });
+
+            viewerZoomOutBtn.addEventListener('click', () => {
+                setViewerZoom(viewerZoomLevel - 15);
+            });
+
+            viewerZoomInBtn.addEventListener('click', () => {
+                setViewerZoom(viewerZoomLevel + 15);
+            });
+
+            viewerStatusToggle.addEventListener('click', () => {
+                if (!activeViewingFile) return;
+                if (activeViewingFile.isProblem) {
+                    const currentIdx = DIFFICULTIES.indexOf(activeViewingFile.difficulty || 'med');
+                    activeViewingFile.difficulty = DIFFICULTIES[(currentIdx + 1) % DIFFICULTIES.length];
+                    syncViewerStatusBadge(activeViewingFile);
+                    renderProblems();
+                } else {
+                    activeViewingFile.done = !activeViewingFile.done;
+                    syncViewerStatusBadge(activeViewingFile);
+                    renderFiles();
+                }
+            });
+
+            function closePdfViewer() {
+                pdfViewerPage.classList.remove('is-open');
+                pdfViewerPage.setAttribute('aria-hidden', 'true');
+                pdfCanvasViewport.innerHTML = '';
+                document.body.style.overflow = '';
+                activePdfDoc = null;
+                activeViewingFile = null;
+                setSelectAreaMode(false);
+            }
+
+            viewerBackBtn.addEventListener('click', closePdfViewer);
+
+            function setSelectAreaMode(active) {
+                isSelectAreaMode = active;
+                viewerSelectAreaBtn.classList.toggle('is-active', isSelectAreaMode);
+                viewerSelectAreaBtn.setAttribute('aria-pressed', String(isSelectAreaMode));
+                pdfCanvasViewport.classList.toggle('is-selecting', isSelectAreaMode);
+                if (!isSelectAreaMode) {
+                    pdfAreaSelectionBox.style.display = 'none';
+                }
+            }
+
+            viewerSelectAreaBtn.addEventListener('click', () => {
+                setSelectAreaMode(!isSelectAreaMode);
+            });
+
+            let isDraggingArea = false;
+            let areaStartX = 0;
+            let areaStartY = 0;
+
+            pdfCanvasViewport.addEventListener('mousedown', (e) => {
+                if (!isSelectAreaMode || e.button !== 0) return;
+                const bodyRect = pdfViewerBody.getBoundingClientRect();
+                isDraggingArea = true;
+                areaStartX = e.clientX - bodyRect.left;
+                areaStartY = e.clientY - bodyRect.top;
+                pdfAreaSelectionBox.style.left = `${areaStartX}px`;
+                pdfAreaSelectionBox.style.top = `${areaStartY}px`;
+                pdfAreaSelectionBox.style.width = '0px';
+                pdfAreaSelectionBox.style.height = '0px';
+                pdfAreaSelectionBox.style.display = 'block';
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDraggingArea) return;
+                const bodyRect = pdfViewerBody.getBoundingClientRect();
+                const currentX = Math.min(Math.max(0, e.clientX - bodyRect.left), bodyRect.width);
+                const currentY = Math.min(Math.max(0, e.clientY - bodyRect.top), bodyRect.height);
+                const left = Math.min(areaStartX, currentX);
+                const top = Math.min(areaStartY, currentY);
+                const width = Math.abs(currentX - areaStartX);
+                const height = Math.abs(currentY - areaStartY);
+                pdfAreaSelectionBox.style.left = `${left}px`;
+                pdfAreaSelectionBox.style.top = `${top}px`;
+                pdfAreaSelectionBox.style.width = `${width}px`;
+                pdfAreaSelectionBox.style.height = `${height}px`;
+            });
+
+            window.addEventListener('mouseup', () => {
+                if (!isDraggingArea) return;
+                isDraggingArea = false;
+            });
+
+            // Open PDF viewer when clicking any PDF row in the list
+            fileListEl.addEventListener('click', (e) => {
+                const row = e.target.closest('.file-row');
+                if (!row) return;
+                e.preventDefault();
+                const idx = Number(row.dataset.fileIndex);
+                const items = fileListEl._currentItems || [];
+                const targetFile = items[idx];
+                if (targetFile) {
+                    openPdfViewer(targetFile);
+                }
+            });
+
+            // Open PDF viewer when clicking any Problem row
+            problemFileListEl.addEventListener('click', (e) => {
+                const row = e.target.closest('.file-row');
+                if (!row) return;
+                e.preventDefault();
+                const idx = Number(row.dataset.problemIndex);
+                const items = problemFileListEl._currentItems || [];
+                const targetProblem = items[idx];
+                if (targetProblem) {
+                    openPdfViewer(targetProblem);
+                }
+            });
+
+            // Toggle floating Notes window
+            function setNotesWindowOpen(open) {
+                isNotesOpen = open;
+                pdfNotesPane.classList.toggle('is-collapsed', !isNotesOpen);
+                viewerNotesToggleBtn.classList.toggle('is-active', isNotesOpen);
+                viewerNotesToggleBtn.setAttribute('aria-expanded', String(isNotesOpen));
+                if (isNotesOpen) {
+                    requestAnimationFrame(() => pdfNotesTextarea.focus());
+                }
+            }
+
+            viewerNotesToggleBtn.addEventListener('click', () => {
+                setNotesWindowOpen(!isNotesOpen);
+            });
+
+            pdfNotesCloseBtn.addEventListener('click', () => {
+                setNotesWindowOpen(false);
+            });
+
+            // Auto-save notes per PDF document
+            pdfNotesTextarea.addEventListener('input', () => {
+                if (!activeViewingFile) return;
+                activeViewingFile.notes = pdfNotesTextarea.value;
+                pdfNotesSavedLabel.textContent = activeViewingFile.notes.trim() ? 'Saved' : 'Empty';
+            });
+
+            // Draggable floating Notes window
+            let isDraggingNotes = false;
+            let notesDragOffsetX = 0;
+            let notesDragOffsetY = 0;
+
+            pdfNotesHeader.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.pdf-notes-close')) return;
+                isDraggingNotes = true;
+                const paneRect = pdfNotesPane.getBoundingClientRect();
+                const bodyRect = pdfViewerBody.getBoundingClientRect();
+                notesDragOffsetX = e.clientX - paneRect.left;
+                notesDragOffsetY = e.clientY - paneRect.top;
+                pdfNotesPane.style.right = 'auto';
+                pdfNotesPane.style.left = `${paneRect.left - bodyRect.left}px`;
+                pdfNotesPane.style.top = `${paneRect.top - bodyRect.top}px`;
+            });
+
+            window.addEventListener('mousemove', (e) => {
+                if (!isDraggingNotes) return;
+                const bodyRect = pdfViewerBody.getBoundingClientRect();
+                const paneRect = pdfNotesPane.getBoundingClientRect();
+                const maxLeft = Math.max(0, bodyRect.width - paneRect.width);
+                const maxTop = Math.max(0, bodyRect.height - paneRect.height);
+                const nextLeft = Math.min(Math.max(0, e.clientX - bodyRect.left - notesDragOffsetX), maxLeft);
+                const nextTop = Math.min(Math.max(0, e.clientY - bodyRect.top - notesDragOffsetY), maxTop);
+                pdfNotesPane.style.left = `${nextLeft}px`;
+                pdfNotesPane.style.top = `${nextTop}px`;
+            });
+
+            window.addEventListener('mouseup', () => {
+                isDraggingNotes = false;
+            });
+
+            // Update active subject, breadcrumb, and reset to page 1
+            function selectSubject(subject) {
+                activeSubject = subject;
+                currentPage = 1;
+
+                if (subject === 'all') {
+                    breadcrumbDynamicEl.hidden = true;
+                    breadcrumbSubjectEl.textContent = '';
+                } else {
+                    breadcrumbDynamicEl.hidden = false;
+                    breadcrumbSubjectEl.textContent = subject;
+                }
+
+                renderSidebar();
+                renderFiles();
+            }
+
+            // Ủy quyền sự kiện click cho các mục trong sidebar
+            subjectListEl.addEventListener('click', (e) => {
+                const btn = e.target.closest('.subject-item');
+                if (!btn) return;
+                selectSubject(btn.dataset.subject);
+            });
+
+            // Bấm vào "Sources" trên tiêu đề để quay về All
+            breadcrumbResetEl.addEventListener('click', () => {
+                selectSubject('all');
+            });
+
+            // Lọc tức thì khi gõ vào ô tìm kiếm bên trái
+            subjectSearchEl.addEventListener('input', (e) => {
+                searchQuery = e.target.value;
+                searchClearEl.classList.toggle('is-visible', searchQuery.length > 0);
+                renderSidebar();
+            });
+
+            searchClearEl.addEventListener('click', () => {
+                searchQuery = '';
+                subjectSearchEl.value = '';
+                searchClearEl.classList.remove('is-visible');
+                subjectSearchEl.focus();
+                renderSidebar();
+            });
+
+            // Sự kiện sắp xếp trên 4 nút footer
+            sortButtons.forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const key = btn.dataset.sort;
+                    if (sortKey === key) {
+                        sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        sortKey = key;
+                        sortDir = 'asc';
+                    }
+
+                    currentPage = 1;
+
+                    sortButtons.forEach((b) => {
+                        if (b.dataset.sort === sortKey) {
+                            b.classList.add('is-active');
+                            b.dataset.dir = sortDir;
+                        } else {
+                            b.classList.remove('is-active');
+                            b.removeAttribute('data-dir');
+                        }
+                    });
+
+                    renderFiles();
+                });
+            });
+
+            // Pagination Prev / Next controls
+            prevPageBtn.addEventListener('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    renderFiles();
+                }
+            });
+
+            nextPageBtn.addEventListener('click', () => {
+                currentPage++;
+                renderFiles();
+            });
+
+            // Problems subject selection, filtering, sorting, and pagination
+            function selectProblemSubject(subject) {
+                activeProblemSubject = subject;
+                problemCurrentPage = 1;
+
+                if (subject === 'all') {
+                    problemBreadcrumbDynamicEl.hidden = true;
+                    problemBreadcrumbSubjectEl.textContent = '';
+                } else {
+                    problemBreadcrumbDynamicEl.hidden = false;
+                    problemBreadcrumbSubjectEl.textContent = subject;
+                }
+
+                renderProblemSidebar();
+                renderProblems();
+            }
+
+            problemSubjectListEl.addEventListener('click', (e) => {
+                const btn = e.target.closest('.subject-item');
+                if (!btn) return;
+                selectProblemSubject(btn.dataset.subject);
+            });
+
+            problemBreadcrumbResetEl.addEventListener('click', () => {
+                selectProblemSubject('all');
+            });
+
+            problemSubjectSearchEl.addEventListener('input', (e) => {
+                problemSearchQuery = e.target.value;
+                problemSearchClearEl.classList.toggle('is-visible', problemSearchQuery.length > 0);
+                renderProblemSidebar();
+            });
+
+            problemSearchClearEl.addEventListener('click', () => {
+                problemSearchQuery = '';
+                problemSubjectSearchEl.value = '';
+                problemSearchClearEl.classList.remove('is-visible');
+                problemSubjectSearchEl.focus();
+                renderProblemSidebar();
+            });
+
+            problemSortButtons.forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const key = btn.dataset.problemSort;
+                    if (problemSortKey === key) {
+                        problemSortDir = problemSortDir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        problemSortKey = key;
+                        problemSortDir = 'asc';
+                    }
+
+                    problemCurrentPage = 1;
+
+                    problemSortButtons.forEach((b) => {
+                        if (b.dataset.problemSort === problemSortKey) {
+                            b.classList.add('is-active');
+                            b.dataset.dir = problemSortDir;
+                        } else {
+                            b.classList.remove('is-active');
+                            b.removeAttribute('data-dir');
+                        }
+                    });
+
+                    renderProblems();
+                });
+            });
+
+            problemPrevPageBtn.addEventListener('click', () => {
+                if (problemCurrentPage > 1) {
+                    problemCurrentPage--;
+                    renderProblems();
+                }
+            });
+
+            problemNextPageBtn.addEventListener('click', () => {
+                problemCurrentPage++;
+                renderProblems();
+            });
+
+            // Open compact vintage Mac OS X upload modal
+            function openUploadModal(mode = 'sources') {
+                uploadTargetMode = mode;
+                const isProblemMode = mode === 'problems';
+                const currentSubj = isProblemMode ? activeProblemSubject : activeSubject;
+                const defaultSubject = currentSubj === 'all' ? 'math' : currentSubj;
+
+                uploadPdfForm.reset();
+                pdfFileInput.value = '';
+                modalPathRootEl.textContent = isProblemMode ? 'Problems' : 'Sources';
+                modalPathSubjectInput.value = defaultSubject;
+                modalPathFileNameInput.value = '';
+                modalPathFileNameInput.placeholder = isProblemMode ? 'new-problem' : 'new-file.pdf';
+                modalFileStatus.textContent = 'No file selected';
+                modalErrorMsg.textContent = '';
+
+                modalDifficultyField.hidden = !isProblemMode;
+                modalDifficultySelect.value = 'med';
+                modalDateLabel.textContent = isProblemMode ? 'Added date' : 'Due date';
+
+                if (isProblemMode) {
+                    const now = new Date();
+                    modalDueDateInput.value = [
+                        String(now.getDate()).padStart(2, '0'),
+                        String(now.getMonth() + 1).padStart(2, '0'),
+                        now.getFullYear()
+                    ].join('/');
+                }
+
+                uploadModalBackdrop.classList.add('is-open');
+                uploadModalBackdrop.setAttribute('aria-hidden', 'false');
+                requestAnimationFrame(() => {
+                    modalPathFileNameInput.focus();
+                });
+            }
+
+            function closeUploadModal() {
+                uploadModalBackdrop.classList.remove('is-open');
+                uploadModalBackdrop.setAttribute('aria-hidden', 'true');
+            }
+
+            uploadPdfBtn.addEventListener('click', () => openUploadModal('sources'));
+            uploadProblemBtn.addEventListener('click', () => openUploadModal('problems'));
+            modalCancelBtn.addEventListener('click', closeUploadModal);
+
+            // Allow pressing Enter inside the inline path inputs to submit the form
+            [modalPathSubjectInput, modalPathFileNameInput].forEach((inputEl) => {
+                inputEl.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        uploadPdfForm.requestSubmit();
+                    }
+                });
+            });
+
+            // Trigger native file picker from classic Browse... button
+            modalBrowseBtn.addEventListener('click', () => {
+                pdfFileInput.click();
+            });
+
+            let lastAutoFilledFileName = '';
+
+            pdfFileInput.addEventListener('change', (e) => {
+                const file = e.target.files && e.target.files[0];
+                if (!file) {
+                    modalFileStatus.textContent = 'No file selected';
+                    return;
+                }
+                modalFileStatus.textContent = file.name;
+                const displayName = uploadTargetMode === 'problems'
+                    ? file.name.replace(/\.pdf$/i, '')
+                    : file.name;
+                const currentInputName = modalPathFileNameInput.value.trim();
+                if (!currentInputName || currentInputName === lastAutoFilledFileName) {
+                    modalPathFileNameInput.value = displayName;
+                    lastAutoFilledFileName = displayName;
+                }
+                modalErrorMsg.textContent = '';
+            });
+
+            // Validate DD/MM/YYYY date string
+            function isValidDMYDate(dateStr) {
+                const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dateStr);
+                if (!match) return false;
+                const day = Number(match[1]);
+                const month = Number(match[2]);
+                const year = Number(match[3]);
+                const date = new Date(year, month - 1, day);
+                return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+            }
+
+            // Save new PDF entry from modal form and inline path inputs
+            uploadPdfForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                modalErrorMsg.textContent = '';
+
+                const rawSubject = modalPathSubjectInput.value
+                    .trim()
+                    .toLowerCase()
+                    .replace(/[^a-z0-9-_]+/g, '-')
+                    .replace(/^-+|-+$/g, '');
+
+                if (!rawSubject) {
+                    modalErrorMsg.textContent = 'Please enter a valid subject in the path.';
+                    modalPathSubjectInput.focus();
+                    return;
+                }
+
+                let rawName = modalPathFileNameInput.value.trim();
+                const selectedFile = pdfFileInput.files && pdfFileInput.files[0];
+
+                if (!rawName && selectedFile) {
+                    rawName = selectedFile.name;
+                }
+
+                if (!rawName) {
+                    modalErrorMsg.textContent = 'Please select a PDF or enter a file name in the path.';
+                    modalPathFileNameInput.focus();
+                    return;
+                }
+
+                if (uploadTargetMode === 'problems') {
+                    rawName = rawName.replace(/\.pdf$/i, '');
+                } else if (!rawName.toLowerCase().endsWith('.pdf')) {
+                    rawName += '.pdf';
+                }
+
+                const topicVal = modalTopicInput.value.trim() || 'General Notes';
+                let dueDateVal = modalDueDateInput.value.trim();
+
+                if (!dueDateVal) {
+                    const now = new Date();
+                    dueDateVal = [
+                        String(now.getDate()).padStart(2, '0'),
+                        String(now.getMonth() + 1).padStart(2, '0'),
+                        now.getFullYear()
+                    ].join('/');
+                } else if (!isValidDMYDate(dueDateVal)) {
+                    const labelText = uploadTargetMode === 'problems' ? 'Added date' : 'Due date';
+                    modalErrorMsg.textContent = `${labelText} must follow DD/MM/YYYY format.`;
+                    modalDueDateInput.focus();
+                    return;
+                }
+
+                // Register new subject if the user typed a custom one on the path
+                if (!SUBJECTS.includes(rawSubject)) {
+                    SUBJECTS.push(rawSubject);
+                    subjectCounts[rawSubject] = 0;
+                    problemSubjectCounts[rawSubject] = 0;
+                    refreshSubjectDatalist();
+                }
+
+                if (uploadTargetMode === 'problems') {
+                    const problemEntry = {
+                        name: rawName,
+                        topic: topicVal,
+                        subject: rawSubject,
+                        addedDate: dueDateVal,
+                        difficulty: modalDifficultySelect.value || 'med',
+                        isProblem: true,
+                        blobUrl: selectedFile ? URL.createObjectURL(selectedFile) : null
+                    };
+
+                    ALL_PROBLEMS.unshift(problemEntry);
+                    PRIMARY_PROBLEMS.unshift(problemEntry);
+                    problemSubjectCounts[rawSubject] = (problemSubjectCounts[rawSubject] || 0) + 1;
+
+                    lastAutoFilledFileName = '';
+                    closeUploadModal();
+                    selectProblemSubject(rawSubject);
+                } else {
+                    const entry = {
+                        name: rawName,
+                        topic: topicVal,
+                        subject: rawSubject,
+                        dueDate: dueDateVal,
+                        done: false,
+                        blobUrl: selectedFile ? URL.createObjectURL(selectedFile) : null
+                    };
+
+                    ALL_FILES.unshift(entry);
+                    PRIMARY_FILES.unshift(entry);
+                    subjectCounts[rawSubject] = (subjectCounts[rawSubject] || 0) + 1;
+
+                    lastAutoFilledFileName = '';
+                    closeUploadModal();
+                    selectSubject(rawSubject);
+                }
+            });
+
+            // Initial render
+            renderSidebar();
+            renderFiles();
+            renderProblemSidebar();
+            renderProblems();
+
+            if (window.location.hash === '#problems') {
+                switchWorkspacePage('problems', false);
+            }
+        })();
+    </script>
+
+</body>
+</html>

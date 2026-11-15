@@ -1,0 +1,44 @@
+.manage-shell {
+    width: 100%;
+    max-width: 1000px;
+}
+.manage-nav {
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    margin-bottom: 32px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+.manage-name { font-weight: 600; }
+.manage-nav-divider { color: #d2d2d7; }
+.manage-nav a { color: #86868b; text-decoration: none; }
+.manage-nav a[aria-current="page"] { color: #1d1d1f; font-weight: 500; }
+.app-layout { max-width: 989px; }
+.sidebar { top: max(32px, 6vh); }
+.file-list .badge {
+    padding: 3px 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 500;
+}
+.file-list .file-row:hover .badge-pending { background: transparent; }
+.file-list .badge-done, .difficulty-easy { color: #1b7a43; }
+.file-list .badge-pending { color: #86868b; }
+.difficulty {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 0;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.25;
+    letter-spacing: -0.005em;
+    white-space: nowrap;
+}
+.difficulty-med { color: #b25900; }
+.difficulty-hard { color: #c92a2a; }
+
+/* Reserve space around the list and its moving footer, keeping only pagination in place. */
+.list-body { min-height: 491.5px; }

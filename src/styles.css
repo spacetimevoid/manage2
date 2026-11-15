@@ -1,0 +1,1340 @@
+
+        /* Reset và thiết lập hệ thống font chuẩn Apple HIG */
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #ffffff;
+            color: #1d1d1f;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+            margin: 0;
+            padding: max(56px, 10vh) 24px 48px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            text-rendering: optimizeLegibility;
+        }
+
+        /* Bố cục 2 cột căn giữa theo chuẩn tầm nhìn khoa học */
+        .app-layout {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            gap: 44px;
+        }
+
+        /* =========================================================
+           CỘT TRÁI: SIDEBAR DANH SÁCH MÔN HỌC (THU GỌN VỪA TẦM NHÌN)
+           ========================================================= */
+        .sidebar {
+            width: 185px;
+            flex-shrink: 0;
+            position: sticky;
+            top: max(56px, 10vh);
+            align-self: flex-start;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-label {
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: #86868b;
+            margin: 0 0 8px 8px;
+            user-select: none;
+        }
+
+        /* Ô tìm kiếm nhanh môn học phong cách Spotlight thu nhỏ */
+        .sidebar-search-wrap {
+            position: relative;
+            margin-bottom: 8px;
+        }
+
+        .sidebar-search {
+            width: 100%;
+            background-color: #f5f5f7;
+            border: 1px solid transparent;
+            border-radius: 7px;
+            padding: 6px 26px 6px 9px;
+            font-family: inherit;
+            font-size: 12.5px;
+            color: #1d1d1f;
+            outline: none;
+            transition: background-color 0.16s ease, border-color 0.16s ease;
+        }
+
+        .sidebar-search::placeholder {
+            color: #86868b;
+        }
+
+        .sidebar-search:focus {
+            background-color: #ffffff;
+            border-color: #d2d2d7;
+        }
+
+        .search-clear {
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 15px;
+            height: 15px;
+            border: none;
+            border-radius: 50%;
+            background-color: #d2d2d7;
+            color: #ffffff;
+            font-size: 10.5px;
+            line-height: 1;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .search-clear.is-visible {
+            display: inline-flex;
+        }
+
+        /* Danh sách cuộn dọc thanh mảnh kéo dài thẳng hàng đáy tối đa của thanh sắp xếp */
+        .subject-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            max-height: 452px;
+            overflow-y: auto;
+            padding-right: 3px;
+        }
+
+        .subject-list::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .subject-list::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .subject-list::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.12);
+            border-radius: 999px;
+        }
+
+        .subject-list::-webkit-scrollbar-thumb:hover {
+            background: rgba(0, 0, 0, 0.24);
+        }
+
+        .subject-item {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 5px 8px;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 400;
+            color: #424245;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .subject-item:hover {
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+        }
+
+        .subject-item.is-active {
+            background-color: #f5f5f7;
+            font-weight: 600;
+            color: #1d1d1f;
+        }
+
+        .subject-name {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            letter-spacing: -0.008em;
+        }
+
+        .subject-count {
+            font-size: 11.5px;
+            font-weight: 400;
+            color: #86868b;
+            font-variant-numeric: tabular-nums;
+            flex-shrink: 0;
+        }
+
+        .subject-item.is-active .subject-count {
+            color: #6e6e73;
+            font-weight: 500;
+        }
+
+        .sidebar-empty {
+            padding: 10px 8px;
+            font-size: 12.5px;
+            color: #86868b;
+        }
+
+        /* =========================================================
+           CỘT PHẢI: KHUNG NỘI DUNG CHÍNH CỐ ĐỊNH CHIỀU RỘNG 760PX
+           ========================================================= */
+        .main-content {
+            flex: 1;
+            width: 760px;
+            max-width: 760px;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .breadcrumb-title {
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", sans-serif;
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+            line-height: 1.15;
+            margin: 0;
+            color: #1d1d1f;
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .upload-link-btn {
+            background: transparent;
+            border: none;
+            padding: 4px 8px;
+            margin-right: -8px;
+            border-radius: 7px;
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 400;
+            letter-spacing: -0.008em;
+            color: #0066cc;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            text-decoration-thickness: 1px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background-color 0.16s ease, color 0.16s ease;
+        }
+
+        .upload-link-btn:hover {
+            background-color: #f5f5f7;
+            color: #004999;
+        }
+
+        .upload-link-btn:active {
+            background-color: #ebebf0;
+        }
+
+        .breadcrumb-root {
+            background: transparent;
+            border: none;
+            padding: 2px 6px;
+            margin-left: -6px;
+            border-radius: 7px;
+            font: inherit;
+            letter-spacing: inherit;
+            color: #1d1d1f;
+            cursor: pointer;
+            transition: background-color 0.16s ease;
+        }
+
+        .breadcrumb-root:hover {
+            background-color: #f5f5f7;
+        }
+
+        .breadcrumb-sep {
+            color: #86868b;
+            font-weight: 400;
+            margin: 0 6px;
+            user-select: none;
+        }
+
+        .breadcrumb-subject {
+            color: #1d1d1f;
+            font-weight: 700;
+        }
+
+        hr.divider {
+            border: 0;
+            height: 1px;
+            background-color: #d2d2d7;
+            margin: 0;
+        }
+
+        /* Danh sách tệp PDF 4 cột co giãn tự nhiên theo phần tử cuối cùng */
+        .file-list {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .file-row {
+            display: grid;
+            grid-template-columns: minmax(200px, 2.1fr) minmax(130px, 1.35fr) 90px 88px;
+            column-gap: 18px;
+            align-items: center;
+            padding: 11px 10px;
+            margin: 1px 0;
+            border-radius: 8px;
+            text-decoration: none;
+            color: inherit;
+            position: relative;
+            transition: background-color 0.16s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+
+        .file-row:not(:last-child)::after {
+            content: "";
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            bottom: -1px;
+            height: 1px;
+            background-color: #ececee;
+            transition: opacity 0.15s ease;
+        }
+
+        .file-row:hover {
+            background-color: #f5f5f7;
+        }
+
+        .file-row:hover::after {
+            opacity: 0;
+        }
+
+        .file-row:active {
+            background-color: #ebebf0;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            min-width: 0;
+        }
+
+        .filename {
+            font-size: 13.5px;
+            font-weight: 400;
+            color: #1d1d1f;
+            letter-spacing: -0.01em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            transition: color 0.16s ease;
+        }
+
+        .file-row:hover .filename {
+            color: #0066cc;
+        }
+
+        .topic-cell {
+            font-size: 13px;
+            font-weight: 400;
+            color: #6e6e73;
+            letter-spacing: -0.005em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .due-date {
+            font-size: 13px;
+            font-weight: 400;
+            color: #86868b;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.005em;
+            white-space: nowrap;
+        }
+
+        .status-cell {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 9px;
+            border-radius: 999px;
+            font-size: 11.5px;
+            font-weight: 500;
+            letter-spacing: -0.005em;
+            line-height: 1.25;
+            white-space: nowrap;
+        }
+
+        .badge-done {
+            background-color: #eafaf1;
+            color: #1b7a43;
+        }
+
+        .badge-pending {
+            background-color: #f5f5f7;
+            color: #6e6e73;
+        }
+
+        .file-row:hover .badge-pending {
+            background-color: #e8e8ed;
+        }
+
+        /* Thanh footer sắp xếp ở cuối danh sách */
+        .list-footer {
+            display: grid;
+            grid-template-columns: minmax(200px, 2.1fr) minmax(130px, 1.35fr) 90px 88px;
+            column-gap: 18px;
+            align-items: center;
+            padding: 11px 10px 0;
+            margin-top: 2px;
+            border-top: 1px solid #d2d2d7;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #1d1d1f;
+            letter-spacing: -0.008em;
+        }
+
+        .sort-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: transparent;
+            border: none;
+            padding: 4px 6px;
+            margin: -4px -6px;
+            border-radius: 7px;
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 600;
+            color: #1d1d1f;
+            letter-spacing: -0.008em;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.16s ease, color 0.16s ease;
+        }
+
+        .sort-btn:hover {
+            background-color: #f5f5f7;
+        }
+
+        .sort-btn:active {
+            background-color: #ebebf0;
+        }
+
+        .sort-btn.is-active {
+            color: #0066cc;
+        }
+
+        .sort-btn.footer-status {
+            justify-self: end;
+        }
+
+        .sort-triangle {
+            width: 8px;
+            height: 8px;
+            fill: currentColor;
+            opacity: 0.35;
+            transition: transform 0.22s cubic-bezier(0.25, 0.1, 0.25, 1),
+                        opacity 0.18s ease,
+                        color 0.18s ease;
+        }
+
+        .sort-btn.is-active .sort-triangle {
+            opacity: 1;
+            color: #0066cc;
+        }
+
+        .sort-btn[data-dir="asc"] .sort-triangle {
+            transform: rotate(180deg);
+        }
+
+        .sort-btn[data-dir="desc"] .sort-triangle {
+            transform: rotate(0deg);
+        }
+
+        /* Minimalist Apple-style Pagination Bar centered right below the bottom divider (<  1 / 4  >) */
+        .pagination-bar {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 18px;
+            padding-top: 14px;
+            margin-top: 0;
+        }
+
+        .pagination-bar[hidden] {
+            display: none;
+        }
+
+        .pagination-info {
+            font-size: 13px;
+            font-weight: 400;
+            color: #1d1d1f;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: 0.01em;
+            user-select: none;
+        }
+
+        .page-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            padding: 0;
+            color: #86868b;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.16s ease, color 0.16s ease, opacity 0.16s ease;
+        }
+
+        .page-btn svg {
+            width: 14px;
+            height: 14px;
+            stroke: currentColor;
+            stroke-width: 1.8;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+        }
+
+        .page-btn:active:not(:disabled) {
+            background-color: #ebebf0;
+        }
+
+        .page-btn:disabled {
+            color: #d2d2d7;
+            opacity: 0.5;
+            cursor: default;
+        }
+
+        /* =========================================================
+           FLAT MINIMALIST APPLE MODAL FOR UPLOAD PDF (NO SHADOWS)
+           ========================================================= */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(29, 29, 31, 0.22);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.16s ease;
+        }
+
+        .modal-backdrop.is-open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .apple-modal {
+            width: 100%;
+            max-width: 460px;
+            background-color: #ffffff;
+            border: 1px solid #d2d2d7;
+            border-radius: 10px;
+            box-shadow: none;
+            padding: 18px 20px 17px;
+            transform: translateY(-6px);
+            transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .modal-backdrop.is-open .apple-modal {
+            transform: translateY(0);
+        }
+
+        .modal-breadcrumb {
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #1d1d1f;
+            margin: 0 0 14px 0;
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 2px;
+        }
+
+        .modal-breadcrumb .sep {
+            color: #86868b;
+            font-weight: 400;
+            margin: 0 4px;
+            user-select: none;
+        }
+
+        /* Inline editable path segments inside Sources / <subject> / <file-name> */
+        .path-inline-input {
+            font-family: inherit;
+            font-size: 14.5px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #1d1d1f;
+            background-color: #f5f5f7;
+            border: 1px solid #d2d2d7;
+            border-radius: 6px;
+            padding: 3px 8px;
+            box-shadow: none;
+            outline: none;
+            transition: background-color 0.14s ease, border-color 0.14s ease;
+        }
+
+        .path-inline-input::placeholder {
+            color: #86868b;
+            font-weight: 500;
+        }
+
+        .path-inline-input:focus {
+            background-color: #ffffff;
+            border-color: #0066cc;
+            box-shadow: none;
+        }
+
+        .path-subject-input {
+            width: 112px;
+        }
+
+        .path-filename-input {
+            flex: 1;
+            min-width: 135px;
+        }
+
+        .modal-field {
+            margin-bottom: 11px;
+        }
+
+        .modal-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: #1d1d1f;
+            letter-spacing: -0.008em;
+            margin-bottom: 5px;
+        }
+
+        .classic-browse-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Flat Minimalist Apple Button */
+        .classic-aqua-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 5px 14px;
+            border-radius: 7px;
+            border: 1px solid #d2d2d7;
+            background-color: #f5f5f7;
+            box-shadow: none;
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #1d1d1f;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.14s ease, border-color 0.14s ease;
+        }
+
+        .classic-aqua-btn:hover {
+            background-color: #ebebf0;
+        }
+
+        .classic-aqua-btn:active {
+            background-color: #e2e2e7;
+        }
+
+        /* Primary Save Button in classic Apple blue */
+        .classic-aqua-btn.is-primary {
+            border-color: #0066cc;
+            background-color: #0066cc;
+            box-shadow: none;
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        .classic-aqua-btn.is-primary:hover {
+            background-color: #0055b3;
+            border-color: #0055b3;
+        }
+
+        .classic-aqua-btn.is-primary:active {
+            background-color: #004499;
+            border-color: #004499;
+        }
+
+        .classic-aqua-btn:hover {
+            background-color: #ebebf0;
+        }
+
+        .classic-aqua-btn:active {
+            background-color: #e2e2e7;
+        }
+
+        /* Primary Save Button in neutral Apple gray */
+        .classic-aqua-btn.is-primary {
+            border-color: #c7c7cc;
+            background-color: #ebebef;
+            box-shadow: none;
+            color: #1d1d1f;
+            font-weight: 600;
+        }
+
+        .classic-aqua-btn.is-primary:hover {
+            background-color: #e0e0e5;
+            border-color: #bdbdc2;
+        }
+
+        .classic-aqua-btn.is-primary:active {
+            background-color: #d4d4da;
+            border-color: #b0b0b6;
+        }
+
+        .classic-file-status {
+            font-size: 12.5px;
+            color: #86868b;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Flat Minimalist Apple Input Field */
+        .classic-input {
+            width: 100%;
+            background-color: #f5f5f7;
+            border: 1px solid #d2d2d7;
+            border-radius: 7px;
+            padding: 6px 9px;
+            font-family: inherit;
+            font-size: 13px;
+            color: #1d1d1f;
+            box-shadow: none;
+            outline: none;
+            transition: background-color 0.14s ease, border-color 0.14s ease;
+        }
+
+        .classic-input::placeholder {
+            color: #86868b;
+        }
+
+        .classic-input:focus {
+            background-color: #ffffff;
+            border-color: #0066cc;
+            box-shadow: none;
+        }
+
+        .modal-error {
+            font-size: 12px;
+            color: #c92a2a;
+            margin: -2px 0 8px 0;
+            min-height: 0;
+        }
+
+        .modal-error:empty {
+            display: none;
+        }
+
+        .modal-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .classic-cancel-link {
+            background: transparent;
+            border: none;
+            padding: 4px 6px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 400;
+            color: #0066cc;
+            text-decoration: underline;
+            text-underline-offset: 2px;
+            cursor: pointer;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .classic-cancel-link:hover {
+            background-color: #f5f5f7;
+            color: #004999;
+        }
+
+        /* =========================================================
+           FULL-SCREEN APPLE / MAC OS X PDF VIEWER PAGE (100VW x 100VH)
+           ========================================================= */
+        .pdf-fullscreen-page {
+            position: fixed;
+            inset: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #ffffff;
+            z-index: 150;
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.16s ease;
+        }
+
+        .pdf-fullscreen-page.is-open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .pdf-viewer-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 10px 24px;
+            background-color: #282828;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            color: #f5f5f7;
+            flex-shrink: 0;
+        }
+
+        .pdf-viewer-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+            flex: 1;
+        }
+
+        .pdf-viewer-controls {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            flex-shrink: 0;
+        }
+
+        .viewer-control-group {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            background: transparent;
+            border: none;
+            padding: 0;
+            font-size: 13px;
+            font-weight: 400;
+            color: #f5f5f7;
+            font-variant-numeric: tabular-nums;
+            user-select: none;
+        }
+
+        .viewer-controls-divider {
+            width: 1px;
+            height: 16px;
+            background-color: rgba(255, 255, 255, 0.24);
+            flex-shrink: 0;
+        }
+
+        .viewer-ctrl-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            border: none;
+            border-radius: 5px;
+            background: transparent;
+            color: #d2d2d7;
+            font-family: inherit;
+            font-size: 15px;
+            font-weight: 400;
+            line-height: 1;
+            cursor: pointer;
+            padding: 0;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .viewer-ctrl-btn:hover:not(:disabled) {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .viewer-ctrl-btn:active:not(:disabled) {
+            background-color: rgba(255, 255, 255, 0.16);
+        }
+
+        .viewer-ctrl-btn:disabled {
+            opacity: 0.32;
+            cursor: default;
+        }
+
+        .viewer-ctrl-btn svg {
+            width: 12px;
+            height: 12px;
+            stroke: currentColor;
+            stroke-width: 1.9;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .viewer-ctrl-label {
+            padding: 0 2px;
+            color: #f5f5f7;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+        }
+
+        .pdf-viewer-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            min-width: 0;
+        }
+
+        .viewer-back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: transparent;
+            border: none;
+            padding: 6px 10px;
+            margin-left: -10px;
+            border-radius: 7px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            color: #7cc0ff;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background-color 0.16s ease, color 0.16s ease;
+        }
+
+        .viewer-back-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #a3d3ff;
+        }
+
+        .viewer-back-btn:active {
+            background-color: rgba(255, 255, 255, 0.16);
+        }
+
+        .viewer-back-btn svg {
+            width: 15px;
+            height: 15px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .viewer-toolbar-divider {
+            width: 1px;
+            height: 20px;
+            background-color: rgba(255, 255, 255, 0.18);
+            flex-shrink: 0;
+        }
+
+        .pdf-viewer-meta {
+            min-width: 0;
+            display: flex;
+            align-items: baseline;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .pdf-viewer-path {
+            font-size: 15px;
+            font-weight: 700;
+            letter-spacing: -0.015em;
+            color: #ffffff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pdf-viewer-path .sep {
+            color: #b8b8be;
+            font-weight: 400;
+            margin: 0 5px;
+        }
+
+        .pdf-viewer-sub {
+            font-size: 12.5px;
+            color: #d2d2d7;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pdf-viewer-actions {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 10px;
+            flex: 1;
+            flex-shrink: 0;
+        }
+
+        .viewer-status-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 28px;
+            background: transparent;
+            border: none;
+            padding: 0 8px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 500;
+            line-height: 1;
+            letter-spacing: -0.008em;
+            cursor: pointer;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .viewer-status-toggle.badge-done {
+            background: transparent;
+            color: #32d74b;
+        }
+
+        .viewer-status-toggle.badge-pending {
+            background: transparent;
+            color: #98989d;
+        }
+
+        .viewer-status-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .viewer-status-toggle:active {
+            background-color: rgba(255, 255, 255, 0.16);
+        }
+
+        .viewer-link-action {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 28px;
+            padding: 0 8px;
+            border-radius: 6px;
+            border: none;
+            background: transparent;
+            font-family: inherit;
+            font-size: 13.5px;
+            font-weight: 400;
+            line-height: 1;
+            letter-spacing: -0.008em;
+            color: #f5f5f7;
+            text-decoration: none;
+            cursor: pointer;
+            white-space: nowrap;
+            user-select: none;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .viewer-link-action:hover,
+        .viewer-link-action.is-active:hover,
+        .viewer-link-action.is-primary:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .viewer-link-action:active,
+        .viewer-link-action.is-active:active,
+        .viewer-link-action.is-primary:active {
+            background-color: rgba(255, 255, 255, 0.16);
+            color: #ffffff;
+        }
+
+        .viewer-link-action.is-active {
+            background: transparent;
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        .viewer-tool-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 26px;
+            padding: 0 8px;
+            border: none;
+            border-radius: 5px;
+            background: transparent;
+            font-family: inherit;
+            font-size: 13px;
+            font-weight: 400;
+            line-height: 1;
+            color: #d2d2d7;
+            cursor: pointer;
+            white-space: nowrap;
+            user-select: none;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .viewer-tool-btn:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+        }
+
+        .viewer-tool-btn.is-active {
+            background-color: rgba(255, 255, 255, 0.14);
+            color: #ffffff;
+        }
+
+        .pdf-viewer-body {
+            flex: 1;
+            width: 100%;
+            min-height: 0;
+            background-color: #282828;
+            display: flex;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .pdf-canvas-viewport {
+            flex: 1;
+            min-width: 0;
+            height: 100%;
+            overflow: auto;
+            background-color: #282828;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px 24px 40px;
+            gap: 20px;
+        }
+
+        .pdf-page-sheet {
+            position: relative;
+            background-color: #ffffff;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.45);
+            flex-shrink: 0;
+        }
+
+        .pdf-page-sheet canvas {
+            display: block;
+        }
+
+        .pdf-canvas-viewport.is-selecting {
+            cursor: crosshair;
+            user-select: none;
+        }
+
+        .pdf-area-selection-box {
+            position: absolute;
+            border: 1px solid rgba(124, 192, 255, 0.9);
+            background-color: rgba(124, 192, 255, 0.16);
+            pointer-events: none;
+            z-index: 15;
+            display: none;
+        }
+
+        /* Floating Draggable & Resizable Apple-style Notes Window */
+        .pdf-notes-pane {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            width: 340px;
+            height: 440px;
+            min-width: 260px;
+            min-height: 220px;
+            max-width: calc(100vw - 32px);
+            max-height: calc(100vh - 80px);
+            background: rgba(251, 251, 253, 0.94);
+            backdrop-filter: blur(22px) saturate(180%);
+            -webkit-backdrop-filter: blur(22px) saturate(180%);
+            border: 1px solid #b8b8be;
+            border-radius: 12px;
+            box-shadow:
+                0 20px 48px rgba(0, 0, 0, 0.22),
+                0 4px 12px rgba(0, 0, 0, 0.08),
+                inset 0 1px 0 rgba(255, 255, 255, 0.92);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            resize: both;
+            z-index: 20;
+            transition: opacity 0.16s ease, transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .pdf-notes-pane.is-collapsed {
+            opacity: 0;
+            transform: scale(0.96);
+            pointer-events: none;
+        }
+
+        .pdf-notes-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: linear-gradient(180deg, #ffffff 0%, #f1f1f4 100%);
+            border-bottom: 1px solid #d8d8de;
+            flex-shrink: 0;
+            cursor: grab;
+            user-select: none;
+        }
+
+        .pdf-notes-header:active {
+            cursor: grabbing;
+        }
+
+        .pdf-notes-header-left {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .pdf-notes-close {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 1px solid rgba(0, 0, 0, 0.16);
+            background-color: #ff5f57;
+            padding: 0;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: filter 0.12s ease;
+        }
+
+        .pdf-notes-close:hover {
+            filter: brightness(0.92);
+        }
+
+        .pdf-notes-title {
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: #6e6e73;
+            user-select: none;
+        }
+
+        .pdf-notes-saved {
+            font-size: 11.5px;
+            color: #86868b;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .pdf-notes-textarea {
+            flex: 1;
+            width: 100%;
+            border: none;
+            outline: none;
+            resize: none;
+            background: transparent;
+            padding: 14px 16px 20px;
+            font-family: inherit;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #1d1d1f;
+        }
+
+        .pdf-notes-textarea::placeholder {
+            color: #9a9aa0;
+        }
+
+        .pdf-notes-resize-grip {
+            position: absolute;
+            right: 4px;
+            bottom: 4px;
+            width: 10px;
+            height: 10px;
+            pointer-events: none;
+            opacity: 0.45;
+            background: linear-gradient(135deg, transparent 45%, #86868b 45%, #86868b 55%, transparent 55%, transparent 72%, #86868b 72%, #86868b 82%, transparent 82%);
+        }
+
+        /* Tối ưu giao diện trên màn hình nhỏ (< 760px) */
+        @media (max-width: 760px) {
+            body {
+                align-items: flex-start;
+                padding: 32px 16px 36px;
+            }
+            .app-layout {
+                flex-direction: column;
+                gap: 24px;
+            }
+            .sidebar {
+                width: 100%;
+                position: static;
+            }
+            .subject-list {
+                max-height: 170px;
+            }
+            .main-content {
+                width: 100%;
+                max-width: 100%;
+            }
+            .breadcrumb-title {
+                font-size: 25px;
+            }
+            .file-row,
+            .list-footer {
+                grid-template-columns: minmax(0, 1fr) 90px;
+                padding-left: 8px;
+                padding-right: 8px;
+            }
+            .topic-cell,
+            .footer-topic,
+            .due-date,
+            .footer-due-date {
+                display: none;
+            }
+            .pagination-bar {
+                padding-top: 14px;
+            }
+            .pdf-viewer-toolbar {
+                flex-wrap: wrap;
+                padding: 10px 14px;
+            }
+            .pdf-viewer-sub {
+                display: none;
+            }
+            .pdf-notes-pane {
+                top: 12px;
+                right: 12px;
+                width: calc(100vw - 24px);
+                height: 44vh;
+            }
+        }
+    
+/* Honor logical visibility even when an element has a display rule. */
+[hidden] { display: none !important; }

@@ -1,0 +1,567 @@
+        .problem-detail-page {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100vh;
+            background-color: #ffffff;
+            color: #1d1d1f;
+            z-index: 140;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            overflow-x: hidden;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .problem-detail-page.is-open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .problem-detail-topbar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e5e5ea;
+            padding: 10px 24px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .problem-detail-topbar-inner {
+            width: 100%;
+            max-width: 780px;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .problem-detail-topbar-left {
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+        }
+
+        .problem-detail-nav {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 12.5px;
+            color: #1d1d1f;
+            font-variant-numeric: tabular-nums;
+            user-select: none;
+        }
+
+        .problem-detail-nav .page-btn {
+            width: 26px;
+            height: 26px;
+        }
+
+        .problem-detail-topbar-right {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .problem-back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: transparent;
+            border: none;
+            padding: 4px 8px;
+            margin-left: -8px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 14px;
+            font-weight: 500;
+            color: #0066cc;
+            text-decoration: none;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .problem-back-btn:hover {
+            background-color: #f5f5f7;
+            color: #004999;
+        }
+
+        .problem-back-btn:active {
+            background-color: #ebebf0;
+        }
+
+        .problem-back-btn svg {
+            width: 15px;
+            height: 15px;
+            stroke: currentColor;
+            stroke-width: 2;
+            fill: none;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .problem-detail-container {
+            width: 100%;
+            max-width: 780px;
+            margin: 0 auto;
+            padding: 28px 24px 64px;
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+        }
+
+        .problem-header-block {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #d2d2d7;
+        }
+
+        .problem-breadcrumb-line {
+            font-size: 12.5px;
+            color: #6e6e73;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .problem-title-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .problem-detail-title-input {
+            width: 100%;
+            font-family: inherit;
+            font-size: 24px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            line-height: 1.25;
+            color: #1d1d1f;
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 6px;
+            padding: 2px 6px;
+            margin-left: -6px;
+            outline: none;
+            transition: background-color 0.14s ease, border-color 0.14s ease;
+        }
+
+        .problem-detail-title-input:hover {
+            background-color: #f5f5f7;
+        }
+
+        .problem-detail-title-input:focus {
+            background-color: #ffffff;
+            border-color: #d2d2d7;
+        }
+
+        .problem-meta-bar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 12.5px;
+            color: #6e6e73;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .problem-diff-btn {
+            background: transparent;
+            border: none;
+            padding: 4px 8px;
+            margin-right: -8px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 500;
+            color: #1d1d1f;
+            cursor: pointer;
+            transition: background-color 0.14s ease;
+        }
+
+        .problem-diff-btn.is-easy {
+            color: #1b7a43;
+        }
+
+        .problem-diff-btn.is-med {
+            color: #b25900;
+        }
+
+        .problem-diff-btn.is-hard {
+            color: #c92a2a;
+        }
+
+        .problem-diff-btn:hover {
+            background-color: #f5f5f7;
+        }
+
+        .problem-diff-btn:active {
+            background-color: #ebebf0;
+        }
+
+        /* Vertical Academic Sections: PROBLEM STATEMENT -> NOTES -> SOLUTIONS */
+        .problem-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .section-heading-row {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid #d2d2d7;
+        }
+
+        .section-heading {
+            font-size: 11.5px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: #6e6e73;
+            margin: 0;
+        }
+
+        .doc-action-link {
+            background: transparent;
+            border: none;
+            padding: 4px 8px;
+            margin-right: -8px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 400;
+            line-height: 1.25;
+            color: #0066cc;
+            text-decoration: underline;
+            text-underline-offset: 3px;
+            text-decoration-thickness: 1px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .doc-action-link:hover {
+            background-color: #f5f5f7;
+            color: #004999;
+        }
+
+        .doc-action-link:active {
+            background-color: #ebebf0;
+        }
+
+        .doc-action-link[hidden] {
+            display: none;
+        }
+
+        .add-menu-wrap {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+        }
+
+        .add-popover-menu {
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0;
+            min-width: 132px;
+            padding: 4px;
+            background-color: #ffffff;
+            border: 1px solid #d2d2d7;
+            border-radius: 6px;
+            z-index: 25;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .add-popover-menu[hidden] {
+            display: none;
+        }
+
+        .add-popover-item {
+            width: 100%;
+            background: transparent;
+            border: none;
+            border-radius: 6px;
+            padding: 5px 8px;
+            font-family: inherit;
+            font-size: 12.5px;
+            font-weight: 400;
+            color: #1d1d1f;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.14s ease;
+        }
+
+        .add-popover-item:hover {
+            background-color: #f5f5f7;
+        }
+
+        .add-popover-item:active {
+            background-color: #ebebf0;
+        }
+
+        .doc-empty-hint {
+            font-size: 13px;
+            color: #86868b;
+            padding: 4px 0;
+        }
+
+        .doc-empty-hint[hidden] {
+            display: none;
+        }
+
+        /* Problem Statement & Solution Media Items (White page, natural aspect ratio) */
+        .doc-media-list {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .doc-media-list[hidden] {
+            display: none;
+        }
+
+        .doc-media-item {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-bottom: 14px;
+            border-bottom: 1px solid #ececee;
+        }
+
+        .doc-media-item:last-child {
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .doc-media-item img {
+            width: auto;
+            max-width: 100%;
+            height: auto;
+            display: block;
+            border: 1px solid #e5e5ea;
+            border-radius: 2px;
+            background-color: #ffffff;
+        }
+
+        .doc-media-meta {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 12px;
+            font-size: 12.5px;
+            color: #6e6e73;
+        }
+
+        .statement-pdf-embed {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .statement-pdf-embed[hidden] {
+            display: none;
+        }
+
+        .statement-pdf-embed iframe {
+            width: 100%;
+            height: 440px;
+            border: 1px solid #d2d2d7;
+            border-radius: 2px;
+            display: block;
+            background-color: #ffffff;
+        }
+
+        /* Independent NOTES Section */
+        .notes-plain-textarea {
+            width: 100%;
+            min-height: 112px;
+            background-color: #ffffff;
+            border: 1px solid #d2d2d7;
+            border-radius: 2px;
+            padding: 10px 12px;
+            font-family: inherit;
+            font-size: 13.5px;
+            line-height: 1.6;
+            color: #1d1d1f;
+            outline: none;
+            resize: vertical;
+            display: block;
+        }
+
+        .notes-plain-textarea::placeholder {
+            color: #86868b;
+        }
+
+        .notes-plain-textarea:focus {
+            border-color: #86868b;
+        }
+
+        /* Solutions Section (Unwrapped, Document-Oriented) */
+        .solution-panel {
+            background-color: #ffffff;
+        }
+
+        .solution-panel[hidden] {
+            display: none;
+        }
+
+        .md-solution-box {
+            border: 1px solid #d2d2d7;
+            border-radius: 2px;
+            background-color: #ffffff;
+        }
+
+        .md-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 6px 10px;
+            background-color: #ffffff;
+            border-bottom: 1px solid #e5e5ea;
+            font-size: 12px;
+            color: #6e6e73;
+        }
+
+        .md-subtabs {
+            display: inline-flex;
+            gap: 6px;
+        }
+
+        .md-subtab-btn {
+            background: transparent;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 12px;
+            font-weight: 400;
+            color: #6e6e73;
+            cursor: pointer;
+            transition: background-color 0.14s ease, color 0.14s ease;
+        }
+
+        .md-subtab-btn:hover {
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+        }
+
+        .md-subtab-btn:active {
+            background-color: #ebebf0;
+        }
+
+        .md-subtab-btn.is-active {
+            background-color: #f5f5f7;
+            color: #1d1d1f;
+            font-weight: 600;
+        }
+
+        .md-editor-area {
+            width: 100%;
+            min-height: 220px;
+            border: none;
+            outline: none;
+            resize: vertical;
+            padding: 12px 14px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #1d1d1f;
+            background-color: #ffffff;
+            display: block;
+        }
+
+        .md-preview-area {
+            min-height: 220px;
+            padding: 14px 16px;
+            font-size: 14px;
+            line-height: 1.65;
+            color: #1d1d1f;
+            background-color: #ffffff;
+        }
+
+        .md-preview-area[hidden],
+        .md-editor-area[hidden] {
+            display: none;
+        }
+
+        .md-preview-area h1,
+        .md-preview-area h2,
+        .md-preview-area h3 {
+            margin: 14px 0 8px;
+            font-weight: 700;
+            letter-spacing: -0.015em;
+        }
+
+        .md-preview-area h1:first-child,
+        .md-preview-area h2:first-child,
+        .md-preview-area h3:first-child {
+            margin-top: 0;
+        }
+
+        .md-preview-area pre {
+            background-color: #fafafa;
+            border: 1px solid #e5e5ea;
+            padding: 10px 12px;
+            border-radius: 2px;
+            overflow-x: auto;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 12.5px;
+        }
+
+        .md-preview-area code {
+            background-color: #f5f5f7;
+            padding: 1px 4px;
+            border-radius: 2px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+            font-size: 12.5px;
+        }
+
+        .md-preview-area blockquote {
+            margin: 10px 0;
+            padding-left: 12px;
+            border-left: 2px solid #d2d2d7;
+            color: #6e6e73;
+        }
+
+        .media-solution-box {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .solution-pdf-frame {
+            width: 100%;
+            height: 520px;
+            border: 1px solid #d2d2d7;
+            border-radius: 2px;
+            background-color: #ffffff;
+            display: block;
+        }
+
+@media (max-width: 760px) {
+            .problem-detail-topbar {
+                padding: 10px 16px;
+            }
+
+            .problem-detail-container {
+                padding: 20px 16px 48px;
+                gap: 24px;
+            }
+
+            .problem-detail-title-input {
+                font-size: 20px;
+            }
+
+}

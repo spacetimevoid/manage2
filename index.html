@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sources</title>
+    <link rel="stylesheet" href="/src/styles.css">
+    <link rel="stylesheet" href="/src/navigation.css">
+    <link rel="stylesheet" href="/src/problem-detail.css">
+    <link rel="stylesheet" href="/src/image-zoom.css">
+    <link rel="stylesheet" href="/src/transitions.css">
+</head>
+<body>
+
+    <div class="manage-shell">
+    <nav class="manage-nav" aria-label="Main navigation">
+        <span class="manage-name">Manage</span><span class="manage-nav-divider" aria-hidden="true">|</span>
+        <a href="#sources" data-view="sources">Sources</a>
+        <a href="#problems" data-view="problems">Problems</a>
+    </nav>
+    <div class="app-layout">
+        <!-- Left column: Subject directory sidebar with instant search -->
+        <aside class="sidebar" aria-label="Subjects directory">
+            <div class="sidebar-label">Subjects</div>
+            <div class="sidebar-search-wrap">
+                <input
+                    type="text"
+                    class="sidebar-search"
+                    id="subjectSearch"
+                    placeholder="Filter subjects..."
+                    autocomplete="off"
+                    spellcheck="false"
+                    aria-label="Filter subjects"
+                >
+                <button type="button" class="search-clear" id="searchClear" aria-label="Clear search query">&times;</button>
+            </div>
+            <nav class="subject-list" id="subjectList"></nav>
+        </aside>
+
+        <!-- Right column: Ergonomic centered content area Sources / <subject> -->
+        <main class="main-content">
+            <header>
+                <div class="header-row">
+                    <h1 class="breadcrumb-title">
+                        <button type="button" class="breadcrumb-root" id="breadcrumbReset" title="View all documents">Sources</button>
+                        <span id="breadcrumbDynamic" hidden><span class="breadcrumb-sep">/</span><span class="breadcrumb-subject" id="breadcrumbSubject"></span></span>
+                    </h1>
+                    <button type="button" class="upload-link-btn" id="uploadPdfBtn">Upload</button>
+                </div>
+                <hr class="divider">
+            </header>
+
+            <div class="list-body">
+            <section class="file-list" id="fileList" aria-label="PDF files list"></section>
+
+            <footer class="list-footer" aria-label="Sort by column">
+                <div>
+                    <button type="button" class="sort-btn" data-sort="name" aria-label="Sort by file name">
+                        <span>File name</span>
+                        <svg class="sort-triangle" viewBox="0 0 10 10" aria-hidden="true">
+                            <polygon points="1,3 9,3 5,8" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="footer-topic">
+                    <button type="button" class="sort-btn" data-sort="topic" aria-label="Sort by topic">
+                        <span>Topic</span>
+                        <svg class="sort-triangle" viewBox="0 0 10 10" aria-hidden="true">
+                            <polygon points="1,3 9,3 5,8" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="footer-due-date">
+                    <button type="button" class="sort-btn" data-sort="date" aria-label="Sort by due date">
+                        <span>Due Date</span>
+                        <svg class="sort-triangle" viewBox="0 0 10 10" aria-hidden="true">
+                            <polygon points="1,3 9,3 5,8" />
+                        </svg>
+                    </button>
+                </div>
+                <button type="button" class="sort-btn footer-status" data-sort="status" aria-label="Sort by status">
+                    <span>Status</span>
+                    <svg class="sort-triangle" viewBox="0 0 10 10" aria-hidden="true">
+                        <polygon points="1,3 9,3 5,8" />
+                    </svg>
+                </button>
+            </footer>
+            </div>
+
+            <!-- Centered bottom pagination bar aligned with the divider above (<  1 / 4  >) -->
+            <nav class="pagination-bar" id="paginationBar" aria-label="Pagination">
+                <button type="button" class="page-btn" id="prevPageBtn" aria-label="Previous page">
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <polyline points="10 3.5 5.5 8 10 12.5"></polyline>
+                    </svg>
+                </button>
+                <span class="pagination-info" id="paginationInfo">1 / 1</span>
+                <button type="button" class="page-btn" id="nextPageBtn" aria-label="Next page">
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <polyline points="6 3.5 10.5 8 6 12.5"></polyline>
+                    </svg>
+                </button>
+            </nav>
+        </main>
+    </div>
+
+    </div>
+    <!-- Compact Vintage Mac OS X Upload Modal -->
+    <div class="modal-backdrop" id="uploadModalBackdrop" aria-hidden="true">
+        <div class="apple-modal" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle">
+            <h2 class="modal-breadcrumb" id="uploadModalTitle">
+                <span id="modalCollectionName">Sources</span><span class="sep">/</span><input
+                    type="text"
+                    class="path-inline-input path-subject-input"
+                    id="modalPathSubjectInput"
+                    list="modalSubjectsDatalist"
+                    placeholder="subject"
+                    autocomplete="off"
+                    spellcheck="false"
+                    aria-label="Subject in path"
+                ><span class="sep">/</span><input
+                    type="text"
+                    class="path-inline-input path-filename-input"
+                    id="modalPathFileNameInput"
+                    placeholder="new-file.pdf"
+                    autocomplete="off"
+                    spellcheck="false"
+                    aria-label="File name in path"
+                >
+            </h2>
+            <datalist id="modalSubjectsDatalist"></datalist>
+
+            <form id="uploadPdfForm" novalidate>
+                <div class="modal-field">
+                    <label class="modal-label" for="modalBrowseBtn">Select PDF</label>
+                    <div class="classic-browse-row">
+                        <button type="button" class="classic-aqua-btn" id="modalBrowseBtn">Browse...</button>
+                        <span class="classic-file-status" id="modalFileStatus">No file selected</span>
+                        <input type="file" id="pdfFileInput" accept="application/pdf,.pdf" hidden>
+                    </div>
+                </div>
+
+                <div class="modal-field">
+                    <label class="modal-label" for="modalTopicInput">Topic</label>
+                    <input
+                        type="text"
+                        class="classic-input"
+                        id="modalTopicInput"
+                        placeholder="Topic"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="modal-field">
+                    <label class="modal-label" for="modalDueDateInput">Due date</label>
+                    <input
+                        type="text"
+                        class="classic-input"
+                        id="modalDueDateInput"
+                        placeholder="DD/MM/YYYY"
+                        autocomplete="off"
+                    >
+                </div>
+
+                <div class="modal-error" id="modalErrorMsg" role="alert"></div>
+
+                <div class="modal-field" id="modalDifficultyField" hidden>
+                    <label class="modal-label" for="modalDifficultyInput">Difficulty</label>
+                    <select class="classic-input" id="modalDifficultyInput">
+                        <option value="easy">Easy</option>
+                        <option value="med">Med</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+
+                <div class="modal-actions">
+                    <button type="submit" class="classic-aqua-btn is-primary">Save</button>
+                    <button type="button" class="classic-cancel-link" id="modalCancelBtn">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Full-Screen Apple PDF Viewer Page (100vw x 100vh) -->
+    <section class="pdf-fullscreen-page" id="pdfViewerPage" aria-hidden="true" aria-label="Full screen PDF reader">
+        <header class="pdf-viewer-toolbar">
+            <div class="pdf-viewer-left">
+                <button type="button" class="viewer-back-btn" id="viewerBackBtn" title="Back to Sources">
+                    <svg viewBox="0 0 16 16" aria-hidden="true">
+                        <polyline points="10 3.5 5.5 8 10 12.5"></polyline>
+                    </svg>
+                    <span>Back</span>
+                </button>
+                <span class="viewer-toolbar-divider" aria-hidden="true"></span>
+                <div class="pdf-viewer-meta">
+                    <div class="pdf-viewer-path" id="pdfViewerTitle"></div>
+                    <div class="pdf-viewer-sub" id="pdfViewerSub"></div>
+                </div>
+            </div>
+
+            <!-- Pages & Zoom Controls -->
+            <div class="pdf-viewer-controls" aria-label="Document navigation and zoom">
+                <div class="viewer-control-group" title="Page navigation">
+                    <button type="button" class="viewer-ctrl-btn" id="viewerPrevPageBtn" aria-label="Previous PDF page">
+                        <svg viewBox="0 0 16 16"><polyline points="10 3.5 5.5 8 10 12.5"></polyline></svg>
+                    </button>
+                    <span class="viewer-ctrl-label" id="viewerPageLabel">1 / 3</span>
+                    <button type="button" class="viewer-ctrl-btn" id="viewerNextPageBtn" aria-label="Next PDF page">
+                        <svg viewBox="0 0 16 16"><polyline points="6 3.5 10.5 8 6 12.5"></polyline></svg>
+                    </button>
+                </div>
+
+                <span class="viewer-controls-divider" aria-hidden="true"></span>
+
+                <div class="viewer-control-group" title="Zoom level (Ctrl + Scroll)">
+                    <button type="button" class="viewer-ctrl-btn" id="viewerZoomOutBtn" aria-label="Zoom out">&minus;</button>
+                    <span class="viewer-ctrl-label" id="viewerZoomLabel">100%</span>
+                    <button type="button" class="viewer-ctrl-btn" id="viewerZoomInBtn" aria-label="Zoom in">+</button>
+                </div>
+
+                <span class="viewer-controls-divider" aria-hidden="true"></span>
+
+                <button type="button" class="viewer-tool-btn" id="viewerSelectAreaBtn" aria-pressed="false" title="Select area on PDF">Select area</button>
+            </div>
+
+            <div class="pdf-viewer-actions">
+                <button type="button" class="badge viewer-status-toggle" id="viewerStatusToggle" title="Click to toggle completion status"></button>
+                <button type="button" class="viewer-link-action is-active" id="viewerNotesToggleBtn" aria-expanded="true" title="Toggle floating notes window">Notes</button>
+                <a class="viewer-link-action is-primary" id="viewerDownloadBtn" download>Download</a>
+            </div>
+        </header>
+        <div class="pdf-viewer-body" id="pdfViewerBody">
+            <div class="pdf-canvas-viewport" id="pdfCanvasViewport" tabindex="0" aria-label="PDF document pages"></div>
+            <div class="pdf-area-selection-box" id="pdfAreaSelectionBox" aria-hidden="true"></div>
+            <aside class="pdf-notes-pane" id="pdfNotesPane" aria-label="Floating document notes">
+                <div class="pdf-notes-header" id="pdfNotesHeader" title="Drag to move window">
+                    <div class="pdf-notes-header-left">
+                        <button type="button" class="pdf-notes-close" id="pdfNotesCloseBtn" aria-label="Close notes window" title="Close Notes"></button>
+                        <span class="pdf-notes-title">Notes</span>
+                    </div>
+                    <span class="pdf-notes-saved" id="pdfNotesSavedLabel">Saved</span>
+                </div>
+                <textarea
+                    class="pdf-notes-textarea"
+                    id="pdfNotesTextarea"
+                    placeholder="Write your notes, key formulas, or page references for this PDF..."
+                    spellcheck="false"
+                ></textarea>
+                <span class="pdf-notes-resize-grip" aria-hidden="true"></span>
+            </aside>
+        </div>
+    </section>
+
+    <dialog class="image-zoom-dialog" id="imageZoomDialog" aria-label="Image preview">
+        <div class="image-zoom-controls">
+            <button type="button" id="imageZoomOutBtn" aria-label="Zoom out">−</button>
+            <span id="imageZoomLabel">100%</span>
+            <button type="button" id="imageZoomInBtn" aria-label="Zoom in">+</button>
+            <button type="button" id="imageZoomCloseBtn" aria-label="Close image preview">×</button>
+        </div>
+        <div class="image-zoom-stage" id="imageZoomStage">
+            <img id="imageZoomImage" alt="" draggable="false">
+        </div>
+    </dialog>
+
+    <section class="problem-detail-page" id="problemDetailPage" aria-hidden="true"
+        aria-label="Problem detail and solution">
+        <div class="problem-detail-topbar">
+            <div class="problem-detail-topbar-inner">
+                <div class="problem-detail-topbar-left">
+                    <button type="button" class="problem-back-btn" id="problemDetailBackBtn" title="Back to Problems">
+                        <svg viewBox="0 0 16 16" aria-hidden="true">
+                            <polyline points="10 3.5 5.5 8 10 12.5"></polyline>
+                        </svg>
+                        <span>Back</span>
+                    </button>
+                </div>
+                <div class="problem-detail-nav" aria-label="Problem navigation">
+                    <button type="button" class="page-btn" id="problemPrevItemBtn" aria-label="Previous problem"
+                        title="Previous problem">
+                        <svg viewBox="0 0 16 16" aria-hidden="true">
+                            <polyline points="10 3.5 5.5 8 10 12.5"></polyline>
+                        </svg>
+                    </button>
+                    <span id="problemDetailPosLabel">1 / 1</span>
+                    <button type="button" class="page-btn" id="problemNextItemBtn" aria-label="Next problem"
+                        title="Next problem">
+                        <svg viewBox="0 0 16 16" aria-hidden="true">
+                            <polyline points="6 3.5 10.5 8 6 12.5"></polyline>
+                        </svg>
+                    </button>
+                </div>
+                <div class="problem-detail-topbar-right">
+                    <div class="problem-meta-bar">
+                        <span id="problemDetailAddedDate"></span>
+                        <span aria-hidden="true">&middot;</span>
+                        <button type="button" class="problem-diff-btn" id="problemDetailDiffBtn"
+                            title="Click to change difficulty"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="problem-detail-container">
+            <header class="problem-header-block">
+                <div class="problem-breadcrumb-line" id="problemDetailBreadcrumb"></div>
+                <div class="problem-title-row">
+                    <input type="text" class="problem-detail-title-input" id="problemDetailTitleInput"
+                        aria-label="Problem title" spellcheck="false">
+                </div>
+            </header>
+
+            <!-- Section 1: PROBLEM STATEMENT -->
+            <section class="problem-section" id="problemStatementSection" aria-labelledby="statementHeading">
+                <div class="section-heading-row">
+                    <h2 class="section-heading" id="statementHeading">Problem Statement</h2>
+                    <div>
+                        <button type="button" class="doc-action-link" id="addStatementMediaBtn">Add image</button>
+                        <input type="file" id="statementMediaInput" accept="image/*,application/pdf,.pdf" multiple
+                            hidden>
+                    </div>
+                </div>
+
+                <div class="doc-empty-hint" id="statementEmptyHint">No problem image added. Click Add image to upload.
+                </div>
+                <div class="doc-media-list" id="statementImageGrid" hidden></div>
+
+                <div class="statement-pdf-embed" id="statementPdfEmbed" hidden>
+                    <iframe id="statementPdfIframe" title="Problem Statement PDF"></iframe>
+                    <div class="doc-media-meta">
+                        <button type="button" class="doc-action-link" id="removeStatementPdfBtn">Remove</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: NOTES -->
+            <section class="problem-section" aria-labelledby="notesHeading">
+                <div class="section-heading-row">
+                    <h2 class="section-heading" id="notesHeading">Notes</h2>
+                </div>
+                <textarea id="problemStatementNoteInput" class="notes-plain-textarea"
+                    placeholder="Write notes for this problem..." spellcheck="false"></textarea>
+            </section>
+
+            <!-- Section 3: SOLUTIONS -->
+            <section class="problem-section" aria-labelledby="solutionHeading">
+                <div class="section-heading-row">
+                    <h2 class="section-heading" id="solutionHeading">Solutions</h2>
+                    <div class="add-menu-wrap" id="solutionAddWrap">
+                        <button type="button" class="doc-action-link" id="solutionAddBtn">Add solution</button>
+                        <div class="add-popover-menu" id="solutionAddMenu" hidden>
+                            <button type="button" class="add-popover-item" data-choose-sol="image">Image</button>
+                            <button type="button" class="add-popover-item" data-choose-sol="pdf">PDF</button>
+                            <button type="button" class="add-popover-item" data-choose-sol="markdown">Markdown</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Empty State before user adds a solution -->
+                <div class="doc-empty-hint" id="solutionEmptyState">No solution added yet. Click Add solution to write
+                    Markdown, upload an Image, or attach a PDF.</div>
+
+                <!-- Markdown Solution Panel -->
+                <div class="solution-panel" id="solutionPanelMarkdown" hidden>
+                    <div class="md-solution-box">
+                        <div class="md-toolbar">
+                            <div class="md-subtabs">
+                                <button type="button" class="md-subtab-btn is-active"
+                                    data-md-mode="write">Write</button>
+                                <button type="button" class="md-subtab-btn" data-md-mode="preview">Preview</button>
+                            </div>
+                            <div style="display:inline-flex;align-items:center;gap:12px;">
+                                <span id="solutionMdStatus">Saved</span>
+                                <button type="button" class="doc-action-link"
+                                    id="removeMarkdownSolutionBtn">Remove</button>
+                            </div>
+                        </div>
+                        <textarea class="md-editor-area" id="solutionMdTextarea"
+                            placeholder="Write your solution in Markdown (supports #, **bold**, *italic*, `code`, lists...)..."
+                            spellcheck="false"></textarea>
+                        <div class="md-preview-area" id="solutionMdPreview" hidden></div>
+                    </div>
+                </div>
+
+                <!-- Image Solution Panel -->
+                <div class="solution-panel" id="solutionPanelImage" hidden>
+                    <div class="media-solution-box">
+                        <input type="file" id="solutionImageInput" accept="image/*" multiple hidden>
+                        <div class="doc-media-list" id="solutionImageGrid"></div>
+                    </div>
+                </div>
+
+                <!-- PDF Solution Panel -->
+                <div class="solution-panel" id="solutionPanelPdf" hidden>
+                    <div class="doc-media-item">
+                        <input type="file" id="solutionPdfInput" accept="application/pdf,.pdf" hidden>
+                        <iframe class="solution-pdf-frame" id="solutionPdfFrame" title="Solution PDF preview"></iframe>
+                        <div class="doc-media-meta">
+                            <button type="button" class="doc-action-link" id="removeSolutionPdfBtn">Remove</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </section>
+
+    <script type="module" src="/src/app.js"></script>
+
+</body>
+</html>
