@@ -11,6 +11,7 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
   let active = null, items = [], returnFocus = null;
   let contentAnimation = null;
   let closing = false, closingPromise = null, preparation = 0, pending = null;
+  const readyImages = new WeakMap();
   const urls = new Map(), timers = new Map(), pickerTargets = new Map();
   page.inert = true;
   page.setAttribute('role', 'dialog');
@@ -19,12 +20,13 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     if (!urls.has(blob)) urls.set(blob, URL.createObjectURL(blob));
     return urls.get(blob);
   };
-  function releaseUrls() {
+  function releaseUrls(keep = new Set()) {
     imageZoom.close();
     $('statementPdfIframe').removeAttribute('src'); $('solutionPdfFrame').removeAttribute('src');
     $('statementImageGrid').replaceChildren(); $('solutionImageGrid').replaceChildren();
-    for (const url of urls.values()) URL.revokeObjectURL(url);
-    urls.clear();
+    for (const [blob, url] of urls) {
+      if (!keep.has(blob)) { URL.revokeObjectURL(url); urls.delete(blob); }
+    }
   }
   async function save(file, status = null) {
     clearTimeout(timers.get(file.id)?.timer); timers.delete(file.id);
@@ -46,8 +48,23 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
   function flush() {
     for (const entry of [...timers.values()]) save(entry.file, entry.status);
   }
+  async function prepareImages(file) {
+    if (!globalThis.Image) return;
+    await Promise.all([...(file.statementImages || []), ...(file.solution?.images || [])].map(async record => {
+      const src = urlFor(record.blob);
+      if (readyImages.get(record)?.src === src) return;
+      const image = new Image(); image.src = src;
+      await image.decode(); readyImages.set(record, image);
+    }));
+  }
   function images(container, records, type) {
     container.innerHTML = records.map((image, index) => `<div class="doc-media-item"><img src="${esc(urlFor(image.blob))}" alt="${type === 'statement' ? 'Problem statement' : 'Solution'} image" tabindex="0" role="button" aria-label="Zoom ${type === 'statement' ? 'problem statement' : 'solution'} image"><div class="doc-media-meta"><button type="button" class="doc-action-link" data-remove-${type}="${index}">Remove</button></div></div>`).join('');
+    container.querySelectorAll?.('img').forEach((placeholder, index) => {
+      const image = readyImages.get(records[index]);
+      if (!image || image.src !== urlFor(records[index].blob)) return;
+      for (const attribute of placeholder.attributes) if (attribute.name !== 'src') image.setAttribute(attribute.name, attribute.value);
+      placeholder.replaceWith(image);
+    });
   }
   function setFrame(frame, blob) {
     if (!blob) { frame.removeAttribute('src'); return; }
@@ -85,9 +102,12 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     $('solutionMdPreview').hidden = mode !== 'preview';
     if (mode === 'preview') $('solutionMdPreview').innerHTML = renderMarkdown(active.solution.markdown);
   }
-  function show(file, direction = 0) {
+  function show(file) {
     contentAnimation?.cancel(); contentAnimation = null;
-    flush(); releaseUrls(); active = ensureProblemData(file);
+    flush();
+    const media = [...(file.statementImages || []), ...(file.solution?.images || [])].map(record => record.blob);
+    releaseUrls(new Set([...media, file.blob, file.solution?.pdfBlob].filter(Boolean)));
+    active = ensureProblemData(file); pending = null;
     const index = items.findIndex(item => item.id === active.id);
     $('problemDetailPosLabel').textContent = `${index + 1} / ${items.length}`;
     $('problemPrevItemBtn').disabled = index <= 0;
@@ -103,18 +123,15 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     renderDifficulty(); renderStatement(); renderSolution(); markdownMode('write');
     page.scrollTop = 0;
     onOpen(file);
-    if (direction && !window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
-      contentAnimation = page.querySelector('.problem-detail-container')?.animate?.([
-        { opacity: 0.92, transform: `translateX(${direction * 3}px)` },
-        { opacity: 1, transform: 'translateX(0)' },
-      ], { duration: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
-    }
   }
+
   function prepared(file, action) {
     const sequence = ++preparation;
-    if (!prepare) return action();
-    pending = file; onOpen(file);
-    return prepare(file).then(() => { if (sequence === preparation) { pending = null; return action(); } }).catch(error => {
+    contentAnimation?.cancel(); contentAnimation = null;
+    pending = file;
+    if (!prepare && !globalThis.Image) return action(sequence);
+    onOpen(file);
+    return Promise.resolve(prepare?.(file)).then(() => { if (sequence === preparation) return prepareImages(file); }).then(() => { if (sequence === preparation) return action(sequence); }).catch(error => {
       if (sequence === preparation) { pending = null; if (active) onOpen(active); else onClose(file); window.alert(error.message || 'Unable to load problem.'); }
     });
   }
@@ -150,10 +167,25 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     return closingPromise;
   }
   $('problemDetailBackBtn').onclick = close;
+  function transitionTo(file, sequence) {
+    const container = page.querySelector('.problem-detail-container');
+    if (!container?.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) { show(file); return; }
+    const fade = container.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: 'ease-in', fill: 'forwards' });
+    contentAnimation = fade;
+    return fade.finished.catch(() => {}).then(() => {
+      if (sequence !== preparation || closing || !active) return;
+      show(file);
+      const reveal = container.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out', fill: 'both' });
+      contentAnimation = reveal;
+      return reveal.finished.catch(() => {}).then(() => {
+        if (contentAnimation === reveal) { reveal.cancel(); contentAnimation = null; }
+      });
+    });
+  }
   function navigate(step) {
     if (!active || closing) return;
     const index = items.findIndex(file => file.id === (pending || active).id) + step;
-    if (items[index]) return prepared(items[index], () => show(items[index], step));
+    if (items[index]) return prepared(items[index], sequence => transitionTo(items[index], sequence));
   }
   for (const [id, step] of [['problemPrevItemBtn', -1], ['problemNextItemBtn', 1]]) $(id).onclick = () => navigate(step);
   $('problemDetailTitleInput').oninput = e => { e.target.setCustomValidity(''); };

@@ -193,3 +193,32 @@ test('left/right keys share navigation with buttons and preserve text cursor con
     app.$('problemNextItemBtn').onclick(); assert.equal(app.detail.activeId, 'b');
   } finally { app.cleanup(); }
 });
+
+test('navigation retains the current problem until image decoding and fade-out finish, then fades in without translation', async () => {
+  const beforeImage = globalThis.Image;
+  let decoded;
+  globalThis.Image = class { decode() { return new Promise(resolve => { decoded = resolve; }); } };
+  const a = problem('a'), b = problem('b');
+  b.statementImages = [{ blob: new Blob(['image']) }];
+  const app = mount([a, b]);
+  const animations = [];
+  try {
+    await app.detail.open(a);
+    app.$('problemDetailPage').scrollTop = 400;
+    app.$('problemDetailPage').querySelector = () => ({ animate(frames, options) {
+      let finish; const finished = new Promise(resolve => { finish = resolve; });
+      const animation = { frames, options, finished, finish, cancel() {} }; animations.push(animation); return animation;
+    } });
+    const changed = app.$('problemNextItemBtn').onclick();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(app.$('problemDetailTitleInput').value, 'a'); assert.equal(animations.length, 0);
+    assert.equal(app.$('problemDetailPage').scrollTop, 400);
+    decoded(); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(animations.length, 1); assert.equal(app.$('problemDetailTitleInput').value, 'a');
+    animations[0].finish(); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(app.$('problemDetailTitleInput').value, 'b'); assert.equal(animations.length, 2);
+    assert.equal(app.$('problemDetailPage').scrollTop, 0);
+    assert.ok(animations.every(animation => animation.frames.every(frame => frame.transform === undefined)));
+    animations[1].finish(); await changed;
+  } finally { app.cleanup(); if (beforeImage === undefined) delete globalThis.Image; else globalThis.Image = beforeImage; }
+});
