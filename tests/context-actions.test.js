@@ -26,7 +26,7 @@ function mount() {
     createContextMenu: () => ({ open(event, actions) { context.actions = actions; } }),
     visibleFiles: () => context.files.filter(file => file.kind !== 'problem' && file.kind !== 'subject'),
     async deleteDocuments(db, ids) { if (context.fail) throw Error('Offline'); removed.push(...ids); },
-    setModal(open, file) { context.editing = file; }, renderSidebar() {}, renderFiles() {}, URL,
+    setModal(open, file) { context.editing = file; }, renderSidebar() {}, renderFiles() {}, renderSourceOutline() {}, URL,
   });
   const source = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
   vm.runInContext(source.slice(source.indexOf('const contextMenu ='), source.indexOf('function syncToolbar(')), context);

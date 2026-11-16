@@ -22,7 +22,7 @@ function form(view) {
     viewName: () => context.activeView === 'problems' ? 'Problems' : 'Sources',
     document: { activeElement: null, body: { style: {} }, querySelector: selector => selector.includes('modalBrowseBtn') ? browseLabel : dateLabel },
     validateUpload: (file, view) => validateUpload(file, view, async () => {}), uploadName, parseDate, dateOf, collectionFiles, normalizeSubject, todayDate, renamedDocument, validateDocumentName, normalizedDifficulty,
-    visibleFiles: () => context.files, async persist(file) { stored.push(structuredClone(file)); }, renderSidebar() {}, renderFiles() {},
+    visibleFiles: () => context.files, async persist(file) { stored.push(structuredClone(file)); }, renderSidebar() {}, renderFiles() {}, renderSourceOutline() {},
     pdfjsLib: { getDocument() { pdfLoads++; return { promise: Promise.resolve({ numPages: 4 }), async destroy() {} }; } },
   });
   const source = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
@@ -116,4 +116,36 @@ test('a slow problem upload uses the collection and metadata captured before nav
   app.$('modalDifficultyInput').value = 'easy'; finish('image'); await saved;
   assert.equal(app.stored[0].kind, 'problem'); assert.equal(app.stored[0].topic, 'Geometry');
   assert.equal(app.stored[0].difficulty, 'hard'); assert.equal(app.stored[0].statementImages.length, 1);
+});
+
+test('source extraction reuses the Problem upload form, saves one linked image and returns to its PDF', async () => {
+  const app = form('sources');
+  const source = { id: 'source', name: 'exam.pdf', subject: 'math', topic: 'Algebra' };
+  app.context.files.push(source);
+  app.context.extracted = { source, blob: png(), location: { sourceId: source.id, page: 2, rect: { x: .1, y: .3, width: .5, height: .2 } } };
+  app.$('pdfFileInput').files = [];
+  vm.runInContext('setModal(true, null, extracted)', app.context);
+  assert.equal(app.browseLabel.textContent, 'Select problem');
+  assert.equal(app.$('modalTopicInput').value, 'Algebra');
+  assert.equal(app.$('pdfViewerPage').inert, true);
+  app.$('modalPathFileNameInput').value = 'Question 1';
+  await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
+  assert.equal(app.stored.length, 1); const saved = app.stored[0];
+  assert.equal(saved.kind, 'problem'); assert.equal(saved.sourceLocation.page, 2);
+  assert.equal(saved.sourceLocation.sourceId, source.id); assert.equal(saved.statementImages.length, 1);
+  assert.equal(app.$('pdfViewerPage').inert, false); assert.equal(app.context.app.inert, true);
+  assert.equal(app.context.document.body.style.overflow, 'hidden');
+});
+test('cancel and failed saves create neither a linked problem nor an outline entry', async () => {
+  const app = form('sources');
+  const source = { id: 'source', subject: 'math', topic: 'Geometry' }; app.context.files.push(source);
+  app.context.extracted = { source, blob: png(), location: { sourceId: source.id, page: 1, rect: { x: 0, y: 0, width: 1, height: .5 } } };
+  vm.runInContext('setModal(true, null, extracted)', app.context); app.$('modalCancelBtn').onclick();
+  assert.equal(app.stored.length, 0); assert.equal(app.context.files.length, 1);
+  vm.runInContext('setModal(true, null, extracted)', app.context);
+  app.context.persist = async () => { throw Error('Offline'); };
+  await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
+  assert.equal(app.context.files.length, 1); assert.equal(app.stored.length, 0);
+  assert.match(app.$('modalErrorMsg').textContent, /Offline/);
+  assert.equal(app.$('uploadModalBackdrop').classList.values.has('is-open'), true);
 });

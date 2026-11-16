@@ -128,3 +128,11 @@ test('metadata listing never downloads attachments; opening downloads only selec
   assert.equal(files[1].notes, 'Edit before download');
   assert.equal(await files[1].statementImages[0].blob.text(), 'B');
 });
+
+test('extracted image and its normalized source position survive a new cloud session together', async () => {
+  const fake = fakeCloud(), owner = { id: 'owner' };
+  const location = { sourceId: 's', page: 2, rect: { x: .1, y: .4, width: .6, height: .2 } };
+  await createCloudStorage(fake.client, owner).save([{ id: 'problem', kind: 'problem', name: 'Question.png', sourceLocation: location, statementImages: [{ blob: new Blob(['crop'], { type: 'image/png' }) }] }]);
+  const [restored] = await createCloudStorage(fake.client, owner).read();
+  assert.deepEqual(restored.sourceLocation, location); assert.equal(await restored.statementImages[0].blob.text(), 'crop');
+});

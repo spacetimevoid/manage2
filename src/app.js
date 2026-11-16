@@ -1,3 +1,6 @@
+import { selectedRegion, cropPage } from './source-extraction.js';
+import { createSourceOutline } from './source-outline.js';
+import './source-extraction.css';
 import { enableSubjectDrag } from './subject-drag.js';
 import { createSubjectModal } from './subject-modal.js';
 import { normalizeSubject, todayDate, renamedDocument, validateDocumentName, difficultyLabel, normalizedDifficulty } from './metadata.js';
@@ -173,24 +176,28 @@ $('pdfNotesTextarea').oninput = () => {
 };
 document.addEventListener('visibilitychange', () => { if (document.hidden && activeFile) saveNote(); });
 
-function setModal(open, file = null) {
+function setModal(open, file = null, extraction = null) {
+  const wasExtracting = !!setModal.extraction;
+  setModal.extraction = open ? extraction : null;
+  if (open) $('uploadModalBackdrop').classList.toggle('is-extracting', !!extraction);
+  if (extraction || wasExtracting) $('pdfViewerPage').inert = open;
   setModal.file = open ? file : null;
-  if (open) setModal.view = file ? (file.kind === 'problem' ? 'problems' : 'sources') : activeView;
+  if (open) setModal.view = file ? (file.kind === 'problem' ? 'problems' : 'sources') : extraction ? 'problems' : activeView;
   if (open) $('uploadModalBackdrop').classList.toggle('is-editing', !!file);
   $('uploadModalBackdrop').classList.toggle('is-open', open);
   $('uploadModalBackdrop').setAttribute('aria-hidden', String(!open));
-  app.inert = open;
-  document.body.style.overflow = open ? 'hidden' : '';
+  app.inert = open || wasExtracting;
+  document.body.style.overflow = open || wasExtracting ? 'hidden' : '';
   if (open) {
-    lastFocus = document.activeElement;
+    setModal.returnFocus = document.activeElement;
     $('uploadPdfForm').reset(); $('pdfFileInput').value = '';
-    $('modalCollectionName').textContent = viewName();
-    $('modalDifficultyField').hidden = activeView !== 'problems';
-    const problems = activeView === 'problems';
+    $('modalCollectionName').textContent = setModal.view === 'problems' ? 'Problems' : 'Sources';
+    $('modalDifficultyField').hidden = setModal.view !== 'problems';
+    const problems = setModal.view === 'problems';
     document.querySelector('label[for="modalBrowseBtn"]').textContent = problems ? 'Select problem' : 'Select source';
     $('pdfFileInput').accept = problems ? 'image/*,application/pdf,.pdf' : 'application/pdf,.pdf';
     $('modalPathFileNameInput').placeholder = problems ? 'new-problem' : 'new-file.pdf';
-    document.querySelector('label[for="modalDueDateInput"]').textContent = activeView === 'problems' ? 'Added date' : 'Due date';
+    document.querySelector('label[for="modalDueDateInput"]').textContent = problems ? 'Added date' : 'Due date';
     $('modalPathSubjectInput').value = activeSubject === 'all' ? '' : activeSubject;
     $('modalPathFileNameInput').value = '';
     $('modalDueDateInput').value = todayDate();
@@ -203,8 +210,13 @@ function setModal(open, file = null) {
       $('modalDueDateInput').value = dateOf(file) || '';
       $('modalDifficultyInput').value = normalizedDifficulty(file.difficulty);
     }
+    if (extraction) {
+      $('modalPathSubjectInput').value = extraction.source.subject;
+      $('modalTopicInput').value = extraction.source.topic;
+      $('modalFileStatus').textContent = extraction.blob.name;
+    }
     $('modalPathFileNameInput').focus();
-  } else lastFocus?.focus();
+  } else setModal.returnFocus?.focus();
 }
 $('uploadPdfBtn').onclick = () => setModal(true);
 $('modalCancelBtn').onclick = () => setModal(false);
@@ -227,7 +239,8 @@ $('uploadPdfForm').onsubmit = async e => {
   try {
     const editing = setModal.file;
     const view = setModal.view;
-    const blob = $('pdfFileInput').files[0];
+    const extraction = setModal.extraction;
+    const blob = extraction?.blob || $('pdfFileInput').files[0];
     if (!editing && !blob) throw new Error(view === 'problems' ? 'Please select an image or PDF.' : 'Please select a PDF file.');
     const topic = $('modalTopicInput').value.trim() || 'General Notes';
     const difficulty = normalizedDifficulty($('modalDifficultyInput').value);
@@ -244,7 +257,7 @@ $('uploadPdfForm').onsubmit = async e => {
       else updated.dueDate = dueDate;
       await persist(updated);
       Object.assign(editing, updated);
-      setModal(false); renderSidebar(); renderFiles();
+      setModal(false); renderSidebar(); renderFiles(); renderSourceOutline();
       return;
     }
     await validateUpload(blob, view);
@@ -261,10 +274,14 @@ $('uploadPdfForm').onsubmit = async e => {
       file.difficulty = difficulty;
       delete file.dueDate;
     }
+    if (extraction) {
+      if (!files.some(source => source.id === extraction.location.sourceId)) throw new Error('The source no longer exists.');
+      file.sourceLocation = extraction.location;
+    }
     await persist(file);
     files.unshift(file);
     currentPage = 1;
-    setModal(false); renderSidebar(); renderFiles();
+    setModal(false); renderSidebar(); renderFiles(); renderSourceOutline();
   } catch (error) {
     $('modalErrorMsg').textContent = error.name === 'PasswordException' ? 'Password-protected PDFs are not supported yet.' : error.message || 'Unable to save file.';
   } finally {
@@ -283,7 +300,7 @@ async function removeFiles(items) {
   files = files.filter(file => !removed.has(file.id));
   for (const file of items) if (file.blobUrl) URL.revokeObjectURL(file.blobUrl);
   if (activeSubject !== 'all' && !subjects().includes(activeSubject)) activeSubject = 'all';
-  renderSidebar(); renderFiles();
+  renderSidebar(); renderFiles(); renderSourceOutline();
 }
 $('fileList').addEventListener('contextmenu', event => {
   const row = event.target.closest('[data-id]');
@@ -431,10 +448,28 @@ async function renderPages(anchorPage = 1, preservePosition = false) {
   for (const sheet of viewport.children) observer.observe(sheet);
   await initialPaint;
 }
+const sourceOutline = createSourceOutline($('pdfViewerBody'), async location => {
+  if (!pdfDoc || !activeFile || location.sourceId !== activeFile.id) return;
+  const doc = pdfDoc, file = activeFile, page = await doc.getPage(location.page);
+  if (doc !== pdfDoc || file !== activeFile) return;
+  const sheet = $('pdfCanvasViewport').querySelector('[data-page-number="' + location.page + '"]');
+  if (!sheet) return;
+  const size = page.getViewport({ scale: zoom / 100 * 1.25 });
+  sheet.dataset.pdfWidth = size.width / (zoom / 100 * 1.25); sheet.dataset.pdfHeight = size.height / (zoom / 100 * 1.25);
+  sheet.style.width = size.width + 'px'; sheet.style.height = size.height + 'px';
+  goPage(location.page, false);
+  const viewport = $('pdfCanvasViewport');
+  isPageNavigation = true;
+  viewport.scrollTo({ top: Math.max(0, sheet.offsetTop + size.height * location.rect.y - 24),
+    left: Math.max(0, sheet.offsetLeft + size.width * location.rect.x - 24), behavior: 'instant' });
+});
+function renderSourceOutline() { sourceOutline.render(files, activeFile); }
+
 async function openViewer(file) {
   if (viewerClosing || activeFile) return;
   lastFocus = document.activeElement;
   activeFile = file; viewerPage = 1; zoom = 100;
+  renderSourceOutline();
   rememberReader(file);
   const token = ++viewerToken;
   let url = file.blobUrl || (file.blob instanceof Blob ? file.blobUrl = URL.createObjectURL(file.blob) : null);
@@ -515,6 +550,7 @@ function goPage(n, smooth = true) {
 $('viewerPrevPageBtn').onclick = () => goPage(viewerPage - 1);
 $('viewerNextPageBtn').onclick = () => goPage(viewerPage + 1);
 $('pdfCanvasViewport').onscroll = () => {
+  selection = null;
   $('pdfAreaSelectionBox').style.display = 'none';
   if (isPageNavigation) return;
   const sheets = [...$('pdfCanvasViewport').children].filter(s => s.dataset.pageNumber);
@@ -566,7 +602,7 @@ function setNotes(open) {
 $('viewerNotesToggleBtn').onclick = () => setNotes(!notesOpen);
 $('pdfNotesCloseBtn').onclick = () => setNotes(false);
 
-// Keep the sketch's region-selection interaction without adding an export action.
+// Select one region on a PDF page and save it as a linked problem.
 function setSelectMode(on) {
   selectMode = on; selection = null;
   $('viewerSelectAreaBtn').classList.toggle('is-active', on);
@@ -576,10 +612,10 @@ function setSelectMode(on) {
 }
 $('viewerSelectAreaBtn').onclick = () => setSelectMode(!selectMode);
 $('pdfCanvasViewport').addEventListener('pointerdown', e => {
-  if (!selectMode || e.button !== 0 || e.target.tagName !== 'CANVAS') return;
+  if (!selectMode || extracting || e.button !== 0 || e.target.tagName !== 'CANVAS') return;
   e.preventDefault();
   const rect = e.target.getBoundingClientRect();
-  selection = { canvas: e.target, rect, x: e.clientX - rect.left, y: e.clientY - rect.top };
+  selection = { page: Number(e.target.closest('[data-page-number]').dataset.pageNumber), canvas: e.target, rect, x: e.clientX - rect.left, y: e.clientY - rect.top };
   $('pdfCanvasViewport').setPointerCapture(e.pointerId);
 });
 $('pdfCanvasViewport').addEventListener('pointermove', e => {
@@ -590,11 +626,24 @@ $('pdfCanvasViewport').addEventListener('pointermove', e => {
   s.crop = { x: Math.min(s.x, x), y: Math.min(s.y, y), w: Math.abs(x - s.x), h: Math.abs(y - s.y) };
   Object.assign($('pdfAreaSelectionBox').style, { display: 'block', left: `${s.rect.left - body.left + s.crop.x}px`, top: `${s.rect.top - body.top + s.crop.y}px`, width: `${s.crop.w}px`, height: `${s.crop.h}px` });
 });
-$('pdfCanvasViewport').addEventListener('pointerup', e => {
-  selection = null;
+let extracting = false;
+$('pdfCanvasViewport').addEventListener('pointerup', async e => {
+  const region = selection; selection = null;
   if ($('pdfCanvasViewport').hasPointerCapture(e.pointerId)) $('pdfCanvasViewport').releasePointerCapture(e.pointerId);
+  $('pdfAreaSelectionBox').style.display = 'none';
+  if (!region || !activeFile || !pdfDoc) return;
+  const rect = selectedRegion(region.rect, { x: region.x, y: region.y }, { x: e.clientX - region.rect.left, y: e.clientY - region.rect.top });
+  if (!rect) return;
+  const source = activeFile, doc = pdfDoc;
+  extracting = true; setSelectMode(false);
+  try {
+    const blob = await cropPage(doc, region.page, rect);
+    if (activeFile !== source || pdfDoc !== doc || viewerClosing) return;
+    setModal(true, null, { blob, source, location: { sourceId: source.id, page: region.page, rect } });
+  } catch (error) { if (activeFile === source && !viewerClosing) window.alert(error.message || 'Unable to crop problem.'); }
+  finally { extracting = false; }
 });
-$('pdfCanvasViewport').addEventListener('pointercancel', () => { selection = null; });
+$('pdfCanvasViewport').addEventListener('pointercancel', () => { selection = null; $('pdfAreaSelectionBox').style.display = 'none'; });
 
 let drag;
 $('pdfNotesHeader').onpointerdown = e => {
