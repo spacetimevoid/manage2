@@ -449,7 +449,7 @@ async function renderPages(anchorPage = 1, preservePosition = false) {
   await initialPaint;
 }
 let sourceNavigation = 0;
-const sourceOutline = createSourceOutline($('pdfViewerBody'), async location => {
+const sourceOutline = createSourceOutline($('pdfNotesPane'), async location => {
   if (!pdfDoc || !activeFile || location.sourceId !== activeFile.id) return;
   const sequence = ++sourceNavigation;
   const doc = pdfDoc, file = activeFile, page = await doc.getPage(location.page);
@@ -465,7 +465,7 @@ const sourceOutline = createSourceOutline($('pdfViewerBody'), async location => 
   const left = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, sheet.offsetLeft + size.width * location.rect.x - 24));
   isPageNavigation = viewport.scrollTop !== top || viewport.scrollLeft !== left;
   viewport.scrollTo({ top, left, behavior: globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ? 'instant' : 'smooth' });
-}, $('viewerBackBtn').parentElement);
+});
 function renderSourceOutline() { sourceOutline.render(files, activeFile); }
 
 async function openViewer(file) {
@@ -600,7 +600,7 @@ function setNotes(open) {
   $('pdfNotesPane').inert = !open;
   $('viewerNotesToggleBtn').classList.toggle('is-active', open);
   $('viewerNotesToggleBtn').setAttribute('aria-expanded', String(open));
-  if (open) $('pdfNotesTextarea').focus(); else $('viewerNotesToggleBtn').focus();
+  if (open) sourceOutline.focus(); else $('viewerNotesToggleBtn').focus();
 }
 $('viewerNotesToggleBtn').onclick = () => setNotes(!notesOpen);
 $('pdfNotesCloseBtn').onclick = () => setNotes(false);

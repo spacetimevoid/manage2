@@ -1,9 +1,8 @@
 .source-outline {
-    flex: 0 0 180px;
-    max-width: 25vw;
+    flex: 1;
+    min-height: 0;
     overflow: auto;
     padding: 16px 8px;
-    border-right: 1px solid #424242;
 }
 .source-outline button {
     display: block;
@@ -12,16 +11,18 @@
     border: 0;
     border-radius: 4px;
     background: transparent;
-    color: #ddd;
+    color: #1d1d1f;
     text-align: left;
     font: inherit;
     font-size: 13px;
     overflow-wrap: anywhere;
     cursor: pointer;
 }
-.source-outline button:hover, .source-outline button:focus-visible { background: #383838; }
-.source-outline-toggle { width: 32px; flex-shrink: 0; color: #fff; }
-.source-outline-toggle svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 1.5; }
+.source-outline button:hover, .source-outline button:focus-visible { background: #e8e8ed; }
 .modal-backdrop.is-extracting { z-index: 160; }
 .modal-backdrop.is-extracting .modal-field:has(#modalBrowseBtn) { display: none; }
 body:has(.modal-backdrop.is-extracting.is-open) > .pdf-fullscreen-page { filter: blur(4px); }
+
+.source-notes-tabs { display: flex; align-items: center; gap: 12px; }
+.source-notes-tab { border: 0; background: transparent; padding: 0; color: #86868b; font: inherit; font-size: 12px; cursor: pointer; }
+.source-notes-tab[aria-selected="true"] { color: #6e6e73; font-weight: 600; }
