@@ -23,6 +23,7 @@ Dự án phục vụ việc lưu trữ file đề và bài tập hay, khó đư�
 
 ## Cách thực hiện
 
+- Hoàn thành đầy đủ từng yêu cầu một cách tỉ mỉ, cẩn thận; ưu tiên tính đúng đắn hơn tốc độ. Dành thời gian cần thiết để rà soát và kiểm chứng, không dừng ở bản sửa tạm hoặc kết quả chưa đạt chỉ để báo xong sớm. Tuân thủ chi tiết tại mục 8 của `RULES.md`.
 - Trước khi sửa, xác định phạm vi yêu cầu và đọc phần mã liên quan.
 - Ưu tiên bản sửa nhỏ nhất đủ giải quyết vấn đề. Không tự tái cấu trúc hoặc thêm thư viện khi không cần thiết cho yêu cầu.
 - Giữ các chức năng hiện có ngoài phạm vi sửa. Không tự áp đặt giới hạn dữ liệu hoặc đổi giá trị mặc định.

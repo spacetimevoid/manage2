@@ -47,4 +47,13 @@ Không tự suy diễn hoặc triển khai phần mở rộng. Hỏi ngắn gọ
 - Commit là ghi nhận cục bộ. Push lên remote theo yêu cầu của người dùng.
 - Nếu không thể commit, phải báo rõ nguyên nhân và phần thay đổi còn chưa được commit; không được tuyên bố đã commit khi chưa thực hiện thành công.
 
+## 8. Làm việc tỉ mỉ, cẩn thận và đúng yêu cầu
+
+- Bắt buộc hoàn thành đầy đủ yêu cầu được giao một cách tỉ mỉ, cẩn thận và chính xác. Ưu tiên chất lượng và tính đúng đắn hơn tốc độ; được dành thời gian cần thiết để làm chuẩn.
+- Đọc kỹ yêu cầu và phần mã liên quan, xác định nguyên nhân trước khi sửa; rà soát từng mục yêu cầu và các ảnh hưởng liên quan trước khi báo hoàn tất.
+- Kiểm chứng phù hợp với thay đổi, bao gồm luồng sử dụng thực tế và kiểm tra trực quan khi thay đổi có liên quan. Nếu phát hiện lỗi thuộc phạm vi công việc, tiếp tục sửa và kiểm tra lại cho đến khi đạt yêu cầu.
+- Không dừng ở bản sửa tạm, bỏ sót yêu cầu hoặc báo hoàn tất khi còn công việc cần làm chỉ để tiết kiệm thời gian. Không khẳng định đã kiểm tra hoặc đã sửa đúng khi chưa có bằng chứng.
+- Nếu bị chặn bởi quyền truy cập, công cụ hoặc thông tin còn thiếu, nêu rõ phần đã làm, phần chưa thể kiểm chứng và điều cần người dùng cung cấp; không che giấu giới hạn hoặc coi phần bị chặn là đã hoàn thành.
+- Quy tắc này không mở rộng phạm vi công việc và không cho phép tự thêm tính năng hoặc thay đổi thiết kế ngoài yêu cầu.
+
 Yêu cầu trực tiếp mới nhất của người dùng được ưu tiên khi có khác biệt với file này.
