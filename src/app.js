@@ -1,3 +1,4 @@
+import { createSubjectModal } from './subject-modal.js';
 import { normalizeSubject, todayDate, renamedDocument, validateDocumentName, difficultyLabel, normalizedDifficulty } from './metadata.js';
 import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
@@ -293,15 +294,13 @@ $('fileList').addEventListener('contextmenu', event => {
     { label: 'Delete', run: () => removeFiles([file]) },
   ]);
 });
-async function addSubject() {
-  const view = activeView;
-  const name = window.prompt('Subject name');
-  if (name === null) return;
+const subjectModal = createSubjectModal(async (name, view) => {
   const subject = makeSubject(name, view, files);
   await persist(subject);
   files.unshift(subject);
   if (activeView === view) renderSidebar();
-}
+});
+function addSubject() { return subjectModal.open(activeView); }
 $('subjectList').closest('.sidebar').addEventListener('contextmenu', event => {
   const subject = event.target.closest('[data-subject]')?.dataset.subject;
   event.preventDefault();

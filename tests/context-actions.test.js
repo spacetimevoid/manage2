@@ -20,7 +20,7 @@ function mount() {
   ];
   const context = vm.createContext({ subjectRecords, makeSubject, activeView: 'sources',
     subjects: () => subjectNames(context.files, context.activeView),
-    window: { prompt: () => context.promptValue }, async persist(file) { if(context.fail) throw Error('Offline'); context.saved = file; },
+    createSubjectModal: save => ({ async open(view) { if (context.promptValue !== null) await save(context.promptValue, view); } }), async persist(file) { if(context.fail) throw Error('Offline'); context.saved = file; },
     files, activeSubject: 'math', db: {}, saveQueue: Promise.resolve(),
     $: id => ({ addEventListener(type, handler) { handlers[id] = handler; }, closest() { return { addEventListener(type, handler) { handlers.sidebar = handler; } }; } }),
     createContextMenu: () => ({ open(event, actions) { context.actions = actions; } }),
