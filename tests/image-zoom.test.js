@@ -54,7 +54,7 @@ test('wheel zoom prevents browser scrolling, supports panning, and reset centers
     assert.match(app.$('imageZoomImage').style.transform, /\+ 0px.*\+ 0px/);
   } finally { app.cleanup(); }
 });
-test('clicking an image under pointer capture stays open; background clicks close it', () => {
+test('clicking an image under pointer capture stays open; background clicks keep it open', () => {
   const app = mount();
   try {
     const stage = app.$('imageZoomStage'), dialog = app.$('imageZoomDialog');
@@ -63,7 +63,8 @@ test('clicking an image under pointer capture stays open; background clicks clos
     assert.equal(dialog.open, true);
     stage.onpointerdown({ target: stage, button: 0, pointerId: 2, clientX: 10, clientY: 10 });
     stage.onpointerup({ pointerId: 2 }); dialog.onclick({ target: stage });
-    assert.equal(dialog.open, false);
+    assert.equal(dialog.open, true);
+    app.$('imageZoomCloseBtn').onclick(); assert.equal(dialog.open, false);
   } finally { app.cleanup(); }
 });
 test('two-finger pinch zoom works and each new image resets zoom', () => {

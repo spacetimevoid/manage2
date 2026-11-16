@@ -6,7 +6,7 @@ import vm from 'node:vm';
 test('an empty library stays empty after initialization and reload', async () => {
   const source = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
   const button = {};
-  const context = vm.createContext({
+  const context = vm.createContext({ pdfSession: { warm: () => Promise.resolve() },
     $: () => button, console, document: { body: { classList: { remove() {} } } }, files: [], db: null, libraryReady: false,
     async openLibrary() { return {}; }, async readDocuments() { return []; },
     async saveDocuments() { assert.fail('Initialization must not seed demo records'); },
@@ -23,7 +23,7 @@ test('startup keeps the list concealed until the current reader route has finish
   const source = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
   let restored, revealed = false;
   const route = new Promise(resolve => { restored = resolve; });
-  const context = vm.createContext({
+  const context = vm.createContext({ pdfSession: { warm: () => Promise.resolve() },
     $: () => ({}), console, files: [], db: null, libraryReady: false,
     document: { body: { classList: { remove(name) { assert.equal(name, 'is-starting'); revealed = true; } } } },
     async openLibrary() { return {}; }, async readDocuments() { return [{ id: 'saved', createdAt: 1 }]; },

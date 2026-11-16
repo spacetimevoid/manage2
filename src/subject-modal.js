@@ -22,7 +22,6 @@ export function createSubjectModal(save) {
     shell.inert = false; document.body.style.overflow = ''; origin?.focus();
   }
   cancel.onclick = close;
-  backdrop.onclick = event => { if (event.target === backdrop) close(); };
   backdrop.onkeydown = event => {
     if (event.key === 'Escape') { event.stopPropagation(); close(); }
     if (event.key === 'Tab') {

@@ -9,13 +9,13 @@ function mount(files, options = {}) {
   const previous = { document: globalThis.document, window: globalThis.window };
   const elements = new Map(), writes = [];
   const make = () => ({
-    hidden: false, disabled: false, value: '', style: {}, dataset: {}, attrs: {},
+    hidden: false, disabled: false, value: '', style: {}, dataset: {}, attrs: {}, listeners: {},
     classList: { add() {}, remove() {}, toggle() {} },
     setAttribute(k, v) { this.attrs[k] = v; }, getAttribute(k) { return this.attrs[k] ?? null; },
     removeAttribute(k) { delete this.attrs[k]; delete this[k]; },
     setCustomValidity(message) { this.validation = message; }, reportValidity() {},
     focus() { globalThis.document.activeElement = this; }, click() {},
-    replaceChildren() { this.innerHTML = ''; }, addEventListener() {}, contains() { return false; },
+    replaceChildren() { this.innerHTML = ''; }, addEventListener(type, callback) { this.listeners[type] = callback; }, contains() { return false; },
     getClientRects() { return [1]; },
   });
   const $ = id => { if (!elements.has(id)) elements.set(id, make()); return elements.get(id); };
@@ -177,5 +177,85 @@ test('rapid problem navigation follows the pending target and a failed load rest
     requests.get('c').reject(Error('Offline')); await new Promise(resolve => setImmediate(resolve));
     assert.equal(app.detail.activeId, 'a'); assert.equal(routes.at(-1), 'a');
     assert.equal(app.$('problemDetailTitleInput').value, 'a');
+  } finally { app.cleanup(); }
+});
+
+test('left/right keys share navigation with buttons and preserve text cursor controls', () => {
+  const files = ['a', 'b', 'c'].map(problem), app = mount(files);
+  try {
+    app.detail.open(files[0]);
+    const key = (key, target = { tagName: 'BUTTON' }) => app.$('problemDetailPage').listeners.keydown({ key, target, preventDefault() {}, stopPropagation() {} });
+    key('ArrowRight'); assert.equal(app.detail.activeId, 'b');
+    key('ArrowLeft', { tagName: 'TEXTAREA' }); assert.equal(app.detail.activeId, 'b');
+    key('ArrowLeft', { tagName: 'INPUT' }); assert.equal(app.detail.activeId, 'b');
+    key('ArrowLeft'); assert.equal(app.detail.activeId, 'a');
+    key('ArrowLeft'); assert.equal(app.detail.activeId, 'a');
+    app.$('problemNextItemBtn').onclick(); assert.equal(app.detail.activeId, 'b');
+  } finally { app.cleanup(); }
+});
+
+test('navigation retains the current problem until image decoding and fade-out finish, then fades in without translation', async () => {
+  const beforeImage = globalThis.Image;
+  let decoded;
+  globalThis.Image = class { decode() { return new Promise(resolve => { decoded = resolve; }); } };
+  const a = problem('a'), b = problem('b');
+  b.statementImages = [{ blob: new Blob(['image']) }];
+  const app = mount([a, b]);
+  const animations = [];
+  try {
+    await app.detail.open(a);
+    app.$('problemDetailPage').scrollTop = 400;
+    app.$('problemDetailPage').querySelector = () => ({ animate(frames, options) {
+      let finish; const finished = new Promise(resolve => { finish = resolve; });
+      const animation = { frames, options, finished, finish, cancel() {} }; animations.push(animation); return animation;
+    } });
+    const changed = app.$('problemNextItemBtn').onclick();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(app.$('problemDetailTitleInput').value, 'a'); assert.equal(animations.length, 0);
+    assert.equal(app.$('problemDetailPage').scrollTop, 400);
+    decoded(); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(animations.length, 1); assert.equal(app.$('problemDetailTitleInput').value, 'a');
+    animations[0].finish(); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(app.$('problemDetailTitleInput').value, 'b'); assert.equal(animations.length, 2);
+    assert.equal(app.$('problemDetailPage').scrollTop, 0);
+    assert.ok(animations.every(animation => animation.frames.every(frame => frame.transform === undefined)));
+    animations[1].finish(); await changed;
+  } finally { app.cleanup(); if (beforeImage === undefined) delete globalThis.Image; else globalThis.Image = beforeImage; }
+});
+
+
+test('adjacent problem images decode before navigation and are reused when moving back', async () => {
+  const beforeImage = globalThis.Image;
+  let decodes = 0;
+  globalThis.Image = class { async decode() { decodes++; } };
+  const files = ['a', 'b', 'c', 'd'].map(id => ({ ...problem(id), statementImages: [{ blob: new Blob([id]) }] }));
+  const app = mount(files);
+  try {
+    await app.detail.open(files[0]);
+    await new Promise(resolve => setTimeout(resolve, 10));
+    assert.equal(decodes, 2, 'only current and next problem decode at the beginning');
+    await app.$('problemNextItemBtn').onclick();
+    assert.equal(decodes, 2, 'next problem already decoded');
+    await new Promise(resolve => setTimeout(resolve, 10));
+    assert.equal(decodes, 3);
+    await app.$('problemPrevItemBtn').onclick();
+    assert.equal(decodes, 3, 'returning to previous problem reuses decoded pixels');
+    assert.equal(app.$('problemDetailTitleInput').value, 'a');
+  } finally { app.cleanup(); if (beforeImage === undefined) delete globalThis.Image; else globalThis.Image = beforeImage; }
+});
+
+test('media removal asks first, persists and can undo; failed deletion keeps its contents', async () => {
+  const { createDeletionHistory } = await import('../src/deletion.js');
+  let confirmed = false, fail = false;
+  const history = createDeletionHistory(async () => confirmed);
+  const file = problem('delete'); file.blob = new Blob(['PDF']);
+  const app = mount([file], { deletionHistory: history, persist: async () => { if (fail) throw Error('offline'); } });
+  try {
+    app.detail.open(file);
+    await app.$('removeStatementPdfBtn').onclick(); assert.ok(file.blob);
+    confirmed = true; fail = true;
+    await assert.rejects(app.$('removeStatementPdfBtn').onclick(), /offline/); assert.ok(file.blob);
+    fail = false; await app.$('removeStatementPdfBtn').onclick(); assert.equal(file.blob, undefined);
+    await history.undo(); assert.equal(await file.blob.text(), 'PDF');
   } finally { app.cleanup(); }
 });

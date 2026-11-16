@@ -1,6 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createCloudStorage } from '../src/cloud-storage.js';
+import { createAttachmentCache } from '../src/attachment-cache.js';
+import { IDBFactory } from 'fake-indexeddb';
 import { snapshotDocument } from '../src/library.js';
 
 function fakeCloud() {
@@ -127,4 +129,69 @@ test('metadata listing never downloads attachments; opening downloads only selec
   await reader.hydrate(files[1]); assert.equal(downloads, 2);
   assert.equal(files[1].notes, 'Edit before download');
   assert.equal(await files[1].statementImages[0].blob.text(), 'B');
+});
+
+test('extracted image and its normalized source position survive a new cloud session together', async () => {
+  const fake = fakeCloud(), owner = { id: 'owner' };
+  const location = { sourceId: 's', page: 2, rect: { x: .1, y: .4, width: .6, height: .2 } };
+  await createCloudStorage(fake.client, owner).save([{ id: 'problem', kind: 'problem', name: 'Question.png', sourceLocation: location, statementImages: [{ blob: new Blob(['crop'], { type: 'image/png' }) }] }]);
+  const [restored] = await createCloudStorage(fake.client, owner).read();
+  assert.deepEqual(restored.sourceLocation, location); assert.equal(await restored.statementImages[0].blob.text(), 'crop');
+});
+
+
+test('a new session opens cached attachments without downloading again, while new paths fetch fresh bytes', async () => {
+  const fake = fakeCloud(), owner = { id: 'owner' }, factory = new IDBFactory();
+  const cache = createAttachmentCache('project/owner', factory);
+  const writer = createCloudStorage(fake.client, owner);
+  await writer.save([{ id: 'a', blob: new Blob(['old']) }]);
+  let downloads = 0;
+  const from = fake.client.storage.from;
+  fake.client.storage.from = name => {
+    const bucket = from(name), download = bucket.download;
+    bucket.download = async path => { downloads++; return download(path); }; return bucket;
+  };
+  const first = createCloudStorage(fake.client, owner, cache);
+  await first.hydrate((await first.read({ metadataOnly: true }))[0]);
+  assert.equal(downloads, 1); await cache.close();
+  const reopenedCache = createAttachmentCache('project/owner', factory);
+  const second = createCloudStorage(fake.client, owner, reopenedCache);
+  const [again] = await second.read({ metadataOnly: true });
+  await second.hydrate(again);
+  assert.equal(downloads, 1, 'reload performs zero extra attachment downloads');
+  assert.equal(await again.blob.text(), 'old');
+  await writer.save([{ id: 'a', blob: new Blob(['new']) }]);
+  const [changed] = await second.read({ metadataOnly: true });
+  const path = changed.blob.__manageFile;
+  await second.hydrate(changed); assert.equal(downloads, 2); assert.equal(await changed.blob.text(), 'new');
+  await second.remove(['a']); assert.equal(await reopenedCache.get(path), undefined);
+  await reopenedCache.close();
+});
+
+test('background hydration shares downloads and never overwrites edits or restores removed media', async () => {
+  const fake = fakeCloud(), owner = { id: 'owner' };
+  await createCloudStorage(fake.client, owner).save([{ id: 'a', notes: 'old', statementImages: [{ blob: new Blob(['old image']) }] }]);
+  let finish, downloads = 0;
+  const from = fake.client.storage.from;
+  fake.client.storage.from = name => {
+    const bucket = from(name), download = bucket.download;
+    bucket.download = path => { downloads++; return new Promise(resolve => { finish = () => download(path).then(resolve); }); }; return bucket;
+  };
+  const storage = createCloudStorage(fake.client, owner);
+  const [file] = await storage.read({ metadataOnly: true });
+  const background = storage.hydrate(file), foreground = storage.hydrate(file);
+  file.notes = 'edited'; file.statementImages = [];
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(downloads, 1); finish(); await Promise.all([background, foreground]);
+  assert.equal(file.notes, 'edited'); assert.deepEqual(file.statementImages, []);
+});
+
+test('undo reuploads deleted attachment bytes instead of referring to a removed storage object', async () => {
+  const fake = fakeCloud(), owner = { id: 'owner' }, storage = createCloudStorage(fake.client, owner);
+  const file = { id: 'undo', blob: new Blob(['keep bytes']) };
+  await storage.save([file]); const oldPath = fake.uploads[0];
+  await storage.remove(['undo']); assert.equal(fake.objects.has(oldPath), false);
+  await storage.save([file]); assert.equal(fake.uploads.length, 2);
+  const [restored] = await createCloudStorage(fake.client, owner).read();
+  assert.equal(await restored.blob.text(), 'keep bytes');
 });

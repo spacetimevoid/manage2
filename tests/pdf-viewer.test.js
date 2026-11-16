@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import http from 'node:http';
 import vm from 'node:vm';
+import { createPdfSession } from '../src/pdf-session.js';
 // PDF.js provides this build for Node's missing browser runtime features.
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { buildSamplePdfBlobUrl } from './fixtures/sample-pdf.js';
@@ -24,14 +25,16 @@ test('viewer opens a PDF URL with the installed PDF.js API, including after reop
     });
     return elements.get(id);
   };
+  const pdfSession = createPdfSession(pdfjsLib);
   const context = vm.createContext({
+    pdfSession, mediaLoader: { warm() {}, load: async file => file },
     pdfjsLib, Blob, db: null, console, activeFile: null, viewerClosing: false, viewerPage: 0, zoom: 0, viewerToken: 0,
     pdfDoc: null, loadingTask: null, lastFocus: null,
     file: { ...file, blobUrl: `http://127.0.0.1:${server.address().port}/uploaded.pdf` },
     $: element, esc: value => value, app: {},
     document: { activeElement: null, body: { style: {} } },
     syncToolbar() {},
-    rememberReader() {},
+    renderSourceOutline() {}, rememberReader() {},
     renderedPages: 0,
   });
   // Exercise the production openViewer function, rather than a separate loader.
@@ -43,13 +46,13 @@ test('viewer opens a PDF URL with the installed PDF.js API, including after reop
       await vm.runInContext('openViewer(file)', context);
       assert.equal(context.pdfDoc?.numPages, 3, element('pdfCanvasViewport').textContent);
       assert.equal(context.renderedPages, 3);
-      await context.loadingTask.destroy();
+      assert.equal(context.loadingTask, pdfSession.open(context.file.blobUrl), 'reopening reuses parsed document');
       context.pdfDoc = null;
       context.activeFile = null;
       context.renderedPages = 0;
     }
   } finally {
-    await context.loadingTask?.destroy();
+    await pdfSession.clear();
     await new Promise(resolve => server.close(resolve));
   }
 });

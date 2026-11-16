@@ -46,7 +46,7 @@ function setup() {
       },
     }; } },
   });
-  vm.runInContext(source.slice(source.indexOf('function cancelRenders('), source.indexOf('async function openViewer(')), context);
+  vm.runInContext(source.slice(source.indexOf('function cancelRenders('), source.indexOf('const sourceOutline =')), context);
   vm.runInContext(source.slice(source.indexOf('function setZoom('), source.indexOf("$('viewerZoomOutBtn').onclick")), context);
   return { context, viewport, frames, observers, tasks,
     zoom(value) { vm.runInContext(`setZoom(${value})`, context); },

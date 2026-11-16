@@ -3,14 +3,17 @@ import { escapeHtml as esc, validatePdf } from './library.js';
 import { ensureProblemData, renameProblem, renderMarkdown, problemTitle } from './problem-data.js';
 import { createImageZoom } from './image-zoom.js';
 import { closeReader } from './reader-transition.js';
+import { fadeDeleted, revealRestored } from './deletion.js';
+import { snapshotDocument } from './library.js';
 
-export function createProblemDetail({ persist, getItems, onChange, background, prepare = null, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
+export function createProblemDetail({ persist, getItems, onChange, background, deletionHistory = null, prepare = null, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
   const $ = id => document.getElementById(id);
   const page = $('problemDetailPage');
   const imageZoom = createImageZoom();
   let active = null, items = [], returnFocus = null;
-  let contentAnimation = null;
+  let contentAnimation = null, prefetchTimer = null;
   let closing = false, closingPromise = null, preparation = 0, pending = null;
+  const readyImages = new Map(), decodingImages = new WeakMap();
   const urls = new Map(), timers = new Map(), pickerTargets = new Map();
   page.inert = true;
   page.setAttribute('role', 'dialog');
@@ -19,12 +22,14 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     if (!urls.has(blob)) urls.set(blob, URL.createObjectURL(blob));
     return urls.get(blob);
   };
-  function releaseUrls() {
+  function releaseUrls(keep = new Set()) {
     imageZoom.close();
     $('statementPdfIframe').removeAttribute('src'); $('solutionPdfFrame').removeAttribute('src');
     $('statementImageGrid').replaceChildren(); $('solutionImageGrid').replaceChildren();
-    for (const url of urls.values()) URL.revokeObjectURL(url);
-    urls.clear();
+    for (const [blob, url] of urls) {
+      if (!keep.has(blob)) { URL.revokeObjectURL(url); urls.delete(blob); }
+    }
+    for (const record of readyImages.keys()) if (!keep.has(record.blob)) readyImages.delete(record);
   }
   async function save(file, status = null) {
     clearTimeout(timers.get(file.id)?.timer); timers.delete(file.id);
@@ -46,8 +51,31 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
   function flush() {
     for (const entry of [...timers.values()]) save(entry.file, entry.status);
   }
+  async function prepareImages(file) {
+    if (!globalThis.Image) return;
+    await Promise.all([...(file.statementImages || []), ...(file.solution?.images || [])].map(async record => {
+      const src = urlFor(record.blob);
+      if (readyImages.get(record)?.src === src) return;
+      const pending = decodingImages.get(record);
+      if (pending?.src === src) return pending.promise;
+      const image = new Image(); image.src = src;
+      const promise = image.decode().then(() => {
+        if (urls.get(record.blob) === src) readyImages.set(record, image);
+      }).finally(() => {
+        if (decodingImages.get(record)?.promise === promise) decodingImages.delete(record);
+      });
+      decodingImages.set(record, { src, promise });
+      await promise;
+    }));
+  }
   function images(container, records, type) {
     container.innerHTML = records.map((image, index) => `<div class="doc-media-item"><img src="${esc(urlFor(image.blob))}" alt="${type === 'statement' ? 'Problem statement' : 'Solution'} image" tabindex="0" role="button" aria-label="Zoom ${type === 'statement' ? 'problem statement' : 'solution'} image"><div class="doc-media-meta"><button type="button" class="doc-action-link" data-remove-${type}="${index}">Remove</button></div></div>`).join('');
+    container.querySelectorAll?.('img').forEach((placeholder, index) => {
+      const image = readyImages.get(records[index]);
+      if (!image || image.src !== urlFor(records[index].blob)) return;
+      for (const attribute of placeholder.attributes) if (attribute.name !== 'src') image.setAttribute(attribute.name, attribute.value);
+      placeholder.replaceWith(image);
+    });
   }
   function setFrame(frame, blob) {
     if (!blob) { frame.removeAttribute('src'); return; }
@@ -85,9 +113,14 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     $('solutionMdPreview').hidden = mode !== 'preview';
     if (mode === 'preview') $('solutionMdPreview').innerHTML = renderMarkdown(active.solution.markdown);
   }
-  function show(file, direction = 0) {
+  function show(file) {
     contentAnimation?.cancel(); contentAnimation = null;
-    flush(); releaseUrls(); active = ensureProblemData(file);
+    flush();
+    const position = items.findIndex(item => item.id === file.id);
+    const nearby = items.slice(Math.max(0, position - 1), position + 2);
+    const media = nearby.flatMap(item => [...(item.statementImages || []), ...(item.solution?.images || [])].map(record => record.blob));
+    releaseUrls(new Set([...media, file.blob, file.solution?.pdfBlob].filter(Boolean)));
+    active = ensureProblemData(file); pending = null;
     const index = items.findIndex(item => item.id === active.id);
     $('problemDetailPosLabel').textContent = `${index + 1} / ${items.length}`;
     $('problemPrevItemBtn').disabled = index <= 0;
@@ -103,18 +136,28 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     renderDifficulty(); renderStatement(); renderSolution(); markdownMode('write');
     page.scrollTop = 0;
     onOpen(file);
-    if (direction && !window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
-      contentAnimation = page.querySelector('.problem-detail-container')?.animate?.([
-        { opacity: 0.75, transform: `translateX(${direction * 6}px)` },
-        { opacity: 1, transform: 'translateX(0)' },
-      ], { duration: 160, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)' });
+    // Prepare only the neighbouring problems, after the current one can paint.
+    // No navigation/route changes and no alerts for speculative work.
+    clearTimeout(prefetchTimer);
+    if (prepare || globalThis.Image) {
+      const sequence = preparation;
+      prefetchTimer = setTimeout(() => {
+        for (const next of nearby.filter(item => item !== file)) {
+          Promise.resolve().then(() => prepare?.(next)).then(() => {
+            if (sequence === preparation && active === file && !closing) return prepareImages(next);
+          }).catch(() => {});
+        }
+      }, 0);
     }
   }
+
   function prepared(file, action) {
     const sequence = ++preparation;
-    if (!prepare) return action();
-    pending = file; onOpen(file);
-    return prepare(file).then(() => { if (sequence === preparation) { pending = null; return action(); } }).catch(error => {
+    contentAnimation?.cancel(); contentAnimation = null;
+    pending = file;
+    if (!prepare && !globalThis.Image) return action(sequence);
+    onOpen(file);
+    return Promise.resolve(prepare?.(file)).then(() => { if (sequence === preparation) return prepareImages(file); }).then(() => { if (sequence === preparation) return action(sequence); }).catch(error => {
       if (sequence === preparation) { pending = null; if (active) onOpen(active); else onClose(file); window.alert(error.message || 'Unable to load problem.'); }
     });
   }
@@ -131,6 +174,7 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
   }
   function close() {
     ++preparation;
+    clearTimeout(prefetchTimer);
     if (pending) { onClose(pending); pending = null; }
     if (closing) return closingPromise;
     if (!active) return;
@@ -150,11 +194,27 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     return closingPromise;
   }
   $('problemDetailBackBtn').onclick = close;
-  for (const [id, step] of [['problemPrevItemBtn', -1], ['problemNextItemBtn', 1]]) $(id).onclick = () => {
-    if (!active) return;
+  function transitionTo(file, sequence) {
+    const container = page.querySelector('.problem-detail-container');
+    if (!container?.animate || window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) { show(file); return; }
+    const fade = container.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: 'ease-in', fill: 'forwards' });
+    contentAnimation = fade;
+    return fade.finished.catch(() => {}).then(() => {
+      if (sequence !== preparation || closing || !active) return;
+      show(file);
+      const reveal = container.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 220, easing: 'ease-out', fill: 'both' });
+      contentAnimation = reveal;
+      return reveal.finished.catch(() => {}).then(() => {
+        if (contentAnimation === reveal) { reveal.cancel(); contentAnimation = null; }
+      });
+    });
+  }
+  function navigate(step) {
+    if (!active || closing) return;
     const index = items.findIndex(file => file.id === (pending || active).id) + step;
-    if (items[index]) prepared(items[index], () => show(items[index], step));
-  };
+    if (items[index]) return prepared(items[index], sequence => transitionTo(items[index], sequence));
+  }
+  for (const [id, step] of [['problemPrevItemBtn', -1], ['problemNextItemBtn', 1]]) $(id).onclick = () => navigate(step);
   $('problemDetailTitleInput').oninput = e => { e.target.setCustomValidity(''); };
   function commitTitle() {
     if (!active) return;
@@ -222,29 +282,60 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     } finally { $(id).value = ''; }
   }
   for (const id of ['statementMediaInput', 'solutionImageInput', 'solutionPdfInput']) $(id).onchange = e => upload(id, [...e.target.files]);
+  function removeMedia(element, keys, change) {
+    const file = active;
+    if (!file) return;
+    if (!deletionHistory) { change(file); releaseUrls(); renderStatement(); renderSolution(); save(file); return; }
+    return deletionHistory.remove('Delete this content from the problem?', async () => {
+      flush();
+      const before = Object.fromEntries(keys.map(key => [key, snapshotDocument(file[key])]));
+      change(file);
+      try { await persist(file); }
+      catch (error) { Object.assign(file, before); throw error; }
+      const reset = await fadeDeleted([element]);
+      if (active === file) { releaseUrls(); renderStatement(); renderSolution(); $('solutionMdTextarea').value = file.solution.markdown; }
+      reset();
+      return async () => {
+        const target = getItems().find(item => item.id === file.id);
+        if (!target) throw new Error('Restore the deleted problem first.');
+        const current = Object.fromEntries(keys.map(key => [key, target[key]]));
+        Object.assign(target, snapshotDocument(before));
+        try { await persist(target); }
+        catch (error) { Object.assign(target, current); throw error; }
+        if (active === target) {
+          await prepareImages(target);
+          if (active !== target) return;
+          const media = [...target.statementImages, ...target.solution.images].map(record => record.blob);
+          releaseUrls(new Set(media)); renderStatement(); renderSolution(); $('solutionMdTextarea').value = target.solution.markdown;
+          const panels = keys.includes('statementImages') ? [$('statementImageGrid')] : keys.includes('blob') ? [$('statementPdfEmbed')] : [$('solutionPanelImage'), $('solutionPanelPdf'), $('solutionPanelMarkdown')].filter(panel => !panel.hidden);
+          await revealRestored(panels);
+        }
+      };
+    });
+  }
   for (const [id, type] of [['statementImageGrid', 'statement'], ['solutionImageGrid', 'solution']]) $(id).onclick = e => {
     if (e.target.tagName === 'IMG') { imageZoom.open(e.target); return; }
     const button = e.target.closest(`[data-remove-${type}]`);
     if (!button || !active) return;
     const records = type === 'statement' ? active.statementImages : active.solution.images;
-    records.splice(Number(button.dataset[type === 'statement' ? 'removeStatement' : 'removeSolution']), 1);
-    if (type === 'solution' && !records.length) active.solution.type = null;
-    releaseUrls(); renderStatement(); renderSolution(); save(active);
+    const index = Number(button.dataset[type === 'statement' ? 'removeStatement' : 'removeSolution']);
+    return removeMedia(button.closest?.('.doc-media-item') || $(id), [type === 'statement' ? 'statementImages' : 'solution'], file => {
+      const images = type === 'statement' ? file.statementImages : file.solution.images;
+      images.splice(index, 1);
+      if (type === 'solution' && !images.length) file.solution.type = null;
+    });
   };
   $('removeStatementPdfBtn').onclick = () => {
     if (!active) return;
-    delete active.blob; delete active.blobUrl; delete active.pageCount;
-    releaseUrls(); renderStatement(); renderSolution(); save(active);
+    return removeMedia($('statementPdfEmbed'), ['blob', 'pageCount'], file => { delete file.blob; delete file.blobUrl; delete file.pageCount; });
   };
   $('removeSolutionPdfBtn').onclick = () => {
     if (!active) return;
-    active.solution.pdfBlob = null; active.solution.pdfName = ''; active.solution.type = null;
-    releaseUrls(); renderStatement(); renderSolution(); save(active);
+    return removeMedia($('solutionPanelPdf'), ['solution'], file => { file.solution.pdfBlob = null; file.solution.pdfName = ''; file.solution.type = null; });
   };
   $('removeMarkdownSolutionBtn').onclick = () => {
     if (!active) return;
-    active.solution.markdown = ''; active.solution.type = null;
-    $('solutionMdTextarea').value = ''; renderSolution(); save(active);
+    return removeMedia($('solutionPanelMarkdown'), ['solution'], file => { file.solution.markdown = ''; file.solution.type = null; });
   };
   page.querySelectorAll('[data-md-mode]').forEach(btn => btn.onclick = () => { if (active) markdownMode(btn.dataset.mdMode); });
   $('solutionMdTextarea').oninput = e => {
@@ -252,6 +343,11 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     active.solution.markdown = e.target.value; schedule(active, $('solutionMdStatus'));
   };
   page.addEventListener('keydown', e => {
+    if (['ArrowLeft', 'ArrowRight'].includes(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey &&
+        !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && !e.target.isContentEditable && !document.querySelector?.('dialog[open]')) {
+      e.preventDefault(); e.stopPropagation();
+      navigate(e.key === 'ArrowLeft' ? -1 : 1); return;
+    }
     if (e.target.tagName === 'IMG' && ['Enter', ' '].includes(e.key)) {
       e.preventDefault(); imageZoom.open(e.target); return;
     }

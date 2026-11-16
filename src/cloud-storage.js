@@ -15,15 +15,22 @@ async function mapLimited(values, callback, count = 4) {
   }));
   return result;
 }
-export function createCloudStorage(client, user) {
+export function createCloudStorage(client, user, cache = null) {
   const bucket = client.storage.from(BUCKET);
   const blobs = new WeakMap(), records = new Map(), downloads = new Map();
+  const deletedPaths = new Set();
   async function decode(value) {
     if (!value || typeof value !== 'object') return value;
     if (value.__manageFile) {
       if (!value.__manageFile.startsWith(`${user.id}/`)) throw new Error('Invalid file ownership.');
       const path = value.__manageFile;
-      if (!downloads.has(path)) downloads.set(path, bucket.download(path).then(throwIfError).catch(error => { downloads.delete(path); throw error; }));
+      if (!downloads.has(path)) downloads.set(path, (async () => {
+        const cached = await cache?.get(path);
+        if (cached instanceof Blob) return cached;
+        const blob = throwIfError(await bucket.download(path));
+        await cache?.put(path, blob);
+        return blob;
+      })().catch(error => { downloads.delete(path); throw error; }));
       const blob = await downloads.get(path);
       blobs.set(blob, value.__manageFile);
       return blob;
@@ -34,6 +41,7 @@ export function createCloudStorage(client, user) {
   async function encode(value, uploaded) {
     if (value instanceof Blob) {
       let path = blobs.get(value);
+      if (deletedPaths.has(path)) path = null;
       if (!path) {
         path = `${user.id}/${crypto.randomUUID()}`;
         throwIfError(await bucket.upload(path, value, { contentType: value.type || 'application/octet-stream', upsert: false }));
@@ -65,6 +73,9 @@ export function createCloudStorage(client, user) {
       for (const record of records.values()) attachmentPaths(record, referenced);
       const unused = [...previous].filter(path => !referenced.has(path));
       if (unused.length) {
+        for (const path of unused) downloads.delete(path);
+        for (const path of unused) deletedPaths.add(path);
+        await cache?.remove(unused);
         const { error } = await bucket.remove(unused);
         if (error) console.error('Unable to remove deleted private attachments:', error);
       }
@@ -73,7 +84,13 @@ export function createCloudStorage(client, user) {
       async function visit(value) {
         if (!value || typeof value !== 'object' || value instanceof Blob) return value;
         if (value.__manageFile) return decode(value);
-        await Promise.all(Object.keys(value).map(async key => { value[key] = await visit(value[key]); }));
+        await Promise.all(Object.keys(value).map(async key => {
+          const original = value[key];
+          const hydrated = await visit(original);
+          // A background download must never overwrite an edit or resurrect
+          // an attachment removed while its request was in flight.
+          if (value[key] === original) value[key] = hydrated;
+        }));
         return value;
       }
       return visit(document);
@@ -109,6 +126,9 @@ export function createCloudStorage(client, user) {
       for (const record of records.values()) attachmentPaths(record, referenced);
       const unused = [...previous].filter(path => !referenced.has(path));
       if (unused.length) {
+        for (const path of unused) downloads.delete(path);
+        for (const path of unused) deletedPaths.add(path);
+        await cache?.remove(unused);
         const { error } = await bucket.remove(unused);
         if (error) console.error('Unable to remove unused private attachments:', error);
       }

@@ -1,12 +1,13 @@
 import * as local from './library.js';
 import { cloudClient } from './cloud.js';
 import { createCloudStorage } from './cloud-storage.js';
+import { createAttachmentCache } from './attachment-cache.js';
 import { requirePrivateSession } from './auth.js';
 
 export async function openLibrary() {
   if (!cloudClient) return local.openLibrary();
   const user = await requirePrivateSession(cloudClient);
-  return createCloudStorage(cloudClient, user);
+  return createCloudStorage(cloudClient, user, createAttachmentCache(`${import.meta.env.VITE_SUPABASE_URL}/${user.id}`));
 }
 export async function readDocuments(db) {
   if (!db.cloud) return local.readDocuments(db);

@@ -1,4 +1,4 @@
-import { normalizeSubject, todayDate, renamedDocument, validateDocumentName, normalizedDifficulty } from '../src/metadata.js';
+import { normalizeSubject, todayDate, renamedDocument, documentTitle, validateDocumentName, normalizedDifficulty } from '../src/metadata.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -15,20 +15,20 @@ function form(view) {
       addEventListener() {}, reset() {}, querySelector: () => save });
     return elements.get(id);
   };
-  const browseLabel = {}, dateLabel = {};
+  const browseLabel = {}, dateField = {}, dateLabel = { closest: () => dateField };
   let pdfLoads = 0;
   const context = vm.createContext({
-    $, activeView: view, activeSubject: 'all', currentPage: 1, files: [], lastFocus: null, app: {}, crypto,
+    $, topicPicker: { close() {} }, activeView: view, activeSubject: 'all', currentPage: 1, files: [], lastFocus: null, app: {}, crypto,
     viewName: () => context.activeView === 'problems' ? 'Problems' : 'Sources',
     document: { activeElement: null, body: { style: {} }, querySelector: selector => selector.includes('modalBrowseBtn') ? browseLabel : dateLabel },
-    validateUpload: (file, view) => validateUpload(file, view, async () => {}), uploadName, parseDate, dateOf, collectionFiles, normalizeSubject, todayDate, renamedDocument, validateDocumentName, normalizedDifficulty,
-    visibleFiles: () => context.files, async persist(file) { stored.push(structuredClone(file)); }, renderSidebar() {}, renderFiles() {},
+    validateUpload: (file, view) => validateUpload(file, view, async () => {}), uploadName, parseDate, dateOf, collectionFiles, normalizeSubject, todayDate, renamedDocument, documentTitle, validateDocumentName, normalizedDifficulty,
+    visibleFiles: () => context.files, async persist(file) { stored.push(structuredClone(file)); }, renderSidebar() {}, renderFiles() {}, renderSourceOutline() {},
     pdfjsLib: { getDocument() { pdfLoads++; return { promise: Promise.resolve({ numPages: 4 }), async destroy() {} }; } },
   });
   const source = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
   vm.runInContext(source.slice(source.indexOf('function setModal('), source.indexOf('const contextMenu =')), context);
   vm.runInContext('setModal(true)', context);
-  return { $, context, browseLabel, stored, get pdfLoads() { return pdfLoads; }, async submit(file) {
+  return { $, context, browseLabel, dateField, stored, get pdfLoads() { return pdfLoads; }, async submit(file) {
     $('pdfFileInput').files = [file]; $('modalPathFileNameInput').value = file.name;
     $('modalPathSubjectInput').value = 'math';
     $('modalTopicInput').value = 'Geometry'; $('modalDueDateInput').value = ''; $('modalDifficultyInput').value = 'hard';
@@ -72,7 +72,7 @@ test('Edit saves metadata without requiring or replacing attachments and preserv
   app.context.files.push(file); app.context.editTarget = file;
   app.$('pdfFileInput').files = [];
   vm.runInContext('setModal(true, editTarget)', app.context);
-  assert.equal(app.$('modalPathFileNameInput').value, 'old.png');
+  assert.equal(app.$('modalPathFileNameInput').value, 'old');
   app.$('modalPathFileNameInput').value = 'edited.png'; app.$('modalTopicInput').value = 'New';
   await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
   assert.equal(app.stored.length, 1); assert.equal(app.context.files.length, 1);
@@ -116,4 +116,73 @@ test('a slow problem upload uses the collection and metadata captured before nav
   app.$('modalDifficultyInput').value = 'easy'; finish('image'); await saved;
   assert.equal(app.stored[0].kind, 'problem'); assert.equal(app.stored[0].topic, 'Geometry');
   assert.equal(app.stored[0].difficulty, 'hard'); assert.equal(app.stored[0].statementImages.length, 1);
+});
+
+test('source extraction reuses the Problem upload form, saves one linked image and returns to its PDF', async () => {
+  const app = form('sources');
+  const source = { id: 'source', name: 'exam.pdf', subject: 'math', topic: 'Algebra' };
+  app.context.files.push(source);
+  app.context.extracted = { source, blob: png(), location: { sourceId: source.id, page: 2, rect: { x: .1, y: .3, width: .5, height: .2 } } };
+  app.$('pdfFileInput').files = [];
+  vm.runInContext('setModal(true, null, extracted)', app.context);
+  assert.equal(app.browseLabel.textContent, 'Select problem');
+  assert.equal(app.$('modalTopicInput').value, 'Algebra');
+  assert.equal(app.$('pdfViewerPage').inert, true);
+  app.$('modalPathFileNameInput').value = 'Question 1';
+  await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
+  assert.equal(app.stored.length, 1); const saved = app.stored[0];
+  assert.equal(saved.kind, 'problem'); assert.equal(saved.sourceLocation.page, 2);
+  assert.equal(saved.sourceLocation.sourceId, source.id); assert.equal(saved.statementImages.length, 1);
+  assert.equal(app.$('pdfViewerPage').inert, false); assert.equal(app.context.app.inert, true);
+  assert.equal(app.context.document.body.style.overflow, 'hidden');
+});
+test('cancel and failed saves create neither a linked problem nor an outline entry', async () => {
+  const app = form('sources');
+  const source = { id: 'source', subject: 'math', topic: 'Geometry' }; app.context.files.push(source);
+  app.context.extracted = { source, blob: png(), location: { sourceId: source.id, page: 1, rect: { x: 0, y: 0, width: 1, height: .5 } } };
+  vm.runInContext('setModal(true, null, extracted)', app.context); app.$('modalCancelBtn').onclick();
+  assert.equal(app.stored.length, 0); assert.equal(app.context.files.length, 1);
+  vm.runInContext('setModal(true, null, extracted)', app.context);
+  app.context.persist = async () => { throw Error('Offline'); };
+  await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
+  assert.equal(app.context.files.length, 1); assert.equal(app.stored.length, 0);
+  assert.match(app.$('modalErrorMsg').textContent, /Offline/);
+  assert.equal(app.$('uploadModalBackdrop').classList.values.has('is-open'), true);
+});
+
+test('Problem date input is hidden and new Problems always use the date at save, while Sources keep Due date', async () => {
+  const app = form('problems');
+  assert.equal(app.dateField.hidden, true);
+  app.context.todayDate = () => '01/01/2027';
+  await app.submit(png());
+  assert.equal(app.stored[0].addedDate, '01/01/2027');
+  const sources = form('sources'); assert.equal(sources.dateField.hidden, false);
+});
+test('Problem Edit preserves the original added date and ignores the shared date input', async () => {
+  const app = form('problems');
+  const file = { id: 'p', name: 'old.png', subject: 'math', topic: 'Geometry', kind: 'problem', addedDate: '02/03/2025' };
+  app.context.files.push(file); app.context.editTarget = file;
+  app.$('pdfFileInput').files = [];
+  vm.runInContext('setModal(true, editTarget)', app.context);
+  app.$('modalDueDateInput').value = 'invalid';
+  await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
+  assert.equal(app.stored[0].addedDate, '02/03/2025');
+});
+
+test('Upload and Edit show only titles while saved PDF and image names preserve their format', async () => {
+  for (const [view, name, type] of [['sources', 'Exam.v2.PDF', 'application/pdf'], ['problems', 'Question.png', 'image/png']]) {
+    const app = form(view), file = { id: 'existing', name, subject: 'math', topic: 'Topic', kind: view === 'problems' ? 'problem' : undefined };
+    app.context.editTarget = file;
+    vm.runInContext('setModal(true, editTarget)', app.context);
+    assert.equal(app.$('modalPathFileNameInput').value, documentTitle(name));
+    vm.runInContext('setModal(true)', app.context);
+    app.$('pdfFileInput').files = [new File(['bytes'], name, { type })];
+    app.$('pdfFileInput').onchange();
+    assert.equal(app.$('modalPathFileNameInput').value, documentTitle(name));
+    assert.doesNotMatch(app.$('modalPathFileNameInput').placeholder, /\.pdf/);
+    app.$('modalPathFileNameInput').value = 'Custom title';
+    app.$('pdfFileInput').onchange(); assert.equal(app.$('modalPathFileNameInput').value, 'Custom title');
+    assert.equal(renamedDocument(documentTitle(name), name).toLowerCase(), name.toLowerCase());
+  }
+  assert.equal(documentTitle('Chapter 1.2'), 'Chapter 1.2');
 });

@@ -52,7 +52,7 @@ test('runtime navigation and reload keep headings, columns, counts and records i
     const date = makeElement(), dateLabel = makeElement(), status = makeElement(), statusLabel = makeElement();
     status.querySelector = () => statusLabel;
     let onHashChange;
-    const context = vm.createContext({
+    const context = vm.createContext({ mediaLoader: { warm() {} },
       SUBJECTS: ['math'], activeView: viewFromHash(hash), activeSubject: 'all', currentPage: 1, sortKey: null, sortDir: 'asc', searchQuery: '', activeFile: null,
       files: [
         { id: 's', name: 'Source.pdf', subject: 'math', topic: 'Source topic', dueDate: '20/11/2026', done: true },
