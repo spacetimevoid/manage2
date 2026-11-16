@@ -15,7 +15,7 @@ function form(view) {
       addEventListener() {}, reset() {}, querySelector: () => save });
     return elements.get(id);
   };
-  const browseLabel = {}, dateLabel = {};
+  const browseLabel = {}, dateField = {}, dateLabel = { closest: () => dateField };
   let pdfLoads = 0;
   const context = vm.createContext({
     $, activeView: view, activeSubject: 'all', currentPage: 1, files: [], lastFocus: null, app: {}, crypto,
@@ -28,7 +28,7 @@ function form(view) {
   const source = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
   vm.runInContext(source.slice(source.indexOf('function setModal('), source.indexOf('const contextMenu =')), context);
   vm.runInContext('setModal(true)', context);
-  return { $, context, browseLabel, stored, get pdfLoads() { return pdfLoads; }, async submit(file) {
+  return { $, context, browseLabel, dateField, stored, get pdfLoads() { return pdfLoads; }, async submit(file) {
     $('pdfFileInput').files = [file]; $('modalPathFileNameInput').value = file.name;
     $('modalPathSubjectInput').value = 'math';
     $('modalTopicInput').value = 'Geometry'; $('modalDueDateInput').value = ''; $('modalDifficultyInput').value = 'hard';
@@ -148,4 +148,23 @@ test('cancel and failed saves create neither a linked problem nor an outline ent
   assert.equal(app.context.files.length, 1); assert.equal(app.stored.length, 0);
   assert.match(app.$('modalErrorMsg').textContent, /Offline/);
   assert.equal(app.$('uploadModalBackdrop').classList.values.has('is-open'), true);
+});
+
+test('Problem date input is hidden and new Problems always use the date at save, while Sources keep Due date', async () => {
+  const app = form('problems');
+  assert.equal(app.dateField.hidden, true);
+  app.context.todayDate = () => '01/01/2027';
+  await app.submit(png());
+  assert.equal(app.stored[0].addedDate, '01/01/2027');
+  const sources = form('sources'); assert.equal(sources.dateField.hidden, false);
+});
+test('Problem Edit preserves the original added date and ignores the shared date input', async () => {
+  const app = form('problems');
+  const file = { id: 'p', name: 'old.png', subject: 'math', topic: 'Geometry', kind: 'problem', addedDate: '02/03/2025' };
+  app.context.files.push(file); app.context.editTarget = file;
+  app.$('pdfFileInput').files = [];
+  vm.runInContext('setModal(true, editTarget)', app.context);
+  app.$('modalDueDateInput').value = 'invalid';
+  await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
+  assert.equal(app.stored[0].addedDate, '02/03/2025');
 });

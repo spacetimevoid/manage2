@@ -198,6 +198,7 @@ function setModal(open, file = null, extraction = null) {
     $('pdfFileInput').accept = problems ? 'image/*,application/pdf,.pdf' : 'application/pdf,.pdf';
     $('modalPathFileNameInput').placeholder = problems ? 'new-problem' : 'new-file.pdf';
     document.querySelector('label[for="modalDueDateInput"]').textContent = problems ? 'Added date' : 'Due date';
+    document.querySelector('label[for="modalDueDateInput"]').closest('.modal-field').hidden = problems;
     $('modalPathSubjectInput').value = activeSubject === 'all' ? '' : activeSubject;
     $('modalPathFileNameInput').value = '';
     $('modalDueDateInput').value = todayDate();
@@ -248,7 +249,7 @@ $('uploadPdfForm').onsubmit = async e => {
     const subject = normalizeSubject($('modalPathSubjectInput').value);
     const name = editing ? renamedDocument($('modalPathFileNameInput').value, editing.name) : uploadName($('modalPathFileNameInput').value, blob, mediaType);
     validateDocumentName(name, subject, collectionFiles(files, view), editing?.id);
-    let dueDate = $('modalDueDateInput').value.trim();
+    let dueDate = view === 'problems' ? (editing?.addedDate || '') : $('modalDueDateInput').value.trim();
     if (Number.isNaN(parseDate(dueDate))) throw new Error('Enter a real date in dd/mm/yyyy format, or leave it blank.');
     if (!dueDate && !editing) dueDate = todayDate();
     if (editing) {
@@ -270,7 +271,7 @@ $('uploadPdfForm').onsubmit = async e => {
       file.statementImages = [{ id: crypto.randomUUID(), name: blob.name, blob }];
     }
     if (view === 'problems') {
-      file.kind = 'problem'; file.addedDate = dueDate;
+      file.kind = 'problem'; file.addedDate = todayDate();
       file.difficulty = difficulty;
       delete file.dueDate;
     }
