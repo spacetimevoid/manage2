@@ -20,6 +20,8 @@
     cursor: pointer;
 }
 .source-outline button:hover, .source-outline button:focus-visible { background: #383838; }
+.source-outline-toggle { width: 32px; flex-shrink: 0; color: #fff; }
+.source-outline-toggle svg { width: 20px; height: 20px; fill: none; stroke: #fff; stroke-width: 1.5; }
 .modal-backdrop.is-extracting { z-index: 160; }
 .modal-backdrop.is-extracting .modal-field:has(#modalBrowseBtn) { display: none; }
 body:has(.modal-backdrop.is-extracting.is-open) > .pdf-fullscreen-page { filter: blur(4px); }

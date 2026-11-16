@@ -462,7 +462,7 @@ const sourceOutline = createSourceOutline($('pdfViewerBody'), async location => 
   isPageNavigation = true;
   viewport.scrollTo({ top: Math.max(0, sheet.offsetTop + size.height * location.rect.y - 24),
     left: Math.max(0, sheet.offsetLeft + size.width * location.rect.x - 24), behavior: 'instant' });
-});
+}, $('viewerBackBtn').parentElement);
 function renderSourceOutline() { sourceOutline.render(files, activeFile); }
 
 async function openViewer(file) {
