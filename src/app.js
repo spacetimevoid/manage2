@@ -448,20 +448,23 @@ async function renderPages(anchorPage = 1, preservePosition = false) {
   for (const sheet of viewport.children) observer.observe(sheet);
   await initialPaint;
 }
+let sourceNavigation = 0;
 const sourceOutline = createSourceOutline($('pdfViewerBody'), async location => {
   if (!pdfDoc || !activeFile || location.sourceId !== activeFile.id) return;
+  const sequence = ++sourceNavigation;
   const doc = pdfDoc, file = activeFile, page = await doc.getPage(location.page);
-  if (doc !== pdfDoc || file !== activeFile) return;
+  if (sequence !== sourceNavigation || doc !== pdfDoc || file !== activeFile) return;
   const sheet = $('pdfCanvasViewport').querySelector('[data-page-number="' + location.page + '"]');
   if (!sheet) return;
   const size = page.getViewport({ scale: zoom / 100 * 1.25 });
   sheet.dataset.pdfWidth = size.width / (zoom / 100 * 1.25); sheet.dataset.pdfHeight = size.height / (zoom / 100 * 1.25);
   sheet.style.width = size.width + 'px'; sheet.style.height = size.height + 'px';
-  goPage(location.page, false);
+  viewerPage = location.page; syncToolbar();
   const viewport = $('pdfCanvasViewport');
-  isPageNavigation = true;
-  viewport.scrollTo({ top: Math.max(0, sheet.offsetTop + size.height * location.rect.y - 24),
-    left: Math.max(0, sheet.offsetLeft + size.width * location.rect.x - 24), behavior: 'instant' });
+  const top = Math.max(0, Math.min(viewport.scrollHeight - viewport.clientHeight, sheet.offsetTop + size.height * location.rect.y - 24));
+  const left = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, sheet.offsetLeft + size.width * location.rect.x - 24));
+  isPageNavigation = viewport.scrollTop !== top || viewport.scrollLeft !== left;
+  viewport.scrollTo({ top, left, behavior: globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ? 'instant' : 'smooth' });
 }, $('viewerBackBtn').parentElement);
 function renderSourceOutline() { sourceOutline.render(files, activeFile); }
 
