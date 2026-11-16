@@ -1,0 +1,27 @@
+.topic-picker-field { position: relative; }
+.topic-picker-list {
+    box-sizing: border-box;
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 2;
+    max-height: 194px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid #d2d2d7;
+    border-radius: 7px;
+    background: #fff;
+}
+.topic-picker-option {
+    box-sizing: border-box;
+    height: 32px;
+    padding: 6px 10px;
+    color: #1d1d1f;
+    font-size: 13px;
+    line-height: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+}
+.topic-picker-option:hover, .topic-picker-option[aria-selected="true"] { background: #f5f5f7; }

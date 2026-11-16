@@ -1,3 +1,5 @@
+import { createTopicPicker, existingTopics } from './topic-picker.js';
+import './topic-picker.css';
 import { selectedRegion, cropPage } from './source-extraction.js';
 import { createSourceOutline } from './source-outline.js';
 import './source-extraction.css';
@@ -177,6 +179,7 @@ $('pdfNotesTextarea').oninput = () => {
 document.addEventListener('visibilitychange', () => { if (document.hidden && activeFile) saveNote(); });
 
 function setModal(open, file = null, extraction = null) {
+  topicPicker.close();
   const wasExtracting = !!setModal.extraction;
   setModal.extraction = open ? extraction : null;
   if (open) $('uploadModalBackdrop').classList.toggle('is-extracting', !!extraction);
@@ -681,6 +684,8 @@ window.addEventListener('keydown', e => {
     if (['=', '+', '-', '0'].includes(e.key)) { e.preventDefault(); setZoom(e.key === '0' ? 100 : zoom + (e.key === '-' ? -15 : 15)); }
   }
 });
+const topicPicker = createTopicPicker($('modalTopicInput'), () => existingTopics(files));
+
 async function initialize() {
   $('uploadPdfBtn').disabled = true;
   try {
