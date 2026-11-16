@@ -18,7 +18,7 @@ function mount() {
     { id: 's1', subject: 'math' }, { id: 's2', subject: 'math' },
     { id: 's3', subject: 'physics' }, { id: 'p1', kind: 'problem', subject: 'math' },
   ];
-  const context = vm.createContext({ subjectRecords, makeSubject, activeView: 'sources',
+  const context = vm.createContext({ enableSubjectDrag() {}, subjectRecords, makeSubject, activeView: 'sources',
     subjects: () => subjectNames(context.files, context.activeView),
     createSubjectModal: save => ({ async open(view) { if (context.promptValue !== null) await save(context.promptValue, view); } }), async persist(file) { if(context.fail) throw Error('Offline'); context.saved = file; },
     files, activeSubject: 'math', db: {}, saveQueue: Promise.resolve(),
@@ -45,10 +45,10 @@ test('row menu edits the selected document and deletes only that document', asyn
 });
 test('subject menu deletes its collection documents, resets selection and never deletes All', async () => {
   const app = mount(); assert.equal(app.click('subjectList', { subject: 'all' }), true);
-  assert.deepEqual(Array.from(app.context.actions, action => action.label), ['Add']);
+  assert.equal(app.context.actions, undefined);
   app.click('subjectList', { subject: 'math' });
-  assert.deepEqual(Array.from(app.context.actions, action => action.label), ['Add', 'Delete']);
-  await app.context.actions[1].run();
+  assert.deepEqual(Array.from(app.context.actions, action => action.label), ['Delete']);
+  await app.context.actions[0].run();
   assert.deepEqual(app.removed, ['s1', 's2']); assert.equal(app.context.activeSubject, 'all');
   assert.deepEqual(Array.from(app.context.files, file => file.id), ['s3', 'p1']);
 });
@@ -67,7 +67,7 @@ test('Add works on the subject area, preserves an empty subject and cancellation
   app.context.promptValue = 'Linear Algebra'; await app.context.actions[0].run();
   assert.equal(app.context.saved.kind, 'subject'); assert.equal(app.context.saved.subject, 'linear-algebra');
   assert.equal(app.context.files.length, 5);
-  app.click('subjectList', { subject: 'linear-algebra' }); await app.context.actions[1].run();
+  app.click('subjectList', { subject: 'linear-algebra' }); await app.context.actions[0].run();
   assert.equal(app.context.files.length, 4);
 });
 test('Add failure and duplicate names leave the subject list unchanged', async () => {

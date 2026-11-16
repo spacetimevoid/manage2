@@ -12,7 +12,20 @@ export const readerHash = (view, id = null) => `#${view}${id ? `/${encodeURIComp
 export const collectionFiles = (files, view) => files.filter(file => file.kind !== 'subject' && (file.kind === 'problem' ? 'problems' : 'sources') === view);
 export const subjectRecords = (files, view) => files.filter(file => file.kind === 'subject' && file.collection === view);
 export function subjectNames(files, view) {
-  return [...new Set([...subjectRecords(files, view), ...collectionFiles(files, view)].map(file => file.subject))];
+  const records = subjectRecords(files, view);
+  const ranks = new Map(records.filter(file => Number.isFinite(file.position)).map(file => [file.subject, file.position]));
+  return [...new Set([...records, ...collectionFiles(files, view)].map(file => file.subject))]
+    .sort((a, b) => (ranks.get(a) ?? Infinity) - (ranks.get(b) ?? Infinity));
+}
+export function reorderedSubjects(files, view, from, to, after = false) {
+  const names = subjectNames(files, view);
+  if (from === to || !names.includes(from) || !names.includes(to)) return [];
+  names.splice(names.indexOf(from), 1);
+  names.splice(names.indexOf(to) + Number(after), 0, from);
+  return names.map((subject, position) => ({
+    ...(subjectRecords(files, view).find(file => file.subject === subject) || { id: crypto.randomUUID(), kind: 'subject', collection: view, subject, createdAt: Date.now() }),
+    position,
+  }));
 }
 export function makeSubject(value, view, files) {
   const subject = normalizeSubject(value);

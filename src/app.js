@@ -1,3 +1,4 @@
+import { enableSubjectDrag } from './subject-drag.js';
 import { createSubjectModal } from './subject-modal.js';
 import { normalizeSubject, todayDate, renamedDocument, validateDocumentName, difficultyLabel, normalizedDifficulty } from './metadata.js';
 import * as pdfjsLib from 'pdfjs-dist';
@@ -8,7 +9,7 @@ import { validateUpload, uploadName } from './uploads.js';
 import { createContextMenu } from './context-menu.js';
 import './context-menu.css';
 import { problemTitle } from './problem-data.js';
-import { escapeHtml as esc, parseDate, queryFiles, validatePdf, viewFromHash, collectionFiles, dateOf, readerRoute, readerHash, snapshotDocument, subjectNames, subjectRecords, makeSubject } from './library.js';
+import { escapeHtml as esc, parseDate, queryFiles, validatePdf, viewFromHash, collectionFiles, dateOf, readerRoute, readerHash, snapshotDocument, subjectNames, subjectRecords, makeSubject, reorderedSubjects } from './library.js';
 import { openLibrary, readDocuments, saveDocuments, deleteDocuments } from './storage.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -36,7 +37,7 @@ function renderSidebar() {
   const q = searchQuery.trim().toLocaleLowerCase();
   const documents = visibleFiles();
   const rows = [{ name: 'all', label: 'All', count: documents.length }, ...subjects().map(s => ({ name: s, label: s, count: documents.filter(f => f.subject === s).length }))];
-  $('subjectList').innerHTML = rows.filter(s => s.label.toLocaleLowerCase().includes(q)).map(s => `<button type="button" class="subject-item ${s.name === activeSubject ? 'is-active' : ''}" data-subject="${esc(s.name)}" aria-current="${s.name === activeSubject ? 'page' : 'false'}"><span class="subject-name">${esc(s.label)}</span><span class="subject-count">${s.count}</span></button>`).join('') || '<div class="sidebar-empty">No subjects found</div>';
+  $('subjectList').innerHTML = rows.filter(s => s.label.toLocaleLowerCase().includes(q)).map(s => `<button type="button" class="subject-item ${s.name === activeSubject ? 'is-active' : ''}" data-subject="${esc(s.name)}" draggable="${s.name !== 'all'}" aria-current="${s.name === activeSubject ? 'page' : 'false'}"><span class="subject-name">${esc(s.label)}</span><span class="subject-count">${s.count}</span></button>`).join('') || '<div class="sidebar-empty">No subjects found</div>';
   $('modalSubjectsDatalist').innerHTML = subjects().map(s => `<option value="${esc(s)}"></option>`).join('');
 }
 function renderFiles() {
@@ -304,13 +305,27 @@ function addSubject() { return subjectModal.open(activeView); }
 $('subjectList').closest('.sidebar').addEventListener('contextmenu', event => {
   const subject = event.target.closest('[data-subject]')?.dataset.subject;
   event.preventDefault();
-  const actions = [{ label: 'Add', run: addSubject }];
+  if (subject === 'all') { contextMenu.close?.(); return; }
+  const actions = subject ? [] : [{ label: 'Add', run: addSubject }];
   if (subject && subject !== 'all') {
     const items = [...visibleFiles(), ...subjectRecords(files, activeView)].filter(file => file.subject === subject);
     actions.push({ label: 'Delete', run: () => removeFiles(items) });
   }
   contextMenu.open(event, actions);
 });
+
+enableSubjectDrag($('subjectList'), async (view, from, to, after) => {
+  const result = saveQueue.catch(() => {}).then(async () => {
+    const records = reorderedSubjects(files, view, from, to, after);
+    if (!records.length) return;
+    await saveDocuments(db, records.map(snapshotDocument));
+    const ids = new Set(records.map(record => record.id));
+    files = [...files.filter(file => !ids.has(file.id)), ...records];
+    if (activeView === view) renderSidebar();
+  });
+  saveQueue = result;
+  await result;
+}, () => activeView);
 
 function syncToolbar() {
   const total = pdfDoc?.numPages || 0;
