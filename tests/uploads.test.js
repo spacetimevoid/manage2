@@ -1,10 +1,11 @@
+import { normalizeSubject, todayDate, renamedDocument, validateDocumentName, normalizedDifficulty } from '../src/metadata.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { validateUpload, uploadName } from '../src/uploads.js';
 import { problemTitle, renameProblem } from '../src/problem-data.js';
-import { dateOf, parseDate } from '../src/library.js';
+import { dateOf, parseDate, collectionFiles } from '../src/library.js';
 
 const png = () => new File([Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j2ioAAAAASUVORK5CYII=', 'base64'))], 'question.png', { type: 'image/png' });
 function form(view) {
@@ -20,7 +21,7 @@ function form(view) {
     $, activeView: view, activeSubject: 'all', currentPage: 1, files: [], lastFocus: null, app: {}, crypto,
     viewName: () => context.activeView === 'problems' ? 'Problems' : 'Sources',
     document: { activeElement: null, body: { style: {} }, querySelector: selector => selector.includes('modalBrowseBtn') ? browseLabel : dateLabel },
-    validateUpload: (file, view) => validateUpload(file, view, async () => {}), uploadName, parseDate, dateOf,
+    validateUpload: (file, view) => validateUpload(file, view, async () => {}), uploadName, parseDate, dateOf, collectionFiles, normalizeSubject, todayDate, renamedDocument, validateDocumentName, normalizedDifficulty,
     visibleFiles: () => context.files, async persist(file) { stored.push(structuredClone(file)); }, renderSidebar() {}, renderFiles() {},
     pdfjsLib: { getDocument() { pdfLoads++; return { promise: Promise.resolve({ numPages: 4 }), async destroy() {} }; } },
   });
@@ -91,4 +92,28 @@ test('cancel keeps Edit fields hidden throughout the closing transition and Uplo
   app.$('uploadPdfBtn').onclick();
   assert.equal(app.$('uploadModalBackdrop').classList.values.has('is-editing'), false);
   assert.equal(app.$('modalDueDateInput').value, today);
+});
+
+test('Edit preserves the original extension, optional dates and duplicate checks for both collections', async () => {
+  for (const view of ['sources', 'problems']) {
+    const app = form(view);
+    const file = { id: 'a', name: 'original.pdf', subject: 'math', topic: 'Topic', ...(view === 'problems' ? { kind: 'problem', addedDate: '' } : { dueDate: '' }) };
+    app.context.files.push(file, { ...file, id: 'b', name: 'taken.pdf' }); app.context.editTarget = file;
+    app.$('pdfFileInput').files = []; vm.runInContext('setModal(true, editTarget)', app.context);
+    app.$('modalPathFileNameInput').value = 'TAKEN';
+    await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
+    assert.equal(app.stored.length, 0); assert.match(app.$('modalErrorMsg').textContent, /already exists/);
+    app.$('modalPathFileNameInput').value = 'renamed';
+    await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
+    assert.equal(file.name, 'renamed.pdf'); assert.equal(dateOf(file), '');
+  }
+});
+test('a slow problem upload uses the collection and metadata captured before navigation', async () => {
+  const app = form('problems'); let finish;
+  app.context.validateUpload = () => new Promise(resolve => { finish = resolve; });
+  const saved = app.submit(png());
+  app.context.activeView = 'sources'; app.$('modalTopicInput').value = 'Changed during upload';
+  app.$('modalDifficultyInput').value = 'easy'; finish('image'); await saved;
+  assert.equal(app.stored[0].kind, 'problem'); assert.equal(app.stored[0].topic, 'Geometry');
+  assert.equal(app.stored[0].difficulty, 'hard'); assert.equal(app.stored[0].statementImages.length, 1);
 });

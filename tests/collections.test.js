@@ -1,3 +1,4 @@
+import { normalizeSubject, todayDate, renamedDocument, validateDocumentName, normalizedDifficulty } from '../src/metadata.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -57,7 +58,7 @@ test('runtime navigation and reload keep headings, columns, counts and records i
         { id: 's', name: 'Source.pdf', subject: 'math', topic: 'Source topic', dueDate: '20/11/2026', done: true },
         { id: 'p', kind: 'problem', name: 'Problem.pdf', subject: 'math', topic: 'Problem topic', addedDate: '15/11/2026', difficulty: 'hard' },
       ],
-      location: { hash }, $, queryFiles, collectionFiles, subjectNames, dateOf, esc: escapeHtml, viewFromHash, readerHash, readerRoute, problemTitle,
+      location: { hash }, $, queryFiles, collectionFiles, subjectNames, normalizedDifficulty, dateOf, esc: escapeHtml, viewFromHash, readerHash, readerRoute, problemTitle,
       libraryReady: true, routeSequence: 0, viewerClosing: false, viewerClosePromise: null,
       history: { replaceState(_state, _title, hash) { context.location.hash = hash; } },
       problemDetail: { isOpen: false, activeId: null },

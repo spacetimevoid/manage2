@@ -1,3 +1,4 @@
+import { DIFFICULTIES, normalizedDifficulty, difficultyLabel } from './metadata.js';
 import { escapeHtml as esc, validatePdf } from './library.js';
 import { ensureProblemData, renameProblem, renderMarkdown, problemTitle } from './problem-data.js';
 import { createImageZoom } from './image-zoom.js';
@@ -74,9 +75,9 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     setFrame($('solutionPdfFrame'), pdf ? solution.pdfBlob : null);
   }
   function renderDifficulty() {
-    const value = active.difficulty || 'easy';
+    const value = normalizedDifficulty(active.difficulty);
     $('problemDetailDiffBtn').className = `problem-diff-btn is-${value}`;
-    $('problemDetailDiffBtn').textContent = ({ easy: 'Easy', med: 'Med', hard: 'Hard' })[value];
+    $('problemDetailDiffBtn').textContent = difficultyLabel(value);
   }
   function markdownMode(mode) {
     page.querySelectorAll('[data-md-mode]').forEach(btn => btn.classList.toggle('is-active', btn.dataset.mdMode === mode));
@@ -114,10 +115,10 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     if (!prepare) return action();
     pending = file; onOpen(file);
     return prepare(file).then(() => { if (sequence === preparation) { pending = null; return action(); } }).catch(error => {
-      if (sequence === preparation) { pending = null; onClose(file); window.alert(error.message || 'Unable to load problem.'); }
+      if (sequence === preparation) { pending = null; if (active) onOpen(active); else onClose(file); window.alert(error.message || 'Unable to load problem.'); }
     });
   }
-  function open(file) { return prepared(file, () => openReady(file)); }
+  function open(file) { if (closing) return closingPromise; return prepared(file, () => openReady(file)); }
   function openReady(file) {
     if (closing) return;
     if (!active) returnFocus = document.activeElement;
@@ -151,7 +152,7 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
   $('problemDetailBackBtn').onclick = close;
   for (const [id, step] of [['problemPrevItemBtn', -1], ['problemNextItemBtn', 1]]) $(id).onclick = () => {
     if (!active) return;
-    const index = items.findIndex(file => file.id === active.id) + step;
+    const index = items.findIndex(file => file.id === (pending || active).id) + step;
     if (items[index]) prepared(items[index], () => show(items[index], step));
   };
   $('problemDetailTitleInput').oninput = e => { e.target.setCustomValidity(''); };
@@ -170,8 +171,8 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
   $('problemStatementNoteInput').oninput = e => { if (active) { active.notes = e.target.value; schedule(active); } };
   $('problemDetailDiffBtn').onclick = () => {
     if (!active) return;
-    const levels = ['easy', 'med', 'hard'];
-    active.difficulty = levels[(levels.indexOf(active.difficulty || 'easy') + 1) % levels.length];
+    const levels = DIFFICULTIES;
+    active.difficulty = levels[(levels.indexOf(normalizedDifficulty(active.difficulty)) + 1) % levels.length];
     renderDifficulty(); save(active); onChange();
   };
   function pick(id) {

@@ -1,3 +1,4 @@
+import { normalizeSubject, DIFFICULTIES, normalizedDifficulty } from './metadata.js';
 export const PAGE_SIZE = 10;
 export function readerRoute(hash) {
   const [section, encodedId] = hash.replace(/^#/, '').split('/');
@@ -14,8 +15,7 @@ export function subjectNames(files, view) {
   return [...new Set([...subjectRecords(files, view), ...collectionFiles(files, view)].map(file => file.subject))];
 }
 export function makeSubject(value, view, files) {
-  const subject = value.trim().toLocaleLowerCase().replace(/\s+/g, '-');
-  if (!subject || subject === 'all' || /[\\/\x00-\x1f]/.test(subject)) throw new Error('Enter a subject without slashes. “all” is reserved.');
+  const subject = normalizeSubject(value);
   if (subjectNames(files, view).includes(subject)) throw new Error('This subject already exists.');
   return { id: crypto.randomUUID(), kind: 'subject', collection: view, subject, createdAt: Date.now() };
 }
@@ -39,8 +39,8 @@ export function queryFiles(files, { subject = 'all', query = '', sortKey = null,
   if (sortKey) items.sort((a, b) => {
     // Unscheduled records remain last in either direction.
     if (sortKey === 'date' && (!dateOf(a) || !dateOf(b))) return dateOf(a) ? -1 : dateOf(b) ? 1 : 0;
-    const difficulties = { easy: 0, med: 1, hard: 2 };
-    const n = sortKey === 'date' ? parseDate(dateOf(a)) - parseDate(dateOf(b)) : sortKey === 'difficulty' ? difficulties[a.difficulty] - difficulties[b.difficulty] : sortKey === 'status' ? Number(a.done) - Number(b.done) : a[sortKey].localeCompare(b[sortKey], undefined, { numeric: true });
+    const difficultyRank = file => DIFFICULTIES.indexOf(normalizedDifficulty(file.difficulty));
+    const n = sortKey === 'date' ? parseDate(dateOf(a)) - parseDate(dateOf(b)) : sortKey === 'difficulty' ? difficultyRank(a) - difficultyRank(b) : sortKey === 'status' ? Number(a.done) - Number(b.done) : a[sortKey].localeCompare(b[sortKey], undefined, { numeric: true });
     return sortDir === 'asc' ? n : -n;
   });
   const pages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));

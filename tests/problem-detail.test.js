@@ -163,3 +163,19 @@ test('restoring a problem waits for its media and cancelled loading never opens 
     assert.equal(app.$('problemDetailTitleInput').value, 'lazy');
   } finally { app.cleanup(); }
 });
+
+test('rapid problem navigation follows the pending target and a failed load restores the visible route', async () => {
+  const files = ['a', 'b', 'c'].map(problem), requests = new Map(), routes = [];
+  const app = mount(files, { prepare: file => file.id === 'a' ? Promise.resolve() : new Promise((resolve, reject) => requests.set(file.id, { resolve, reject })), onOpen: file => routes.push(file.id) });
+  globalThis.window.alert = () => {};
+  try {
+    await app.detail.open(files[0]);
+    app.$('problemNextItemBtn').onclick(); app.$('problemNextItemBtn').onclick();
+    assert.equal(app.detail.activeId, 'c');
+    requests.get('b').resolve(); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(app.$('problemDetailTitleInput').value, 'a');
+    requests.get('c').reject(Error('Offline')); await new Promise(resolve => setImmediate(resolve));
+    assert.equal(app.detail.activeId, 'a'); assert.equal(routes.at(-1), 'a');
+    assert.equal(app.$('problemDetailTitleInput').value, 'a');
+  } finally { app.cleanup(); }
+});
