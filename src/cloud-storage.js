@@ -53,6 +53,20 @@ export function createCloudStorage(client, user) {
   }
   return {
     cloud: true,
+    async remove(ids) {
+      if (!ids.length) return;
+      const previous = new Set();
+      for (const id of ids) attachmentPaths(records.get(id), previous);
+      throwIfError(await client.from('library_documents').delete().eq('owner_id', user.id).in('id', ids));
+      for (const id of ids) records.delete(id);
+      const referenced = new Set();
+      for (const record of records.values()) attachmentPaths(record, referenced);
+      const unused = [...previous].filter(path => !referenced.has(path));
+      if (unused.length) {
+        const { error } = await bucket.remove(unused);
+        if (error) console.error('Unable to remove deleted private attachments:', error);
+      }
+    },
     async read() {
       const rows = [];
       for (let start = 0; ; start += 500) {

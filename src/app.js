@@ -3,9 +3,11 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { createProblemDetail } from './problem-detail.js';
 import { closeReader } from './reader-transition.js';
 import { validateUpload, uploadName } from './uploads.js';
+import { createContextMenu } from './context-menu.js';
+import './context-menu.css';
 import { problemTitle } from './problem-data.js';
 import { escapeHtml as esc, parseDate, queryFiles, validatePdf, viewFromHash, collectionFiles, dateOf, readerRoute, readerHash, snapshotDocument } from './library.js';
-import { openLibrary, readDocuments, saveDocuments } from './storage.js';
+import { openLibrary, readDocuments, saveDocuments, deleteDocuments } from './storage.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 const $ = id => document.getElementById(id);
@@ -167,7 +169,9 @@ $('pdfNotesTextarea').oninput = () => {
 };
 document.addEventListener('visibilitychange', () => { if (document.hidden && activeFile) saveNote(); });
 
-function setModal(open) {
+function setModal(open, file = null) {
+  setModal.file = open ? file : null;
+  $('uploadModalBackdrop').classList.toggle('is-editing', open && !!file);
   $('uploadModalBackdrop').classList.toggle('is-open', open);
   $('uploadModalBackdrop').setAttribute('aria-hidden', String(!open));
   app.inert = open;
@@ -186,6 +190,13 @@ function setModal(open) {
     $('modalPathFileNameInput').value = '';
     $('modalErrorMsg').textContent = '';
     $('modalFileStatus').textContent = 'No file selected';
+    if (file) {
+      $('modalPathSubjectInput').value = file.subject;
+      $('modalPathFileNameInput').value = file.name;
+      $('modalTopicInput').value = file.topic;
+      $('modalDueDateInput').value = dateOf(file) || '';
+      $('modalDifficultyInput').value = file.difficulty || 'easy';
+    }
     $('modalPathFileNameInput').focus();
   } else lastFocus?.focus();
 }
@@ -208,18 +219,29 @@ $('uploadPdfForm').onsubmit = async e => {
   submit.disabled = true; $('modalCancelBtn').disabled = true;
   let validation;
   try {
+    const editing = setModal.file;
     const blob = $('pdfFileInput').files[0];
-    const mediaType = await validateUpload(blob, activeView);
+    const mediaType = editing ? null : await validateUpload(blob, activeView);
     const subject = $('modalPathSubjectInput').value.trim().toLocaleLowerCase().replace(/\s+/g, '-');
     if (!subject || subject === 'all' || /[\\/\x00-\x1f]/.test(subject)) throw new Error('Enter a subject without slashes. “all” is reserved.');
-    const name = uploadName($('modalPathFileNameInput').value, blob, mediaType);
+    const name = editing ? $('modalPathFileNameInput').value.trim() : uploadName($('modalPathFileNameInput').value, blob, mediaType);
+    if (!name) throw new Error('Enter a file name.');
     if (/[\\/\x00-\x1f]/.test(name)) throw new Error('File name cannot contain slashes or control characters.');
-    if (visibleFiles().some(f => !f.sample && f.subject === subject && f.name.toLocaleLowerCase() === name.toLocaleLowerCase())) throw new Error('A PDF with this name already exists in that subject.');
+    if (visibleFiles().some(f => f.id !== editing?.id && !f.sample && f.subject === subject && f.name.toLocaleLowerCase() === name.toLocaleLowerCase())) throw new Error('A PDF with this name already exists in that subject.');
     let dueDate = $('modalDueDateInput').value.trim();
     if (Number.isNaN(parseDate(dueDate))) throw new Error('Enter a real date in DD/MM/YYYY format, or leave it blank.');
     if (!dueDate) {
       const now = new Date();
       dueDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+    }
+    if (editing) {
+      const updated = { ...editing, name, subject, topic: $('modalTopicInput').value.trim() || 'General Notes' };
+      if (editing.kind === 'problem') { updated.addedDate = dueDate; updated.difficulty = $('modalDifficultyInput').value; }
+      else updated.dueDate = dueDate;
+      await persist(updated);
+      Object.assign(editing, updated);
+      setModal(false); renderSidebar(); renderFiles();
+      return;
     }
     const file = { id: crypto.randomUUID(), name, subject, topic: $('modalTopicInput').value.trim() || 'General Notes', dueDate, done: false, notes: '', sample: false, createdAt: Date.now() };
     if (mediaType === 'pdf') {
@@ -245,6 +267,36 @@ $('uploadPdfForm').onsubmit = async e => {
     submit.disabled = false; $('modalCancelBtn').disabled = false;
   }
 };
+
+const contextMenu = createContextMenu();
+async function removeFiles(items) {
+  const ids = items.map(file => file.id);
+  const result = saveQueue.catch(() => {}).then(() => deleteDocuments(db, ids));
+  saveQueue = result;
+  await result;
+  const removed = new Set(ids);
+  files = files.filter(file => !removed.has(file.id));
+  for (const file of items) if (file.blobUrl) URL.revokeObjectURL(file.blobUrl);
+  if (activeSubject !== 'all' && !visibleFiles().some(file => file.subject === activeSubject)) activeSubject = 'all';
+  renderSidebar(); renderFiles();
+}
+$('fileList').addEventListener('contextmenu', event => {
+  const row = event.target.closest('[data-id]');
+  const file = visibleFiles().find(file => file.id === row?.dataset.id);
+  if (!file) return;
+  event.preventDefault();
+  contextMenu.open(event, [
+    { label: 'Edit', run: () => setModal(true, file) },
+    { label: 'Delete', run: () => removeFiles([file]) },
+  ]);
+});
+$('subjectList').addEventListener('contextmenu', event => {
+  const subject = event.target.closest('[data-subject]')?.dataset.subject;
+  if (!subject || subject === 'all') return;
+  event.preventDefault();
+  const items = visibleFiles().filter(file => file.subject === subject);
+  contextMenu.open(event, [{ label: 'Delete', run: () => removeFiles(items) }]);
+});
 
 function syncToolbar() {
   const total = pdfDoc?.numPages || 0;

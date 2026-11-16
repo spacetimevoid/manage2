@@ -26,3 +26,10 @@ export async function readDocuments(db) {
   return remote;
 }
 export const saveDocuments = (db, documents) => db.cloud ? db.save(documents) : local.saveDocuments(db, documents);
+export async function deleteDocuments(db, ids) {
+  if (!db.cloud) return local.deleteDocuments(db, ids);
+  // Remove imported originals first so a reload cannot import deleted files again.
+  const browserDb = await local.openLibrary();
+  try { await local.deleteDocuments(browserDb, ids); } finally { browserDb.close(); }
+  await db.remove(ids);
+}

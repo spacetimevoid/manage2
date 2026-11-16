@@ -87,3 +87,11 @@ export async function validatePdf(file) {
   const head = new TextDecoder().decode(await file.slice(0, 1024).arrayBuffer());
   if (!head.includes('%PDF-')) throw new Error('This file does not contain a valid PDF header.');
 }
+export function deleteDocuments(db, ids) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('documents', 'readwrite');
+    for (const id of ids) tx.objectStore('documents').delete(id);
+    tx.oncomplete = () => resolve();
+    tx.onerror = tx.onabort = () => reject(tx.error || new Error('Unable to delete documents.'));
+  });
+}

@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { validateUpload, uploadName } from '../src/uploads.js';
 import { problemTitle, renameProblem } from '../src/problem-data.js';
-import { parseDate } from '../src/library.js';
+import { dateOf, parseDate } from '../src/library.js';
 
 const png = () => new File([Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j2ioAAAAASUVORK5CYII=', 'base64'))], 'question.png', { type: 'image/png' });
 function form(view) {
@@ -20,12 +20,12 @@ function form(view) {
     $, activeView: view, activeSubject: 'all', currentPage: 1, files: [], lastFocus: null, app: {}, crypto,
     viewName: () => context.activeView === 'problems' ? 'Problems' : 'Sources',
     document: { activeElement: null, body: { style: {} }, querySelector: selector => selector.includes('modalBrowseBtn') ? browseLabel : dateLabel },
-    validateUpload: (file, view) => validateUpload(file, view, async () => {}), uploadName, parseDate,
+    validateUpload: (file, view) => validateUpload(file, view, async () => {}), uploadName, parseDate, dateOf,
     visibleFiles: () => context.files, async persist(file) { stored.push(structuredClone(file)); }, renderSidebar() {}, renderFiles() {},
     pdfjsLib: { getDocument() { pdfLoads++; return { promise: Promise.resolve({ numPages: 4 }), async destroy() {} }; } },
   });
   const source = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
-  vm.runInContext(source.slice(source.indexOf('function setModal('), source.indexOf('function syncToolbar(')), context);
+  vm.runInContext(source.slice(source.indexOf('function setModal('), source.indexOf('const contextMenu =')), context);
   vm.runInContext('setModal(true)', context);
   return { $, context, browseLabel, stored, get pdfLoads() { return pdfLoads; }, async submit(file) {
     $('pdfFileInput').files = [file]; $('modalPathFileNameInput').value = file.name;
@@ -63,4 +63,18 @@ test('broken images are rejected and image uploads never receive a forced PDF ex
   assert.equal(uploadName('custom', png(), 'image'), 'custom.png');
   assert.equal(uploadName('custom.pdf', png(), 'image'), 'custom.png');
   assert.equal(uploadName('exam', new File([], 'original.pdf'), 'pdf'), 'exam.pdf');
+});
+
+test('Edit saves metadata without requiring or replacing attachments and preserves notes', async () => {
+  const app = form('problems');
+  const file = { id: 'existing', name: 'old.png', subject: 'math', topic: 'Old', kind: 'problem', addedDate: '16/11/2026', difficulty: 'hard', notes: 'Keep', statementImages: [{ blob: png() }] };
+  app.context.files.push(file); app.context.editTarget = file;
+  app.$('pdfFileInput').files = [];
+  vm.runInContext('setModal(true, editTarget)', app.context);
+  assert.equal(app.$('modalPathFileNameInput').value, 'old.png');
+  app.$('modalPathFileNameInput').value = 'edited.png'; app.$('modalTopicInput').value = 'New';
+  await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
+  assert.equal(app.stored.length, 1); assert.equal(app.context.files.length, 1);
+  assert.equal(file.name, 'edited.png'); assert.equal(file.topic, 'New');
+  assert.equal(file.notes, 'Keep'); assert.equal(file.statementImages.length, 1); assert.equal(app.pdfLoads, 0);
 });

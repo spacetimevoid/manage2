@@ -15,8 +15,9 @@
 }
 .image-zoom-dialog::backdrop {
     background: rgba(0, 0, 0, 0.25);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+}
+body:has(#imageZoomDialog[open]) > :is(.manage-shell, .pdf-fullscreen-page, .problem-detail-page) {
+    filter: blur(10px);
 }
 .image-zoom-controls {
     position: absolute;

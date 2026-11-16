@@ -17,8 +17,15 @@ function fakeCloud() {
     } },
     from(table) {
       assert.equal(table, 'library_documents');
-      let owner;
+      let owner, deleting = false;
       return {
+        delete() { deleting = true; return this; },
+        async in(key, ids) {
+          assert.equal(key, 'id'); assert.equal(deleting, true);
+          if (failWrite) return { error: new Error('Database unavailable') };
+          for (const id of ids) rows.delete(owner + ':' + id);
+          return { data: null };
+        },
         select() { return this; }, eq(_key, value) { owner = value; return this; }, order() { return this; },
         async range(start, end) { return { data: [...rows.values()].filter(row => row.owner_id === owner).sort((a, b) => a.id.localeCompare(b.id)).slice(start, end + 1) }; },
         async upsert(records) {
@@ -79,4 +86,22 @@ test('save snapshots freeze mutable metadata while preserving immutable Blob ide
   file.notes = 'new'; file.statementImages.push({ blob });
   assert.equal(snapshot.notes, 'old'); assert.equal(snapshot.statementImages.length, 1);
   assert.equal(snapshot.statementImages[0].blob, blob); assert.equal(snapshot.blobUrl, undefined);
+});
+
+test('deleting documents removes only selected owner records and unreferenced attachments', async () => {
+  const fake = fakeCloud(), storage = createCloudStorage(fake.client, { id: 'owner' });
+  const shared = new Blob(['shared']);
+  await storage.save([{ id: 'a', blob: shared }, { id: 'b', blob: shared }, { id: 'c', blob: new Blob(['private']) }]);
+  fake.rows.set('other:a', { owner_id: 'other', id: 'a', document: { id: 'a' } });
+  await storage.remove(['a', 'c']);
+  assert.equal(fake.rows.has('owner:a'), false); assert.equal(fake.rows.has('owner:c'), false);
+  assert.equal(fake.rows.has('other:a'), true); assert.equal(fake.objects.size, 1);
+  assert.deepEqual((await storage.read()).map(file => file.id), ['b']);
+  await storage.remove(['b']); assert.equal(fake.objects.size, 0);
+});
+test('failed deletion retains records and attachments', async () => {
+  const fake = fakeCloud(), storage = createCloudStorage(fake.client, { id: 'owner' });
+  await storage.save([{ id: 'a', blob: new Blob(['PDF']) }]); fake.fail();
+  await assert.rejects(storage.remove(['a']), /Database unavailable/);
+  assert.equal(fake.rows.size, 1); assert.equal(fake.objects.size, 1);
 });
