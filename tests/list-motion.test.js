@@ -52,3 +52,15 @@ test('first attachment animates after a hidden empty grid becomes visible; hidde
     assert.equal(container.rows[0].animations.length, 0);
   } finally { globalThis.matchMedia = previous; }
 });
+
+test('switching collections fades common subjects without translating them beyond the shorter list', () => {
+  const container = list([row('All', 0), row('math', 430)]);
+  const finish = captureListMotion(container, { move: false });
+  container.rows = [row('All', 0), row('math', 48)]; finish();
+  for (const item of container.rows) {
+    assert.equal(item.animations.length, 1);
+    assert.ok(item.animations[0].frames.every(frame => frame.transform === undefined));
+    assert.equal(item.animations[0].frames[0].opacity, 0);
+    item.animations[0].finish();
+  }
+});

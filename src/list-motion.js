@@ -4,7 +4,7 @@ const keyOf = element => element.dataset.id ?? element.dataset.subject ?? elemen
 
 // Measure before replacing a list, then animate its new nodes from the old
 // visible positions. No timers delay saving, navigation or user interaction.
-export function captureListMotion(container) {
+export function captureListMotion(container, { move = true } = {}) {
   if (!container?.querySelectorAll || !container.getClientRects) return () => {};
   const reduced = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
   const previous = new Map([...container.querySelectorAll(selector)].filter(element => element.getClientRects().length).map(element => [keyOf(element), element.getBoundingClientRect()]));
@@ -17,7 +17,7 @@ export function captureListMotion(container) {
       if (!element.getClientRects().length || !element.animate) continue;
       const before = previous.get(keyOf(element)), after = element.getBoundingClientRect();
       let frames;
-      if (!before) frames = [{ opacity: 0 }, { opacity: 1 }];
+      if (!before || !move) frames = [{ opacity: 0 }, { opacity: 1 }];
       else {
         const x = before.left - after.left, y = before.top - after.top;
         if (Math.abs(x) < .5 && Math.abs(y) < .5) continue;

@@ -47,7 +47,12 @@ $('pdfNotesTextarea').setAttribute('aria-label', 'Document notes');
 
 function subjects() { return subjectNames(files, activeView); }
 function renderSidebar(animate = true) {
-  const finishMotion = animate ? captureListMotion($('subjectList')) : () => {};
+  const list = $('subjectList');
+  // Subjects with the same name in different collections are separate rows.
+  // Moving them from the old collection's positions can briefly overflow the
+  // shorter destination list and create a scrollbar during the transition.
+  const finishMotion = animate ? captureListMotion(list, { move: list.dataset.collection === activeView }) : () => {};
+  list.dataset.collection = activeView;
   if (activeSubject !== 'all' && !subjects().includes(activeSubject)) { activeSubject = 'all'; currentPage = 1; }
   const q = searchQuery.trim().toLocaleLowerCase();
   const documents = visibleFiles();

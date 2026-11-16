@@ -52,7 +52,7 @@ test('runtime navigation and reload keep headings, columns, counts and records i
     const date = makeElement(), dateLabel = makeElement(), status = makeElement(), statusLabel = makeElement();
     status.querySelector = () => statusLabel;
     let onHashChange;
-    const context = vm.createContext({ captureListMotion: () => () => {}, mediaLoader: { warm() {} },
+    const context = vm.createContext({ captureListMotion: (element, options) => { if (options) element.motion = options; return () => {}; }, mediaLoader: { warm() {} },
       SUBJECTS: ['math'], activeView: viewFromHash(hash), activeSubject: 'all', currentPage: 1, sortKey: null, sortDir: 'asc', searchQuery: '', activeFile: null,
       files: [
         { id: 's', name: 'Source.pdf', subject: 'math', topic: 'Source topic', dueDate: '20/11/2026', done: true },
@@ -89,6 +89,9 @@ test('runtime navigation and reload keep headings, columns, counts and records i
   assert.doesNotMatch(app.$('fileList').innerHTML, /Problem/);
   await app.navigate('#problems');
   assert.equal(app.$('breadcrumbReset').textContent, 'Problems');
+  assert.equal(app.$('subjectList').motion.move, false);
+  app.context.renderSidebar();
+  assert.equal(app.$('subjectList').motion.move, true);
   assert.equal(app.dateLabel.textContent, 'Added Date');
   assert.equal(app.statusLabel.textContent, 'Difficulty');
   assert.equal(app.links[1].attrs['aria-current'], 'page');
@@ -99,6 +102,7 @@ test('runtime navigation and reload keep headings, columns, counts and records i
   assert.equal(reloaded.$('fileList').innerHTML, app.$('fileList').innerHTML);
   await reloaded.navigate('#sources');
   assert.equal(reloaded.statusLabel.textContent, 'Status');
+  assert.equal(reloaded.$('subjectList').motion.move, false);
   assert.equal(reloaded.dateLabel.textContent, 'Due Date');
   // Restore each reader after a fresh mount, then close without reopening it on reload.
   for (const [view, id] of [['sources', 's'], ['problems', 'p']]) {
