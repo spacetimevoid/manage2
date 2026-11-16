@@ -3,7 +3,7 @@ import { escapeHtml as esc, validatePdf } from './library.js';
 import { ensureProblemData, renameProblem, renderMarkdown, problemTitle } from './problem-data.js';
 import { createImageZoom } from './image-zoom.js';
 import { closeReader } from './reader-transition.js';
-import { fadeDeleted } from './deletion.js';
+import { fadeDeleted, revealRestored } from './deletion.js';
 import { snapshotDocument } from './library.js';
 
 export function createProblemDetail({ persist, getItems, onChange, background, deletionHistory = null, prepare = null, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
@@ -302,7 +302,14 @@ export function createProblemDetail({ persist, getItems, onChange, background, d
         Object.assign(target, snapshotDocument(before));
         try { await persist(target); }
         catch (error) { Object.assign(target, current); throw error; }
-        if (active === target) { releaseUrls(); renderStatement(); renderSolution(); $('solutionMdTextarea').value = target.solution.markdown; }
+        if (active === target) {
+          await prepareImages(target);
+          if (active !== target) return;
+          const media = [...target.statementImages, ...target.solution.images].map(record => record.blob);
+          releaseUrls(new Set(media)); renderStatement(); renderSolution(); $('solutionMdTextarea').value = target.solution.markdown;
+          const panels = keys.includes('statementImages') ? [$('statementImageGrid')] : keys.includes('blob') ? [$('statementPdfEmbed')] : [$('solutionPanelImage'), $('solutionPanelPdf'), $('solutionPanelMarkdown')].filter(panel => !panel.hidden);
+          await revealRestored(panels);
+        }
       };
     });
   }

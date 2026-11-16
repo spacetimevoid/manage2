@@ -21,7 +21,7 @@ function mount() {
     { id: 's1', subject: 'math' }, { id: 's2', subject: 'math' },
     { id: 's3', subject: 'physics' }, { id: 'p1', kind: 'problem', subject: 'math' },
   ];
-  const context = vm.createContext({ deletionHistory: createDeletionHistory(async () => context.confirm !== false), snapshotDocument, mediaLoader: { load: async file => file }, fadeDeleted: async () => () => {}, document: { querySelectorAll: () => [] }, async saveDocuments(_db, records) { if(context.fail) throw Error('Offline'); context.restored = records; }, enableSubjectDrag() {}, subjectRecords, makeSubject, activeView: 'sources',
+  const context = vm.createContext({ deletionHistory: createDeletionHistory(async () => context.confirm !== false), snapshotDocument, mediaLoader: { load: async file => file }, fadeDeleted: async () => () => {}, revealRestored: async () => {}, document: { querySelectorAll: () => [] }, async saveDocuments(_db, records) { if(context.fail) throw Error('Offline'); context.restored = records; }, enableSubjectDrag() {}, subjectRecords, makeSubject, activeView: 'sources',
     subjects: () => subjectNames(context.files, context.activeView),
     createSubjectModal: save => ({ async open(view) { if (context.promptValue !== null) await save(context.promptValue, view); } }), async persist(file) { if(context.fail) throw Error('Offline'); context.saved = file; },
     files, activeSubject: 'math', db: {}, saveQueue: Promise.resolve(),

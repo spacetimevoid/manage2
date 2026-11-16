@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createDeletionHistory, createDeleteConfirmation, fadeDeleted, installDeleteUndo } from '../src/deletion.js';
+import { createDeletionHistory, createDeleteConfirmation, fadeDeleted, revealRestored, installDeleteUndo } from '../src/deletion.js';
 
 test('confirmation cancels safely, undo follows reverse order and a failed restore remains retryable', async () => {
   let confirm = false, fail = false; const restored = [];
@@ -53,9 +53,24 @@ test('deletion gradually collapses row spacing before refreshing the surrounding
     } }]);
     assert.equal(frames[0].height, '48px'); assert.equal(frames[1].height, '0px');
     for (const key of ['paddingTop', 'paddingBottom', 'marginTop', 'marginBottom']) assert.equal(frames[1][key], '0px');
-    assert.equal(options.fill, 'forwards'); assert.ok(options.duration > 180);
+    assert.equal(options.fill, 'both'); assert.ok(options.duration > 180);
     assert.equal(cancelled, false); finish(); const cleanup = await done;
     assert.equal(cancelled, false, 'collapsed space persists until the list refresh');
     cleanup(); assert.equal(cancelled, true);
+  } finally { globalThis.getComputedStyle = previous; }
+});
+
+test('undo expands restored rows from zero height and fades them in, then releases animation styles', async () => {
+  const previous = globalThis.getComputedStyle;
+  globalThis.getComputedStyle = () => ({ paddingTop: '11px', paddingBottom: '11px', marginTop: '1px', marginBottom: '1px', borderTopWidth: '0px', borderBottomWidth: '0px' });
+  let frames, finish, cancelled = false;
+  try {
+    const restored = revealRestored([{ getBoundingClientRect: () => ({ height: 48 }), animate(value) {
+      frames = value; return { finished: new Promise(resolve => { finish = resolve; }), cancel() { cancelled = true; } };
+    } }]);
+    assert.equal(frames[0].height, '0px'); assert.equal(frames[0].opacity, 0);
+    assert.equal(frames[1].height, '48px'); assert.equal(frames[1].opacity, 1);
+    assert.equal(frames[1].marginTop, '1px'); assert.equal(cancelled, false);
+    finish(); await restored; assert.equal(cancelled, true);
   } finally { globalThis.getComputedStyle = previous; }
 });

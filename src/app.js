@@ -1,5 +1,5 @@
 import { createTopicPicker, existingTopics } from './topic-picker.js';
-import { createDeletionHistory, createDeleteConfirmation, installDeleteUndo, fadeDeleted } from './deletion.js';
+import { createDeletionHistory, createDeleteConfirmation, installDeleteUndo, fadeDeleted, revealRestored } from './deletion.js';
 import './deletion.css';
 import { createMediaPreloader } from './media-preloader.js';
 import { createPdfSession } from './pdf-session.js';
@@ -325,6 +325,7 @@ async function removeFiles(items) {
     saveQueue = result; await result;
     for (const entry of saved) if (!files.some(file => file.id === entry.file.id)) files.splice(Math.max(0, entry.index), 0, entry.file);
     renderSidebar(); renderFiles(); renderSourceOutline();
+    await revealRestored([...document.querySelectorAll('[data-id], [data-subject]')].filter(element => ids.includes(element.dataset.id) || items.some(file => file.kind === 'subject' && file.subject === element.dataset.subject)));
   };
   });
 }

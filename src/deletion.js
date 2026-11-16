@@ -1,4 +1,4 @@
-export async function fadeDeleted(elements) {
+export async function fadeDeleted(elements, restoring = false) {
   if (globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return () => {};
   // Collapse the occupied space as well as fading the content, so siblings
   // follow the row upward throughout the animation, before the DOM refresh.
@@ -13,10 +13,15 @@ export async function fadeDeleted(elements) {
       { opacity: 0, height: '0px', minHeight: 0, boxSizing: 'border-box', overflow: 'hidden', flexShrink: 0,
         paddingTop: '0px', paddingBottom: '0px', marginTop: '0px', marginBottom: '0px', borderTopWidth: '0px', borderBottomWidth: '0px' },
     ] : [{ opacity: 1 }, { opacity: 0 }];
-    return element.animate?.(frames, { duration: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' });
+    return element.animate?.(restoring ? frames.reverse() : frames, { duration: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'both' });
   }).filter(Boolean);
   await Promise.all(animations.map(animation => animation.finished.catch(() => {})));
   return () => animations.forEach(animation => animation.cancel());
+}
+
+export async function revealRestored(elements) {
+  const cleanup = await fadeDeleted(elements, true);
+  cleanup();
 }
 
 export function createDeletionHistory(confirm) {
