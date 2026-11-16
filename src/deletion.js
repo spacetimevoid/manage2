@@ -1,6 +1,20 @@
 export async function fadeDeleted(elements) {
   if (globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return () => {};
-  const animations = elements.filter(Boolean).map(element => element.animate?.([{ opacity: 1 }, { opacity: 0 }], { duration: 180, easing: 'ease-out', fill: 'forwards' })).filter(Boolean);
+  // Collapse the occupied space as well as fading the content, so siblings
+  // follow the row upward throughout the animation, before the DOM refresh.
+  const animations = elements.filter(Boolean).map(element => {
+    const height = element.getBoundingClientRect?.().height;
+    const style = globalThis.getComputedStyle?.(element);
+    const frames = height && style ? [
+      { opacity: 1, height: `${height}px`, minHeight: 0, boxSizing: 'border-box', overflow: 'hidden', flexShrink: 0,
+        paddingTop: style.paddingTop, paddingBottom: style.paddingBottom,
+        marginTop: style.marginTop, marginBottom: style.marginBottom,
+        borderTopWidth: style.borderTopWidth, borderBottomWidth: style.borderBottomWidth },
+      { opacity: 0, height: '0px', minHeight: 0, boxSizing: 'border-box', overflow: 'hidden', flexShrink: 0,
+        paddingTop: '0px', paddingBottom: '0px', marginTop: '0px', marginBottom: '0px', borderTopWidth: '0px', borderBottomWidth: '0px' },
+    ] : [{ opacity: 1 }, { opacity: 0 }];
+    return element.animate?.(frames, { duration: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'forwards' });
+  }).filter(Boolean);
   await Promise.all(animations.map(animation => animation.finished.catch(() => {})));
   return () => animations.forEach(animation => animation.cancel());
 }

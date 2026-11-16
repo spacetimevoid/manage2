@@ -41,3 +41,21 @@ test('Ctrl+Z restores deletions outside text fields and delete fade completes be
     assert.equal(cancelled, false); finish(); const reset = await fading; assert.equal(cancelled, false); reset(); assert.equal(cancelled, true);
   } finally { globalThis.document = previous; }
 });
+
+test('deletion gradually collapses row spacing before refreshing the surrounding list', async () => {
+  const previous = globalThis.getComputedStyle;
+  globalThis.getComputedStyle = () => ({ paddingTop: '11px', paddingBottom: '11px', marginTop: '1px', marginBottom: '1px', borderTopWidth: '0px', borderBottomWidth: '0px' });
+  let frames, options, finish, cancelled = false;
+  try {
+    const done = fadeDeleted([{ getBoundingClientRect: () => ({ height: 48 }), animate(value, settings) {
+      frames = value; options = settings;
+      return { finished: new Promise(resolve => { finish = resolve; }), cancel() { cancelled = true; } };
+    } }]);
+    assert.equal(frames[0].height, '48px'); assert.equal(frames[1].height, '0px');
+    for (const key of ['paddingTop', 'paddingBottom', 'marginTop', 'marginBottom']) assert.equal(frames[1][key], '0px');
+    assert.equal(options.fill, 'forwards'); assert.ok(options.duration > 180);
+    assert.equal(cancelled, false); finish(); const cleanup = await done;
+    assert.equal(cancelled, false, 'collapsed space persists until the list refresh');
+    cleanup(); assert.equal(cancelled, true);
+  } finally { globalThis.getComputedStyle = previous; }
+});
