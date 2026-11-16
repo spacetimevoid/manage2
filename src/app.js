@@ -1,4 +1,5 @@
 import { createTopicPicker, existingTopics } from './topic-picker.js';
+import { captureListMotion } from './list-motion.js';
 import { createDeletionHistory, createDeleteConfirmation, installDeleteUndo, fadeDeleted, revealRestored } from './deletion.js';
 import './deletion.css';
 import { createMediaPreloader } from './media-preloader.js';
@@ -45,15 +46,18 @@ $('pdfViewerPage').setAttribute('aria-modal', 'true');
 $('pdfNotesTextarea').setAttribute('aria-label', 'Document notes');
 
 function subjects() { return subjectNames(files, activeView); }
-function renderSidebar() {
+function renderSidebar(animate = true) {
+  const finishMotion = animate ? captureListMotion($('subjectList')) : () => {};
   if (activeSubject !== 'all' && !subjects().includes(activeSubject)) { activeSubject = 'all'; currentPage = 1; }
   const q = searchQuery.trim().toLocaleLowerCase();
   const documents = visibleFiles();
   const rows = [{ name: 'all', label: 'All', count: documents.length }, ...subjects().map(s => ({ name: s, label: s, count: documents.filter(f => f.subject === s).length }))];
   $('subjectList').innerHTML = rows.filter(s => s.label.toLocaleLowerCase().includes(q)).map(s => `<button type="button" class="subject-item ${s.name === activeSubject ? 'is-active' : ''}" data-subject="${esc(s.name)}" draggable="${s.name !== 'all'}" aria-current="${s.name === activeSubject ? 'page' : 'false'}"><span class="subject-name">${esc(s.label)}</span><span class="subject-count">${s.count}</span></button>`).join('') || '<div class="sidebar-empty">No subjects found</div>';
   $('modalSubjectsDatalist').innerHTML = subjects().map(s => `<option value="${esc(s)}"></option>`).join('');
+  finishMotion();
 }
-function renderFiles() {
+function renderFiles(animate = true) {
+  const finishMotion = animate ? captureListMotion($('fileList')) : () => {};
   const result = queryFiles(visibleFiles(), { subject: activeSubject, sortKey, sortDir, page: currentPage });
   currentPage = result.page;
   $('fileList').innerHTML = result.items.map(f => `<a class="file-row" href="${esc(readerHash(activeView, f.id))}" data-id="${esc(f.id)}"><div class="file-info"><span class="filename">${esc(activeView === 'problems' ? problemTitle(f) : f.name)}</span></div><span class="topic-cell">${esc(f.topic)}</span><span class="due-date">${esc(dateOf(f))}</span><div class="status-cell"><span class="${activeView === 'problems' ? `difficulty difficulty-${esc(normalizedDifficulty(f.difficulty))}` : `badge ${f.done ? 'badge-done' : 'badge-pending'}`}">${activeView === 'problems' ? difficultyLabel(f.difficulty) : f.done ? 'Completed' : 'Pending'}</span></div></a>`).join('') || '<div class="sidebar-empty" style="padding: 18px 10px;">No files in this subject</div>';
@@ -64,6 +68,7 @@ function renderFiles() {
   $('breadcrumbDynamic').hidden = activeSubject === 'all';
   $('breadcrumbSubject').textContent = activeSubject === 'all' ? '' : activeSubject;
   if (!readerRoute(location.hash).id) mediaLoader.warm(result.items);
+  finishMotion();
 }
 function renderView() {
   const problems = activeView === 'problems';
@@ -318,13 +323,13 @@ async function removeFiles(items) {
   files = files.filter(file => !removed.has(file.id));
   for (const file of items) if (file.blobUrl) URL.revokeObjectURL(file.blobUrl);
   if (activeSubject !== 'all' && !subjects().includes(activeSubject)) activeSubject = 'all';
-  renderSidebar(); renderFiles(); renderSourceOutline();
+  renderSidebar(false); renderFiles(false); renderSourceOutline(false);
   resetFade();
   return async () => {
     const result = saveQueue.catch(() => {}).then(() => saveDocuments(db, saved.map(entry => entry.file)));
     saveQueue = result; await result;
     for (const entry of saved) if (!files.some(file => file.id === entry.file.id)) files.splice(Math.max(0, entry.index), 0, entry.file);
-    renderSidebar(); renderFiles(); renderSourceOutline();
+    renderSidebar(false); renderFiles(false); renderSourceOutline(false);
     await revealRestored([...document.querySelectorAll('[data-id], [data-subject]')].filter(element => ids.includes(element.dataset.id) || items.some(file => file.kind === 'subject' && file.subject === element.dataset.subject)));
   };
   });
@@ -495,7 +500,7 @@ const sourceOutline = createSourceOutline($('pdfNotesPane'), async location => {
 }, (event, file) => {
   contextMenu.open(event, [{ label: 'Delete', run: () => removeFiles([file]) }]);
 });
-function renderSourceOutline() { sourceOutline.render(files, activeFile); }
+function renderSourceOutline(animate = true) { sourceOutline.render(files, activeFile, animate); }
 
 async function openViewer(file) {
   if (viewerClosing || activeFile) return;

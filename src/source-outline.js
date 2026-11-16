@@ -1,5 +1,6 @@
 import { sourceEntries } from './source-extraction.js';
 import { problemTitle } from './problem-data.js';
+import { captureListMotion } from './list-motion.js';
 
 export function createSourceOutline(pane, jump, contextMenu = null) {
   const notes = pane.querySelector('#pdfNotesTextarea'), saved = pane.querySelector('#pdfNotesSavedLabel');
@@ -37,7 +38,8 @@ export function createSourceOutline(pane, jump, contextMenu = null) {
   select(false);
   return {
     focus() { (problems ? problemsTab : notes).focus(); },
-    render(files, source) {
+    render(files, source, animate = true) {
+      const finishMotion = animate ? captureListMotion(outline) : () => {};
       if (sourceId !== source?.id) select(false);
       sourceId = source?.id;
       const entries = source ? sourceEntries(files, source.id) : [];
@@ -54,6 +56,7 @@ export function createSourceOutline(pane, jump, contextMenu = null) {
         };
         return button;
       }));
+      finishMotion();
     },
   };
 }

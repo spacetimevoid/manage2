@@ -4,6 +4,7 @@ import { ensureProblemData, renameProblem, renderMarkdown, problemTitle } from '
 import { createImageZoom } from './image-zoom.js';
 import { closeReader } from './reader-transition.js';
 import { fadeDeleted, revealRestored } from './deletion.js';
+import { captureListMotion } from './list-motion.js';
 import { snapshotDocument } from './library.js';
 
 export function createProblemDetail({ persist, getItems, onChange, background, deletionHistory = null, prepare = null, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
@@ -69,7 +70,7 @@ export function createProblemDetail({ persist, getItems, onChange, background, d
     }));
   }
   function images(container, records, type) {
-    container.innerHTML = records.map((image, index) => `<div class="doc-media-item"><img src="${esc(urlFor(image.blob))}" alt="${type === 'statement' ? 'Problem statement' : 'Solution'} image" tabindex="0" role="button" aria-label="Zoom ${type === 'statement' ? 'problem statement' : 'solution'} image"><div class="doc-media-meta"><button type="button" class="doc-action-link" data-remove-${type}="${index}">Remove</button></div></div>`).join('');
+    container.innerHTML = records.map((image, index) => `<div class="doc-media-item" data-media-id="${esc(image.id || index)}"><img src="${esc(urlFor(image.blob))}" alt="${type === 'statement' ? 'Problem statement' : 'Solution'} image" tabindex="0" role="button" aria-label="Zoom ${type === 'statement' ? 'problem statement' : 'solution'} image"><div class="doc-media-meta"><button type="button" class="doc-action-link" data-remove-${type}="${index}">Remove</button></div></div>`).join('');
     container.querySelectorAll?.('img').forEach((placeholder, index) => {
       const image = readyImages.get(records[index]);
       if (!image || image.src !== urlFor(records[index].blob)) return;
@@ -247,6 +248,7 @@ export function createProblemDetail({ persist, getItems, onChange, background, d
     $('solutionAddMenu').hidden = true;
     if (btn.dataset.chooseSol === 'markdown') {
       active.solution.type = 'markdown'; save(active); renderSolution(); markdownMode('write'); $('solutionMdTextarea').focus();
+      void revealRestored([$('solutionPanelMarkdown')]);
     } else pick(btn.dataset.chooseSol === 'image' ? 'solutionImageInput' : 'solutionPdfInput');
   });
   async function upload(id, selected) {
@@ -274,7 +276,17 @@ export function createProblemDetail({ persist, getItems, onChange, background, d
         file.solution.type = 'pdf'; file.solution.pdfBlob = selected[0];
         file.solution.pdfName = selected[0].name; file.solution.images = [];
       }
-      releaseUrls(); renderStatement(); renderSolution(); await save(file);
+      await prepareImages(file);
+      if (active !== file) { await save(file); return; }
+      const finishStatement = captureListMotion($('statementImageGrid'));
+      const finishSolution = captureListMotion($('solutionImageGrid'));
+      const media = [...file.statementImages, ...file.solution.images].map(record => record.blob);
+      releaseUrls(new Set(media)); renderStatement(); renderSolution();
+      finishStatement(); finishSolution();
+      if (id === 'solutionPdfInput' || (id === 'statementMediaInput' && selected.some(blob => /\.pdf$/i.test(blob.name)))) {
+        void revealRestored([$(id === 'solutionPdfInput' ? 'solutionPanelPdf' : 'statementPdfEmbed')]);
+      }
+      await save(file);
     } catch (error) {
       const button = id === 'statementMediaInput' ? $('addStatementMediaBtn') : $('solutionAddBtn');
       button.title = error.message;

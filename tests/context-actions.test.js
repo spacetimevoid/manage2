@@ -93,7 +93,7 @@ test('deleting a linked problem from either menu removes the same record and ref
       let menu;
       app.context.createSourceOutline = (_pane, _jump, context) => { menu = context; return {}; };
       const source = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
-      vm.runInContext(source.slice(source.indexOf('const sourceOutline ='), source.indexOf('function renderSourceOutline()')), app.context);
+      vm.runInContext(source.slice(source.indexOf('const sourceOutline ='), source.indexOf('function renderSourceOutline(')), app.context);
       menu({}, problem);
       assert.deepEqual(Array.from(app.context.actions, action => action.label), ['Delete']);
     } else {
