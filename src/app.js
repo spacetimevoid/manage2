@@ -9,7 +9,7 @@ import { createSourceOutline } from './source-outline.js';
 import './source-extraction.css';
 import { enableSubjectDrag } from './subject-drag.js';
 import { createSubjectModal } from './subject-modal.js';
-import { normalizeSubject, todayDate, renamedDocument, validateDocumentName, difficultyLabel, normalizedDifficulty } from './metadata.js';
+import { normalizeSubject, todayDate, renamedDocument, documentTitle, validateDocumentName, difficultyLabel, normalizedDifficulty } from './metadata.js';
 import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { createProblemDetail } from './problem-detail.js';
@@ -209,7 +209,7 @@ function setModal(open, file = null, extraction = null) {
     const problems = setModal.view === 'problems';
     document.querySelector('label[for="modalBrowseBtn"]').textContent = problems ? 'Select problem' : 'Select source';
     $('pdfFileInput').accept = problems ? 'image/*,application/pdf,.pdf' : 'application/pdf,.pdf';
-    $('modalPathFileNameInput').placeholder = problems ? 'new-problem' : 'new-file.pdf';
+    $('modalPathFileNameInput').placeholder = problems ? 'new-problem' : 'new-file';
     document.querySelector('label[for="modalDueDateInput"]').textContent = problems ? 'Added date' : 'Due date';
     document.querySelector('label[for="modalDueDateInput"]').closest('.modal-field').hidden = problems;
     $('modalPathSubjectInput').value = activeSubject === 'all' ? '' : activeSubject;
@@ -219,7 +219,7 @@ function setModal(open, file = null, extraction = null) {
     $('modalFileStatus').textContent = 'No file selected';
     if (file) {
       $('modalPathSubjectInput').value = file.subject;
-      $('modalPathFileNameInput').value = file.name;
+      $('modalPathFileNameInput').value = documentTitle(file.name);
       $('modalTopicInput').value = file.topic;
       $('modalDueDateInput').value = dateOf(file) || '';
       $('modalDifficultyInput').value = normalizedDifficulty(file.difficulty);
@@ -238,7 +238,7 @@ $('modalBrowseBtn').onclick = () => $('pdfFileInput').click();
 $('pdfFileInput').onchange = () => {
   const file = $('pdfFileInput').files[0];
   $('modalFileStatus').textContent = file?.name || 'No file selected';
-  if (file && !$('modalPathFileNameInput').value.trim()) $('modalPathFileNameInput').value = file.name;
+  if (file && !$('modalPathFileNameInput').value.trim()) $('modalPathFileNameInput').value = documentTitle(file.name);
 };
 for (const id of ['modalPathSubjectInput', 'modalPathFileNameInput']) $(id).onkeydown = e => {
   if (e.key === 'Enter') { e.preventDefault(); $('uploadPdfForm').requestSubmit(); }

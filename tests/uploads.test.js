@@ -1,4 +1,4 @@
-import { normalizeSubject, todayDate, renamedDocument, validateDocumentName, normalizedDifficulty } from '../src/metadata.js';
+import { normalizeSubject, todayDate, renamedDocument, documentTitle, validateDocumentName, normalizedDifficulty } from '../src/metadata.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -21,7 +21,7 @@ function form(view) {
     $, topicPicker: { close() {} }, activeView: view, activeSubject: 'all', currentPage: 1, files: [], lastFocus: null, app: {}, crypto,
     viewName: () => context.activeView === 'problems' ? 'Problems' : 'Sources',
     document: { activeElement: null, body: { style: {} }, querySelector: selector => selector.includes('modalBrowseBtn') ? browseLabel : dateLabel },
-    validateUpload: (file, view) => validateUpload(file, view, async () => {}), uploadName, parseDate, dateOf, collectionFiles, normalizeSubject, todayDate, renamedDocument, validateDocumentName, normalizedDifficulty,
+    validateUpload: (file, view) => validateUpload(file, view, async () => {}), uploadName, parseDate, dateOf, collectionFiles, normalizeSubject, todayDate, renamedDocument, documentTitle, validateDocumentName, normalizedDifficulty,
     visibleFiles: () => context.files, async persist(file) { stored.push(structuredClone(file)); }, renderSidebar() {}, renderFiles() {}, renderSourceOutline() {},
     pdfjsLib: { getDocument() { pdfLoads++; return { promise: Promise.resolve({ numPages: 4 }), async destroy() {} }; } },
   });
@@ -72,7 +72,7 @@ test('Edit saves metadata without requiring or replacing attachments and preserv
   app.context.files.push(file); app.context.editTarget = file;
   app.$('pdfFileInput').files = [];
   vm.runInContext('setModal(true, editTarget)', app.context);
-  assert.equal(app.$('modalPathFileNameInput').value, 'old.png');
+  assert.equal(app.$('modalPathFileNameInput').value, 'old');
   app.$('modalPathFileNameInput').value = 'edited.png'; app.$('modalTopicInput').value = 'New';
   await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
   assert.equal(app.stored.length, 1); assert.equal(app.context.files.length, 1);
@@ -167,4 +167,22 @@ test('Problem Edit preserves the original added date and ignores the shared date
   app.$('modalDueDateInput').value = 'invalid';
   await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
   assert.equal(app.stored[0].addedDate, '02/03/2025');
+});
+
+test('Upload and Edit show only titles while saved PDF and image names preserve their format', async () => {
+  for (const [view, name, type] of [['sources', 'Exam.v2.PDF', 'application/pdf'], ['problems', 'Question.png', 'image/png']]) {
+    const app = form(view), file = { id: 'existing', name, subject: 'math', topic: 'Topic', kind: view === 'problems' ? 'problem' : undefined };
+    app.context.editTarget = file;
+    vm.runInContext('setModal(true, editTarget)', app.context);
+    assert.equal(app.$('modalPathFileNameInput').value, documentTitle(name));
+    vm.runInContext('setModal(true)', app.context);
+    app.$('pdfFileInput').files = [new File(['bytes'], name, { type })];
+    app.$('pdfFileInput').onchange();
+    assert.equal(app.$('modalPathFileNameInput').value, documentTitle(name));
+    assert.doesNotMatch(app.$('modalPathFileNameInput').placeholder, /\.pdf/);
+    app.$('modalPathFileNameInput').value = 'Custom title';
+    app.$('pdfFileInput').onchange(); assert.equal(app.$('modalPathFileNameInput').value, 'Custom title');
+    assert.equal(renamedDocument(documentTitle(name), name).toLowerCase(), name.toLowerCase());
+  }
+  assert.equal(documentTitle('Chapter 1.2'), 'Chapter 1.2');
 });

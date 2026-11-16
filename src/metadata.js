@@ -24,6 +24,8 @@ export function renamedDocument(value, originalName) {
   return extension && !name.toLowerCase().endsWith(extension.toLowerCase()) ? `${name}${extension}` : name;
 }
 
+export const documentTitle = name => String(name || '').replace(/\.(?:pdf|png|jpe?g|webp|gif|svg|avif|bmp|tiff?|heic|heif|ico)$/i, '');
+
 export const DIFFICULTIES = ['easy', 'med', 'hard'];
 export const normalizedDifficulty = value => DIFFICULTIES.includes(value) ? value : 'easy';
 export const difficultyLabel = value => ({ easy: 'Easy', med: 'Med', hard: 'Hard' })[normalizedDifficulty(value)];
