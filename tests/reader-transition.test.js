@@ -53,7 +53,7 @@ test('opening waits for the first painted page; closing keeps the bitmap and bac
     $, Blob, db: null, viewerClosing: false, viewerClosePromise: null, activeFile: null, viewerToken: 0, loadingTask: null, pdfDoc: null,
     lastFocus: null, viewerPage: 1, zoom: 100,
     file: { name: 'test.pdf', subject: 'math', topic: 'Math', dueDate: '', blobUrl: 'blob:test' },
-    pdfjsLib: { getDocument: () => task }, esc: value => value, console,
+    pdfSession: { open: () => task }, mediaLoader: { warm() {}, load: async file => file }, esc: value => value, console,
     document: { activeElement: null, body: { style: {} } }, app: {},
     syncToolbar() {}, renderPages: () => firstPaint, saveNote() {}, cancelRenders() {}, setSelectMode() {}, renderFiles() {},
     renderSourceOutline() {}, rememberReader() {}, forgetReader() {},
@@ -73,6 +73,6 @@ test('opening waits for the first painted page; closing keeps the bitmap and bac
   await vm.runInContext('openViewer(file)', context);
   assert.equal(context.activeFile, null, 'opening is guarded while the old reader is fading out');
   finishClose();
-  assert.equal($('pdfCanvasViewport').cleared, true); assert.equal(destroyed, true);
+  assert.equal($('pdfCanvasViewport').cleared, true); assert.equal(destroyed, false, 'parsed PDF stays cached after closing');
   assert.equal(context.app.inert, false); assert.equal(context.viewerClosing, false);
 });

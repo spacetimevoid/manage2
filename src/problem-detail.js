@@ -9,9 +9,9 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
   const page = $('problemDetailPage');
   const imageZoom = createImageZoom();
   let active = null, items = [], returnFocus = null;
-  let contentAnimation = null;
+  let contentAnimation = null, prefetchTimer = null;
   let closing = false, closingPromise = null, preparation = 0, pending = null;
-  const readyImages = new WeakMap();
+  const readyImages = new Map(), decodingImages = new WeakMap();
   const urls = new Map(), timers = new Map(), pickerTargets = new Map();
   page.inert = true;
   page.setAttribute('role', 'dialog');
@@ -27,6 +27,7 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     for (const [blob, url] of urls) {
       if (!keep.has(blob)) { URL.revokeObjectURL(url); urls.delete(blob); }
     }
+    for (const record of readyImages.keys()) if (!keep.has(record.blob)) readyImages.delete(record);
   }
   async function save(file, status = null) {
     clearTimeout(timers.get(file.id)?.timer); timers.delete(file.id);
@@ -53,8 +54,16 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     await Promise.all([...(file.statementImages || []), ...(file.solution?.images || [])].map(async record => {
       const src = urlFor(record.blob);
       if (readyImages.get(record)?.src === src) return;
+      const pending = decodingImages.get(record);
+      if (pending?.src === src) return pending.promise;
       const image = new Image(); image.src = src;
-      await image.decode(); readyImages.set(record, image);
+      const promise = image.decode().then(() => {
+        if (urls.get(record.blob) === src) readyImages.set(record, image);
+      }).finally(() => {
+        if (decodingImages.get(record)?.promise === promise) decodingImages.delete(record);
+      });
+      decodingImages.set(record, { src, promise });
+      await promise;
     }));
   }
   function images(container, records, type) {
@@ -105,7 +114,9 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
   function show(file) {
     contentAnimation?.cancel(); contentAnimation = null;
     flush();
-    const media = [...(file.statementImages || []), ...(file.solution?.images || [])].map(record => record.blob);
+    const position = items.findIndex(item => item.id === file.id);
+    const nearby = items.slice(Math.max(0, position - 1), position + 2);
+    const media = nearby.flatMap(item => [...(item.statementImages || []), ...(item.solution?.images || [])].map(record => record.blob));
     releaseUrls(new Set([...media, file.blob, file.solution?.pdfBlob].filter(Boolean)));
     active = ensureProblemData(file); pending = null;
     const index = items.findIndex(item => item.id === active.id);
@@ -123,6 +134,19 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     renderDifficulty(); renderStatement(); renderSolution(); markdownMode('write');
     page.scrollTop = 0;
     onOpen(file);
+    // Prepare only the neighbouring problems, after the current one can paint.
+    // No navigation/route changes and no alerts for speculative work.
+    clearTimeout(prefetchTimer);
+    if (prepare || globalThis.Image) {
+      const sequence = preparation;
+      prefetchTimer = setTimeout(() => {
+        for (const next of nearby.filter(item => item !== file)) {
+          Promise.resolve().then(() => prepare?.(next)).then(() => {
+            if (sequence === preparation && active === file && !closing) return prepareImages(next);
+          }).catch(() => {});
+        }
+      }, 0);
+    }
   }
 
   function prepared(file, action) {
@@ -148,6 +172,7 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
   }
   function close() {
     ++preparation;
+    clearTimeout(prefetchTimer);
     if (pending) { onClose(pending); pending = null; }
     if (closing) return closingPromise;
     if (!active) return;

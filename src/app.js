@@ -1,4 +1,6 @@
 import { createTopicPicker, existingTopics } from './topic-picker.js';
+import { createMediaPreloader } from './media-preloader.js';
+import { createPdfSession } from './pdf-session.js';
 import './topic-picker.css';
 import { selectedRegion, cropPage } from './source-extraction.js';
 import { createSourceOutline } from './source-outline.js';
@@ -31,6 +33,8 @@ let viewerClosePromise = null, libraryReady = false, routeSequence = 0;
 let zoomFrame = null;
 let observer = null, renderTasks = new Set(), notesOpen = true, selectMode = false, selection = null;
 let lastFocus, noteTimer, saveQueue = Promise.resolve();
+const mediaLoader = createMediaPreloader(file => db?.cloud ? db.hydrate(file) : file);
+const pdfSession = createPdfSession(pdfjsLib);
 $('pdfCanvasViewport').setAttribute('aria-live', 'off');
 $('pdfViewerPage').setAttribute('role', 'dialog');
 $('pdfViewerPage').setAttribute('aria-modal', 'true');
@@ -55,6 +59,7 @@ function renderFiles() {
   $('nextPageBtn').disabled = currentPage >= result.pages;
   $('breadcrumbDynamic').hidden = activeSubject === 'all';
   $('breadcrumbSubject').textContent = activeSubject === 'all' ? '' : activeSubject;
+  if (!readerRoute(location.hash).id) mediaLoader.warm(result.items);
 }
 function renderView() {
   const problems = activeView === 'problems';
@@ -146,11 +151,11 @@ function persist(file) {
 }
 const problemDetail = createProblemDetail({
   persist,
-  prepare: file => db?.cloud ? db.hydrate(file) : Promise.resolve(file),
+  prepare: file => mediaLoader.load(file),
   background: app,
   getItems: () => queryFiles(collectionFiles(files, 'problems'), { subject: activeSubject, sortKey, sortDir }).allItems,
   onChange: () => { renderSidebar(); renderFiles(); },
-  onOpen: rememberReader,
+  onOpen(file) { mediaLoader.warm([]); rememberReader(file); },
   onClose: forgetReader,
   async checkPdf(blob) {
     await validatePdf(blob);
@@ -477,6 +482,7 @@ async function openViewer(file) {
   activeFile = file; viewerPage = 1; zoom = 100;
   renderSourceOutline();
   rememberReader(file);
+  mediaLoader.warm([]);
   const token = ++viewerToken;
   let url = file.blobUrl || (file.blob instanceof Blob ? file.blobUrl = URL.createObjectURL(file.blob) : null);
   const collection = file.kind === 'problem' ? 'Problems' : 'Sources';
@@ -491,13 +497,13 @@ async function openViewer(file) {
   $('pdfCanvasViewport').textContent = 'Loading PDF\u2026';
   syncToolbar();
   try {
-    if (db?.cloud) await db.hydrate(file);
+    await mediaLoader.load(file);
     if (token !== viewerToken || activeFile !== file || viewerClosing) return;
     url = file.blobUrl || (file.blob ? file.blobUrl = URL.createObjectURL(file.blob) : null);
     if (url) $('viewerDownloadBtn').href = url;
-    const task = pdfjsLib.getDocument({ url }); loadingTask = task;
+    const task = pdfSession.open(url); loadingTask = task;
     const doc = await task.promise;
-    if (token !== viewerToken) { await doc.destroy(); return; }
+    if (token !== viewerToken) return;
     pdfDoc = doc; syncToolbar(); await renderPages();
     if (activeFile !== file || pdfDoc !== doc || viewerClosing) return;
     $('pdfViewerPage').classList.add('is-open'); $('pdfViewerPage').setAttribute('aria-hidden', 'false');
@@ -517,11 +523,10 @@ function closeViewer() {
   viewerClosing = true;
   saveNote(); ++viewerToken; cancelRenders();
   forgetReader(activeFile);
-  const task = loadingTask; loadingTask = null; pdfDoc = null; activeFile = null;
+  loadingTask = null; pdfDoc = null; activeFile = null;
   $('pdfViewerPage').inert = true;
   $('pdfViewerPage').setAttribute('aria-hidden', 'true');
   viewerClosePromise = closeReader($('pdfViewerPage'), () => {
-    task?.destroy().catch(() => {});
     $('pdfCanvasViewport').replaceChildren();
     $('pdfViewerPage').inert = false;
     app.inert = false; document.body.style.overflow = ''; setSelectMode(false);
@@ -539,6 +544,11 @@ $('fileList').onclick = e => {
     else if (file) openViewer(file);
   }
 };
+for (const event of ['pointerover', 'focusin', 'touchstart']) $('fileList').addEventListener(event, e => {
+  const id = e.target.closest('[data-id]')?.dataset.id;
+  const file = files.find(file => file.id === id);
+  if (file) mediaLoader.load(file).catch(() => {});
+}, { passive: true });
 $('viewerBackBtn').onclick = closeViewer;
 function goPage(n, smooth = true) {
   if (!pdfDoc) return;
@@ -689,6 +699,7 @@ async function initialize() {
   $('uploadPdfBtn').disabled = true;
   try {
     db = await openLibrary();
+    Promise.resolve().then(() => pdfSession.warm()).catch(() => {});
     files = await readDocuments(db);
     files.sort((a, b) => b.createdAt - a.createdAt);
     libraryReady = true;

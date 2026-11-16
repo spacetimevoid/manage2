@@ -222,3 +222,24 @@ test('navigation retains the current problem until image decoding and fade-out f
     animations[1].finish(); await changed;
   } finally { app.cleanup(); if (beforeImage === undefined) delete globalThis.Image; else globalThis.Image = beforeImage; }
 });
+
+
+test('adjacent problem images decode before navigation and are reused when moving back', async () => {
+  const beforeImage = globalThis.Image;
+  let decodes = 0;
+  globalThis.Image = class { async decode() { decodes++; } };
+  const files = ['a', 'b', 'c', 'd'].map(id => ({ ...problem(id), statementImages: [{ blob: new Blob([id]) }] }));
+  const app = mount(files);
+  try {
+    await app.detail.open(files[0]);
+    await new Promise(resolve => setTimeout(resolve, 10));
+    assert.equal(decodes, 2, 'only current and next problem decode at the beginning');
+    await app.$('problemNextItemBtn').onclick();
+    assert.equal(decodes, 2, 'next problem already decoded');
+    await new Promise(resolve => setTimeout(resolve, 10));
+    assert.equal(decodes, 3);
+    await app.$('problemPrevItemBtn').onclick();
+    assert.equal(decodes, 3, 'returning to previous problem reuses decoded pixels');
+    assert.equal(app.$('problemDetailTitleInput').value, 'a');
+  } finally { app.cleanup(); if (beforeImage === undefined) delete globalThis.Image; else globalThis.Image = beforeImage; }
+});
