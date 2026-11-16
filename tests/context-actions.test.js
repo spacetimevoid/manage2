@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { createDeletionHistory } from '../src/deletion.js';
+import { snapshotDocument } from '../src/library.js';
 import { sourceEntries } from '../src/source-extraction.js';
 import { IDBFactory } from 'fake-indexeddb';
 import { openLibrary, saveDocuments, readDocuments, deleteDocuments, subjectRecords, subjectNames, makeSubject } from '../src/library.js';
@@ -19,7 +21,7 @@ function mount() {
     { id: 's1', subject: 'math' }, { id: 's2', subject: 'math' },
     { id: 's3', subject: 'physics' }, { id: 'p1', kind: 'problem', subject: 'math' },
   ];
-  const context = vm.createContext({ enableSubjectDrag() {}, subjectRecords, makeSubject, activeView: 'sources',
+  const context = vm.createContext({ deletionHistory: createDeletionHistory(async () => context.confirm !== false), snapshotDocument, mediaLoader: { load: async file => file }, fadeDeleted: async () => () => {}, document: { querySelectorAll: () => [] }, async saveDocuments(_db, records) { if(context.fail) throw Error('Offline'); context.restored = records; }, enableSubjectDrag() {}, subjectRecords, makeSubject, activeView: 'sources',
     subjects: () => subjectNames(context.files, context.activeView),
     createSubjectModal: save => ({ async open(view) { if (context.promptValue !== null) await save(context.promptValue, view); } }), async persist(file) { if(context.fail) throw Error('Offline'); context.saved = file; },
     files, activeSubject: 'math', db: {}, saveQueue: Promise.resolve(),
@@ -103,4 +105,17 @@ test('deleting a linked problem from either menu removes the same record and ref
     assert.equal(app.context.files.some(file => file.id === 'p1'), false);
     assert.equal(app.context.files.some(file => file.id === 's1'), true);
   }
+});
+
+test('cancel prevents deletion and undo restores a deleted subject with every file', async () => {
+  const app = mount(); app.context.confirm = false;
+  await app.context.removeFiles([app.context.files[0]]);
+  assert.equal(app.removed.length, 0); assert.equal(app.context.deletionHistory.canUndo, false);
+  app.context.confirm = true;
+  const deleted = app.context.files.filter(file => file.subject === 'math');
+  await app.context.removeFiles(deleted);
+  assert.equal(app.context.files.length, 1);
+  await app.context.deletionHistory.undo();
+  assert.equal(app.context.files.length, 4); assert.equal(app.context.restored.length, 3);
+  assert.equal(app.context.deletionHistory.canUndo, false);
 });

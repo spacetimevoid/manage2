@@ -243,3 +243,19 @@ test('adjacent problem images decode before navigation and are reused when movin
     assert.equal(app.$('problemDetailTitleInput').value, 'a');
   } finally { app.cleanup(); if (beforeImage === undefined) delete globalThis.Image; else globalThis.Image = beforeImage; }
 });
+
+test('media removal asks first, persists and can undo; failed deletion keeps its contents', async () => {
+  const { createDeletionHistory } = await import('../src/deletion.js');
+  let confirmed = false, fail = false;
+  const history = createDeletionHistory(async () => confirmed);
+  const file = problem('delete'); file.blob = new Blob(['PDF']);
+  const app = mount([file], { deletionHistory: history, persist: async () => { if (fail) throw Error('offline'); } });
+  try {
+    app.detail.open(file);
+    await app.$('removeStatementPdfBtn').onclick(); assert.ok(file.blob);
+    confirmed = true; fail = true;
+    await assert.rejects(app.$('removeStatementPdfBtn').onclick(), /offline/); assert.ok(file.blob);
+    fail = false; await app.$('removeStatementPdfBtn').onclick(); assert.equal(file.blob, undefined);
+    await history.undo(); assert.equal(await file.blob.text(), 'PDF');
+  } finally { app.cleanup(); }
+});

@@ -18,6 +18,7 @@ async function mapLimited(values, callback, count = 4) {
 export function createCloudStorage(client, user, cache = null) {
   const bucket = client.storage.from(BUCKET);
   const blobs = new WeakMap(), records = new Map(), downloads = new Map();
+  const deletedPaths = new Set();
   async function decode(value) {
     if (!value || typeof value !== 'object') return value;
     if (value.__manageFile) {
@@ -40,6 +41,7 @@ export function createCloudStorage(client, user, cache = null) {
   async function encode(value, uploaded) {
     if (value instanceof Blob) {
       let path = blobs.get(value);
+      if (deletedPaths.has(path)) path = null;
       if (!path) {
         path = `${user.id}/${crypto.randomUUID()}`;
         throwIfError(await bucket.upload(path, value, { contentType: value.type || 'application/octet-stream', upsert: false }));
@@ -72,6 +74,7 @@ export function createCloudStorage(client, user, cache = null) {
       const unused = [...previous].filter(path => !referenced.has(path));
       if (unused.length) {
         for (const path of unused) downloads.delete(path);
+        for (const path of unused) deletedPaths.add(path);
         await cache?.remove(unused);
         const { error } = await bucket.remove(unused);
         if (error) console.error('Unable to remove deleted private attachments:', error);
@@ -124,6 +127,7 @@ export function createCloudStorage(client, user, cache = null) {
       const unused = [...previous].filter(path => !referenced.has(path));
       if (unused.length) {
         for (const path of unused) downloads.delete(path);
+        for (const path of unused) deletedPaths.add(path);
         await cache?.remove(unused);
         const { error } = await bucket.remove(unused);
         if (error) console.error('Unable to remove unused private attachments:', error);

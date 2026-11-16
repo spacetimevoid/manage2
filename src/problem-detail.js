@@ -3,8 +3,10 @@ import { escapeHtml as esc, validatePdf } from './library.js';
 import { ensureProblemData, renameProblem, renderMarkdown, problemTitle } from './problem-data.js';
 import { createImageZoom } from './image-zoom.js';
 import { closeReader } from './reader-transition.js';
+import { fadeDeleted } from './deletion.js';
+import { snapshotDocument } from './library.js';
 
-export function createProblemDetail({ persist, getItems, onChange, background, prepare = null, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
+export function createProblemDetail({ persist, getItems, onChange, background, deletionHistory = null, prepare = null, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
   const $ = id => document.getElementById(id);
   const page = $('problemDetailPage');
   const imageZoom = createImageZoom();
@@ -280,29 +282,53 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     } finally { $(id).value = ''; }
   }
   for (const id of ['statementMediaInput', 'solutionImageInput', 'solutionPdfInput']) $(id).onchange = e => upload(id, [...e.target.files]);
+  function removeMedia(element, keys, change) {
+    const file = active;
+    if (!file) return;
+    if (!deletionHistory) { change(file); releaseUrls(); renderStatement(); renderSolution(); save(file); return; }
+    return deletionHistory.remove('Delete this content from the problem?', async () => {
+      flush();
+      const before = Object.fromEntries(keys.map(key => [key, snapshotDocument(file[key])]));
+      change(file);
+      try { await persist(file); }
+      catch (error) { Object.assign(file, before); throw error; }
+      const reset = await fadeDeleted([element]);
+      if (active === file) { releaseUrls(); renderStatement(); renderSolution(); $('solutionMdTextarea').value = file.solution.markdown; }
+      reset();
+      return async () => {
+        const target = getItems().find(item => item.id === file.id);
+        if (!target) throw new Error('Restore the deleted problem first.');
+        const current = Object.fromEntries(keys.map(key => [key, target[key]]));
+        Object.assign(target, snapshotDocument(before));
+        try { await persist(target); }
+        catch (error) { Object.assign(target, current); throw error; }
+        if (active === target) { releaseUrls(); renderStatement(); renderSolution(); $('solutionMdTextarea').value = target.solution.markdown; }
+      };
+    });
+  }
   for (const [id, type] of [['statementImageGrid', 'statement'], ['solutionImageGrid', 'solution']]) $(id).onclick = e => {
     if (e.target.tagName === 'IMG') { imageZoom.open(e.target); return; }
     const button = e.target.closest(`[data-remove-${type}]`);
     if (!button || !active) return;
     const records = type === 'statement' ? active.statementImages : active.solution.images;
-    records.splice(Number(button.dataset[type === 'statement' ? 'removeStatement' : 'removeSolution']), 1);
-    if (type === 'solution' && !records.length) active.solution.type = null;
-    releaseUrls(); renderStatement(); renderSolution(); save(active);
+    const index = Number(button.dataset[type === 'statement' ? 'removeStatement' : 'removeSolution']);
+    return removeMedia(button.closest?.('.doc-media-item') || $(id), [type === 'statement' ? 'statementImages' : 'solution'], file => {
+      const images = type === 'statement' ? file.statementImages : file.solution.images;
+      images.splice(index, 1);
+      if (type === 'solution' && !images.length) file.solution.type = null;
+    });
   };
   $('removeStatementPdfBtn').onclick = () => {
     if (!active) return;
-    delete active.blob; delete active.blobUrl; delete active.pageCount;
-    releaseUrls(); renderStatement(); renderSolution(); save(active);
+    return removeMedia($('statementPdfEmbed'), ['blob', 'pageCount'], file => { delete file.blob; delete file.blobUrl; delete file.pageCount; });
   };
   $('removeSolutionPdfBtn').onclick = () => {
     if (!active) return;
-    active.solution.pdfBlob = null; active.solution.pdfName = ''; active.solution.type = null;
-    releaseUrls(); renderStatement(); renderSolution(); save(active);
+    return removeMedia($('solutionPanelPdf'), ['solution'], file => { file.solution.pdfBlob = null; file.solution.pdfName = ''; file.solution.type = null; });
   };
   $('removeMarkdownSolutionBtn').onclick = () => {
     if (!active) return;
-    active.solution.markdown = ''; active.solution.type = null;
-    $('solutionMdTextarea').value = ''; renderSolution(); save(active);
+    return removeMedia($('solutionPanelMarkdown'), ['solution'], file => { file.solution.markdown = ''; file.solution.type = null; });
   };
   page.querySelectorAll('[data-md-mode]').forEach(btn => btn.onclick = () => { if (active) markdownMode(btn.dataset.mdMode); });
   $('solutionMdTextarea').oninput = e => {

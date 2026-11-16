@@ -185,3 +185,13 @@ test('background hydration shares downloads and never overwrites edits or restor
   assert.equal(downloads, 1); finish(); await Promise.all([background, foreground]);
   assert.equal(file.notes, 'edited'); assert.deepEqual(file.statementImages, []);
 });
+
+test('undo reuploads deleted attachment bytes instead of referring to a removed storage object', async () => {
+  const fake = fakeCloud(), owner = { id: 'owner' }, storage = createCloudStorage(fake.client, owner);
+  const file = { id: 'undo', blob: new Blob(['keep bytes']) };
+  await storage.save([file]); const oldPath = fake.uploads[0];
+  await storage.remove(['undo']); assert.equal(fake.objects.has(oldPath), false);
+  await storage.save([file]); assert.equal(fake.uploads.length, 2);
+  const [restored] = await createCloudStorage(fake.client, owner).read();
+  assert.equal(await restored.blob.text(), 'keep bytes');
+});

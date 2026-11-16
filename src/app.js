@@ -1,4 +1,6 @@
 import { createTopicPicker, existingTopics } from './topic-picker.js';
+import { createDeletionHistory, createDeleteConfirmation, installDeleteUndo, fadeDeleted } from './deletion.js';
+import './deletion.css';
 import { createMediaPreloader } from './media-preloader.js';
 import { createPdfSession } from './pdf-session.js';
 import './topic-picker.css';
@@ -35,6 +37,8 @@ let observer = null, renderTasks = new Set(), notesOpen = true, selectMode = fal
 let lastFocus, noteTimer, saveQueue = Promise.resolve();
 const mediaLoader = createMediaPreloader(file => db?.cloud ? db.hydrate(file) : file);
 const pdfSession = createPdfSession(pdfjsLib);
+const deletionHistory = createDeletionHistory(createDeleteConfirmation());
+installDeleteUndo(deletionHistory);
 $('pdfCanvasViewport').setAttribute('aria-live', 'off');
 $('pdfViewerPage').setAttribute('role', 'dialog');
 $('pdfViewerPage').setAttribute('aria-modal', 'true');
@@ -150,6 +154,7 @@ function persist(file) {
   return result;
 }
 const problemDetail = createProblemDetail({
+  deletionHistory,
   persist,
   prepare: file => mediaLoader.load(file),
   background: app,
@@ -300,15 +305,28 @@ $('uploadPdfForm').onsubmit = async e => {
 
 const contextMenu = createContextMenu();
 async function removeFiles(items) {
+  return deletionHistory.remove(items.some(file => file.kind === 'subject') ? 'Delete this subject and all its sources/problems?' : 'Delete the selected source/problem?', async () => {
+  // Keep complete attachments for undo before removing their private objects.
+  for (const file of items) await mediaLoader.load(file);
+  const saved = items.map(file => ({ file: snapshotDocument(file), index: files.indexOf(file) })).sort((a, b) => a.index - b.index);
   const ids = items.map(file => file.id);
   const result = saveQueue.catch(() => {}).then(() => deleteDocuments(db, ids));
   saveQueue = result;
   await result;
+  const resetFade = await fadeDeleted([...document.querySelectorAll('[data-id], [data-subject]')].filter(element => ids.includes(element.dataset.id) || items.some(file => file.kind === 'subject' && file.subject === element.dataset.subject)));
   const removed = new Set(ids);
   files = files.filter(file => !removed.has(file.id));
   for (const file of items) if (file.blobUrl) URL.revokeObjectURL(file.blobUrl);
   if (activeSubject !== 'all' && !subjects().includes(activeSubject)) activeSubject = 'all';
   renderSidebar(); renderFiles(); renderSourceOutline();
+  resetFade();
+  return async () => {
+    const result = saveQueue.catch(() => {}).then(() => saveDocuments(db, saved.map(entry => entry.file)));
+    saveQueue = result; await result;
+    for (const entry of saved) if (!files.some(file => file.id === entry.file.id)) files.splice(Math.max(0, entry.index), 0, entry.file);
+    renderSidebar(); renderFiles(); renderSourceOutline();
+  };
+  });
 }
 $('fileList').addEventListener('contextmenu', event => {
   const row = event.target.closest('[data-id]');
