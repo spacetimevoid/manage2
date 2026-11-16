@@ -147,3 +147,19 @@ test('problem close preserves media until the fade ends and reports the current 
     assert.equal(app.background.inert, false);
   } finally { app.cleanup(); }
 });
+
+test('restoring a problem waits for its media and cancelled loading never opens a stale problem', async () => {
+  const file = problem('lazy'); let finish;
+  const loaded = new Promise(resolve => { finish = resolve; });
+  const routes = [];
+  const app = mount([file], { prepare: () => loaded, onOpen: file => routes.push(file.id), onClose: () => routes.push('closed') });
+  try {
+    const opened = app.detail.open(file);
+    assert.equal(app.detail.activeId, file.id); assert.equal(app.detail.isOpen, true);
+    assert.equal(app.$('problemDetailTitleInput').value, '');
+    app.detail.close(); finish(); await opened;
+    assert.equal(app.detail.isOpen, false); assert.equal(app.$('problemDetailTitleInput').value, '');
+    await app.detail.open(file);
+    assert.equal(app.$('problemDetailTitleInput').value, 'lazy');
+  } finally { app.cleanup(); }
+});

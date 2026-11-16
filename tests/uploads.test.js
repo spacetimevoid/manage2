@@ -10,7 +10,7 @@ const png = () => new File([Uint8Array.from(Buffer.from('iVBORw0KGgoAAAANSUhEUgA
 function form(view) {
   const elements = new Map(), save = { disabled: false }, stored = [];
   const $ = id => {
-    if (!elements.has(id)) elements.set(id, { value: '', style: {}, classList: { add() {}, remove() {}, toggle() {} }, setAttribute() {}, focus() {},
+    if (!elements.has(id)) elements.set(id, { value: '', style: {}, classList: { values: new Set(), add() {}, remove() {}, toggle(key, value) { if(value) this.values.add(key); else this.values.delete(key); } }, setAttribute() {}, focus() {},
       addEventListener() {}, reset() {}, querySelector: () => save });
     return elements.get(id);
   };
@@ -37,7 +37,7 @@ function form(view) {
 
 test('Problems image upload uses an image/PDF picker and saves the image in Problem Statement without PDF parsing', async () => {
   const app = form('problems');
-  assert.equal(app.browseLabel.textContent, 'Select image or PDF');
+  assert.equal(app.browseLabel.textContent, 'Select problem');
   assert.equal(app.$('pdfFileInput').accept, 'image/*,application/pdf,.pdf');
   await app.submit(png());
   const [file] = app.stored;
@@ -52,7 +52,7 @@ test('Problems still accepts PDFs and Sources remains PDF-only', async () => {
   const problems = form('problems'); await problems.submit(pdf);
   assert.equal(problems.pdfLoads, 1); assert.equal(problems.stored[0].pageCount, 4);
   const sources = form('sources');
-  assert.equal(sources.browseLabel.textContent, 'Select PDF'); assert.equal(sources.$('pdfFileInput').accept, 'application/pdf,.pdf');
+  assert.equal(sources.browseLabel.textContent, 'Select source'); assert.equal(sources.$('pdfFileInput').accept, 'application/pdf,.pdf');
   await sources.submit(png()); assert.equal(sources.stored.length, 0);
   await sources.submit(pdf); assert.equal(sources.stored[0].blob.type, 'application/pdf');
   assert.equal(sources.stored[0].kind, undefined);
@@ -77,4 +77,18 @@ test('Edit saves metadata without requiring or replacing attachments and preserv
   assert.equal(app.stored.length, 1); assert.equal(app.context.files.length, 1);
   assert.equal(file.name, 'edited.png'); assert.equal(file.topic, 'New');
   assert.equal(file.notes, 'Keep'); assert.equal(file.statementImages.length, 1); assert.equal(app.pdfLoads, 0);
+});
+
+test('cancel keeps Edit fields hidden throughout the closing transition and Upload resets them', () => {
+  const app = form('sources');
+  const now = new Date(), today = String(now.getDate()).padStart(2,'0') + '/' + String(now.getMonth()+1).padStart(2,'0') + '/' + now.getFullYear();
+  assert.equal(app.$('modalDueDateInput').value, today);
+  app.context.editTarget = { name: 'a.pdf', subject: 'math', dueDate: '01/01/2020' };
+  vm.runInContext('setModal(true, editTarget)', app.context);
+  assert.equal(app.$('modalDueDateInput').value, '01/01/2020');
+  app.$('modalCancelBtn').onclick();
+  assert.equal(app.$('uploadModalBackdrop').classList.values.has('is-editing'), true);
+  app.$('uploadPdfBtn').onclick();
+  assert.equal(app.$('uploadModalBackdrop').classList.values.has('is-editing'), false);
+  assert.equal(app.$('modalDueDateInput').value, today);
 });

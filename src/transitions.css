@@ -6,3 +6,5 @@
     .pdf-fullscreen-page,
     .problem-detail-page { transition: none; }
 }
+
+body.is-starting .manage-shell { visibility: hidden; }

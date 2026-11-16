@@ -105,3 +105,26 @@ test('failed deletion retains records and attachments', async () => {
   await assert.rejects(storage.remove(['a']), /Database unavailable/);
   assert.equal(fake.rows.size, 1); assert.equal(fake.objects.size, 1);
 });
+
+test('metadata listing never downloads attachments; opening downloads only selected files and reuses them', async () => {
+  const fake = fakeCloud(), owner = { id: 'owner' };
+  const writer = createCloudStorage(fake.client, owner);
+  await writer.save([{ id: 'a', blob: new Blob(['A']) }, { id: 'b', statementImages: [{ blob: new Blob(['B']) }] }]);
+  let downloads = 0;
+  const originalFrom = fake.client.storage.from;
+  fake.client.storage.from = name => {
+    const bucket = originalFrom(name), download = bucket.download;
+    bucket.download = async path => { downloads++; return download(path); };
+    return bucket;
+  };
+  const reader = createCloudStorage(fake.client, owner);
+  const files = await reader.read({ metadataOnly: true });
+  assert.equal(downloads, 0); assert.ok(files[0].blob.__manageFile);
+  await reader.hydrate(files[0]); assert.equal(downloads, 1); assert.equal(await files[0].blob.text(), 'A');
+  await reader.hydrate(files[0]); assert.equal(downloads, 1);
+  files[1].notes = 'Edit before download'; await reader.save([files[1]]);
+  assert.equal(fake.objects.size, 2);
+  await reader.hydrate(files[1]); assert.equal(downloads, 2);
+  assert.equal(files[1].notes, 'Edit before download');
+  assert.equal(await files[1].statementImages[0].blob.text(), 'B');
+});

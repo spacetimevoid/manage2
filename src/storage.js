@@ -10,7 +10,7 @@ export async function openLibrary() {
 }
 export async function readDocuments(db) {
   if (!db.cloud) return local.readDocuments(db);
-  const remote = await db.read();
+  const remote = await db.read({ metadataOnly: true });
   // Import existing records from this browser origin without overwriting cloud edits.
   let browserDb;
   let existing = [];

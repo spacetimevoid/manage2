@@ -25,7 +25,7 @@ test('viewer opens a PDF URL with the installed PDF.js API, including after reop
     return elements.get(id);
   };
   const context = vm.createContext({
-    pdfjsLib, console, activeFile: null, viewerClosing: false, viewerPage: 0, zoom: 0, viewerToken: 0,
+    pdfjsLib, Blob, db: null, console, activeFile: null, viewerClosing: false, viewerPage: 0, zoom: 0, viewerToken: 0,
     pdfDoc: null, loadingTask: null, lastFocus: null,
     file: { ...file, blobUrl: `http://127.0.0.1:${server.address().port}/uploaded.pdf` },
     $: element, esc: value => value, app: {},

@@ -91,7 +91,7 @@ async function applyRoute() {
   const file = collectionFiles(files, route.view).find(file => file.id === route.id);
   if (!file) { history.replaceState(null, '', readerHash(route.view)); return; }
   if (file.kind === 'problem') {
-    if (problemDetail.activeId !== file.id) problemDetail.open(file);
+    if (problemDetail.activeId !== file.id) await problemDetail.open(file);
   } else if (activeFile?.id !== file.id) await openViewer(file);
 }
 window.addEventListener('hashchange', () => applyRoute().catch(error => console.error('Unable to restore reader:', error)));
@@ -138,6 +138,7 @@ function persist(file) {
 }
 const problemDetail = createProblemDetail({
   persist,
+  prepare: file => db?.cloud ? db.hydrate(file) : Promise.resolve(file),
   background: app,
   getItems: () => queryFiles(collectionFiles(files, 'problems'), { subject: activeSubject, sortKey, sortDir }).allItems,
   onChange: () => { renderSidebar(); renderFiles(); },
@@ -171,7 +172,7 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && act
 
 function setModal(open, file = null) {
   setModal.file = open ? file : null;
-  $('uploadModalBackdrop').classList.toggle('is-editing', open && !!file);
+  if (open) $('uploadModalBackdrop').classList.toggle('is-editing', !!file);
   $('uploadModalBackdrop').classList.toggle('is-open', open);
   $('uploadModalBackdrop').setAttribute('aria-hidden', String(!open));
   app.inert = open;
@@ -182,12 +183,14 @@ function setModal(open, file = null) {
     $('modalCollectionName').textContent = viewName();
     $('modalDifficultyField').hidden = activeView !== 'problems';
     const problems = activeView === 'problems';
-    document.querySelector('label[for="modalBrowseBtn"]').textContent = problems ? 'Select image or PDF' : 'Select PDF';
+    document.querySelector('label[for="modalBrowseBtn"]').textContent = problems ? 'Select problem' : 'Select source';
     $('pdfFileInput').accept = problems ? 'image/*,application/pdf,.pdf' : 'application/pdf,.pdf';
     $('modalPathFileNameInput').placeholder = problems ? 'new-problem' : 'new-file.pdf';
     document.querySelector('label[for="modalDueDateInput"]').textContent = activeView === 'problems' ? 'Added date' : 'Due date';
     $('modalPathSubjectInput').value = activeSubject === 'all' ? '' : activeSubject;
     $('modalPathFileNameInput').value = '';
+    const today = new Date();
+    $('modalDueDateInput').value = `${String(today.getDate()).padStart(2, '0')}/${String(today.getMonth() + 1).padStart(2, '0')}/${today.getFullYear()}`;
     $('modalErrorMsg').textContent = '';
     $('modalFileStatus').textContent = 'No file selected';
     if (file) {
@@ -229,7 +232,7 @@ $('uploadPdfForm').onsubmit = async e => {
     if (/[\\/\x00-\x1f]/.test(name)) throw new Error('File name cannot contain slashes or control characters.');
     if (visibleFiles().some(f => f.id !== editing?.id && !f.sample && f.subject === subject && f.name.toLocaleLowerCase() === name.toLocaleLowerCase())) throw new Error('A PDF with this name already exists in that subject.');
     let dueDate = $('modalDueDateInput').value.trim();
-    if (Number.isNaN(parseDate(dueDate))) throw new Error('Enter a real date in DD/MM/YYYY format, or leave it blank.');
+    if (Number.isNaN(parseDate(dueDate))) throw new Error('Enter a real date in dd/mm/yyyy format, or leave it blank.');
     if (!dueDate) {
       const now = new Date();
       dueDate = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
@@ -408,7 +411,7 @@ async function openViewer(file) {
   activeFile = file; viewerPage = 1; zoom = 100;
   rememberReader(file);
   const token = ++viewerToken;
-  const url = file.blobUrl || (file.blob ? file.blobUrl = URL.createObjectURL(file.blob) : null);
+  let url = file.blobUrl || (file.blob instanceof Blob ? file.blobUrl = URL.createObjectURL(file.blob) : null);
   const collection = file.kind === 'problem' ? 'Problems' : 'Sources';
   $('viewerBackBtn').title = `Back to ${collection}`;
   $('pdfViewerTitle').innerHTML = `${collection}<span class="sep">/</span>${esc(file.subject)}<span class="sep">/</span>${esc(file.name)}`;
@@ -418,9 +421,15 @@ async function openViewer(file) {
   if (url) $('viewerDownloadBtn').href = url; else $('viewerDownloadBtn').removeAttribute('href');
   $('viewerDownloadBtn').download = file.name;
   app.inert = true; document.body.style.overflow = 'hidden';
-  $('pdfCanvasViewport').textContent = 'Loading PDF…';
+  $('pdfCanvasViewport').textContent = 'Loading PDF\u2026';
+  $('pdfViewerPage').classList.add('is-open'); $('pdfViewerPage').setAttribute('aria-hidden', 'false');
+  $('viewerBackBtn').focus();
   syncToolbar();
   try {
+    if (db?.cloud) await db.hydrate(file);
+    if (token !== viewerToken || activeFile !== file || viewerClosing) return;
+    url = file.blobUrl || (file.blob ? file.blobUrl = URL.createObjectURL(file.blob) : null);
+    if (url) $('viewerDownloadBtn').href = url;
     const task = pdfjsLib.getDocument({ url }); loadingTask = task;
     const doc = await task.promise;
     if (token !== viewerToken) { await doc.destroy(); return; }
@@ -607,6 +616,7 @@ async function initialize() {
     console.error('Browser storage is unavailable. Enable site storage, then reload to use your library.');
   }
   renderView(); syncToolbar();
-  if (libraryReady) await applyRoute();
+  try { if (libraryReady) await applyRoute(); }
+  finally { document.body.classList.remove('is-starting'); }
 }
 initialize();

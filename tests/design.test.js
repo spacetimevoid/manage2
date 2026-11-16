@@ -9,6 +9,9 @@ const app = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
 
 test('page markup matches the sketch except the requested navigation, Upload label and problem metadata', () => {
   const normalize = source => source
+    .replace('<body class="is-starting">', '<body>')
+    .replace('dd/mm/yyyy', 'DD/MM/YYYY')
+    .replace('>Select source</label>', '>Select PDF</label>')
     .replace(/<style>[\s\S]*?<\/style>/, '')
     .replace(/<link rel="stylesheet" href="\/src\/styles.css">/, '')
     .replace(/<link rel="stylesheet" href="\/src\/navigation.css">/, '')

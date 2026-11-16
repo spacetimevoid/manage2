@@ -17,12 +17,14 @@ async function mapLimited(values, callback, count = 4) {
 }
 export function createCloudStorage(client, user) {
   const bucket = client.storage.from(BUCKET);
-  const blobs = new WeakMap(), records = new Map();
+  const blobs = new WeakMap(), records = new Map(), downloads = new Map();
   async function decode(value) {
     if (!value || typeof value !== 'object') return value;
     if (value.__manageFile) {
       if (!value.__manageFile.startsWith(`${user.id}/`)) throw new Error('Invalid file ownership.');
-      const blob = throwIfError(await bucket.download(value.__manageFile));
+      const path = value.__manageFile;
+      if (!downloads.has(path)) downloads.set(path, bucket.download(path).then(throwIfError).catch(error => { downloads.delete(path); throw error; }));
+      const blob = await downloads.get(path);
       blobs.set(blob, value.__manageFile);
       return blob;
     }
@@ -67,7 +69,16 @@ export function createCloudStorage(client, user) {
         if (error) console.error('Unable to remove deleted private attachments:', error);
       }
     },
-    async read() {
+    async hydrate(document) {
+      async function visit(value) {
+        if (!value || typeof value !== 'object' || value instanceof Blob) return value;
+        if (value.__manageFile) return decode(value);
+        await Promise.all(Object.keys(value).map(async key => { value[key] = await visit(value[key]); }));
+        return value;
+      }
+      return visit(document);
+    },
+    async read({ metadataOnly = false } = {}) {
       const rows = [];
       for (let start = 0; ; start += 500) {
         const page = throwIfError(await client.from('library_documents').select('id,document').eq('owner_id', user.id).order('id').range(start, start + 499));
@@ -75,7 +86,7 @@ export function createCloudStorage(client, user) {
       }
       const result = await mapLimited(rows, async row => {
         records.set(row.id, row.document);
-        return decode(row.document);
+        return metadataOnly ? structuredClone(row.document) : decode(row.document);
       });
       return result;
     },

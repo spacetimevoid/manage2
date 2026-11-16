@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="/src/image-zoom.css">
     <link rel="stylesheet" href="/src/transitions.css">
 </head>
-<body>
+<body class="is-starting">
 
     <div class="manage-shell">
     <nav class="manage-nav" aria-label="Main navigation">
@@ -132,7 +132,7 @@
 
             <form id="uploadPdfForm" novalidate>
                 <div class="modal-field">
-                    <label class="modal-label" for="modalBrowseBtn">Select PDF</label>
+                    <label class="modal-label" for="modalBrowseBtn">Select source</label>
                     <div class="classic-browse-row">
                         <button type="button" class="classic-aqua-btn" id="modalBrowseBtn">Browse...</button>
                         <span class="classic-file-status" id="modalFileStatus">No file selected</span>
@@ -157,7 +157,7 @@
                         type="text"
                         class="classic-input"
                         id="modalDueDateInput"
-                        placeholder="DD/MM/YYYY"
+                        placeholder="dd/mm/yyyy"
                         autocomplete="off"
                     >
                 </div>

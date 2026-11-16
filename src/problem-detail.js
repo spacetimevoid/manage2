@@ -3,13 +3,13 @@ import { ensureProblemData, renameProblem, renderMarkdown, problemTitle } from '
 import { createImageZoom } from './image-zoom.js';
 import { closeReader } from './reader-transition.js';
 
-export function createProblemDetail({ persist, getItems, onChange, background, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
+export function createProblemDetail({ persist, getItems, onChange, background, prepare = null, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
   const $ = id => document.getElementById(id);
   const page = $('problemDetailPage');
   const imageZoom = createImageZoom();
   let active = null, items = [], returnFocus = null;
   let contentAnimation = null;
-  let closing = false, closingPromise = null;
+  let closing = false, closingPromise = null, preparation = 0, pending = null;
   const urls = new Map(), timers = new Map(), pickerTargets = new Map();
   page.inert = true;
   page.setAttribute('role', 'dialog');
@@ -109,7 +109,16 @@ export function createProblemDetail({ persist, getItems, onChange, background, c
       ], { duration: 160, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)' });
     }
   }
-  function open(file) {
+  function prepared(file, action) {
+    const sequence = ++preparation;
+    if (!prepare) return action();
+    pending = file; onOpen(file);
+    return prepare(file).then(() => { if (sequence === preparation) { pending = null; return action(); } }).catch(error => {
+      if (sequence === preparation) { pending = null; onClose(file); window.alert(error.message || 'Unable to load problem.'); }
+    });
+  }
+  function open(file) { return prepared(file, () => openReady(file)); }
+  function openReady(file) {
     if (closing) return;
     if (!active) returnFocus = document.activeElement;
     items = getItems();
@@ -120,6 +129,8 @@ export function createProblemDetail({ persist, getItems, onChange, background, c
     $('problemDetailBackBtn').focus();
   }
   function close() {
+    ++preparation;
+    if (pending) { onClose(pending); pending = null; }
     if (closing) return closingPromise;
     if (!active) return;
     closing = true;
@@ -141,7 +152,7 @@ export function createProblemDetail({ persist, getItems, onChange, background, c
   for (const [id, step] of [['problemPrevItemBtn', -1], ['problemNextItemBtn', 1]]) $(id).onclick = () => {
     if (!active) return;
     const index = items.findIndex(file => file.id === active.id) + step;
-    if (items[index]) show(items[index], step);
+    if (items[index]) prepared(items[index], () => show(items[index], step));
   };
   $('problemDetailTitleInput').oninput = e => { e.target.setCustomValidity(''); };
   function commitTitle() {
@@ -257,5 +268,5 @@ export function createProblemDetail({ persist, getItems, onChange, background, c
   });
   document.addEventListener('visibilitychange', () => { if (document.hidden) flush(); });
   window.addEventListener('pagehide', flush);
-  return { open, close, get isOpen() { return !!active || closing; }, get activeId() { return active?.id || null; } };
+  return { open, close, get isOpen() { return !!active || !!pending || closing; }, get activeId() { return pending?.id || active?.id || null; } };
 }

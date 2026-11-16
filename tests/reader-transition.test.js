@@ -41,7 +41,7 @@ test('reduced motion and closing an unopened reader finish without an animation 
   }
 });
 
-test('opening waits for page rendering; closing keeps the bitmap and background locked until the fade finishes', async () => {
+test('opening reveals the reader immediately while pages load; closing keeps the bitmap and background locked until the fade finishes', async () => {
   const elements = new Map();
   const $ = id => { if (!elements.has(id)) elements.set(id, element(false)); return elements.get(id); };
   let ready, finishClose;
@@ -50,7 +50,7 @@ test('opening waits for page rendering; closing keeps the bitmap and background 
   const doc = { numPages: 3 };
   const task = { promise: Promise.resolve(doc), async destroy() { destroyed = true; } };
   const context = vm.createContext({
-    $, viewerClosing: false, viewerClosePromise: null, activeFile: null, viewerToken: 0, loadingTask: null, pdfDoc: null,
+    $, Blob, db: null, viewerClosing: false, viewerClosePromise: null, activeFile: null, viewerToken: 0, loadingTask: null, pdfDoc: null,
     lastFocus: null, viewerPage: 1, zoom: 100,
     file: { name: 'test.pdf', subject: 'math', topic: 'Math', dueDate: '', blobUrl: 'blob:test' },
     pdfjsLib: { getDocument: () => task }, esc: value => value, console,
@@ -63,7 +63,8 @@ test('opening waits for page rendering; closing keeps the bitmap and background 
   vm.runInContext(source.slice(source.indexOf('async function openViewer('), source.indexOf("$('fileList').onclick")), context);
   const opened = vm.runInContext('openViewer(file)', context);
   await Promise.resolve();
-  assert.equal($('pdfViewerPage').classList.contains('is-open'), false);
+  assert.equal($('pdfViewerPage').classList.contains('is-open'), true);
+  assert.equal($('pdfCanvasViewport').textContent, 'Loading PDF\u2026');
   ready(); await opened;
   assert.equal($('pdfViewerPage').classList.contains('is-open'), true);
   vm.runInContext('closeViewer()', context);
