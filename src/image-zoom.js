@@ -50,11 +50,7 @@ export function createImageZoom() {
       else zoom(e.key === '-' ? scale / 1.25 : scale * 1.25);
     }
   });
-  dialog.onclick = e => {
-    if (moved) { moved = false; return; }
-    if (e.target === stage && startedOnImage) return;
-    if (e.target === dialog || e.target === stage) close();
-  };
+  dialog.onclick = () => { moved = false; };
   stage.ondblclick = e => {
     if (e.target !== image && !startedOnImage) return;
     e.preventDefault(); zoom(scale > 1 ? 1 : 2, e.clientX, e.clientY);

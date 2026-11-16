@@ -224,7 +224,6 @@ function setModal(open, file = null, extraction = null) {
 }
 $('uploadPdfBtn').onclick = () => setModal(true);
 $('modalCancelBtn').onclick = () => setModal(false);
-$('uploadModalBackdrop').onclick = e => { if (e.target === $('uploadModalBackdrop') && !$('modalCancelBtn').disabled) setModal(false); };
 $('modalBrowseBtn').onclick = () => $('pdfFileInput').click();
 $('pdfFileInput').onchange = () => {
   const file = $('pdfFileInput').files[0];

@@ -9,13 +9,13 @@ function mount(files, options = {}) {
   const previous = { document: globalThis.document, window: globalThis.window };
   const elements = new Map(), writes = [];
   const make = () => ({
-    hidden: false, disabled: false, value: '', style: {}, dataset: {}, attrs: {},
+    hidden: false, disabled: false, value: '', style: {}, dataset: {}, attrs: {}, listeners: {},
     classList: { add() {}, remove() {}, toggle() {} },
     setAttribute(k, v) { this.attrs[k] = v; }, getAttribute(k) { return this.attrs[k] ?? null; },
     removeAttribute(k) { delete this.attrs[k]; delete this[k]; },
     setCustomValidity(message) { this.validation = message; }, reportValidity() {},
     focus() { globalThis.document.activeElement = this; }, click() {},
-    replaceChildren() { this.innerHTML = ''; }, addEventListener() {}, contains() { return false; },
+    replaceChildren() { this.innerHTML = ''; }, addEventListener(type, callback) { this.listeners[type] = callback; }, contains() { return false; },
     getClientRects() { return [1]; },
   });
   const $ = id => { if (!elements.has(id)) elements.set(id, make()); return elements.get(id); };
@@ -177,5 +177,19 @@ test('rapid problem navigation follows the pending target and a failed load rest
     requests.get('c').reject(Error('Offline')); await new Promise(resolve => setImmediate(resolve));
     assert.equal(app.detail.activeId, 'a'); assert.equal(routes.at(-1), 'a');
     assert.equal(app.$('problemDetailTitleInput').value, 'a');
+  } finally { app.cleanup(); }
+});
+
+test('left/right keys share navigation with buttons and preserve text cursor controls', () => {
+  const files = ['a', 'b', 'c'].map(problem), app = mount(files);
+  try {
+    app.detail.open(files[0]);
+    const key = (key, target = { tagName: 'BUTTON' }) => app.$('problemDetailPage').listeners.keydown({ key, target, preventDefault() {}, stopPropagation() {} });
+    key('ArrowRight'); assert.equal(app.detail.activeId, 'b');
+    key('ArrowLeft', { tagName: 'TEXTAREA' }); assert.equal(app.detail.activeId, 'b');
+    key('ArrowLeft', { tagName: 'INPUT' }); assert.equal(app.detail.activeId, 'b');
+    key('ArrowLeft'); assert.equal(app.detail.activeId, 'a');
+    key('ArrowLeft'); assert.equal(app.detail.activeId, 'a');
+    app.$('problemNextItemBtn').onclick(); assert.equal(app.detail.activeId, 'b');
   } finally { app.cleanup(); }
 });

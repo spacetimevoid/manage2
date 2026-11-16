@@ -105,9 +105,9 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     onOpen(file);
     if (direction && !window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
       contentAnimation = page.querySelector('.problem-detail-container')?.animate?.([
-        { opacity: 0.75, transform: `translateX(${direction * 6}px)` },
+        { opacity: 0.92, transform: `translateX(${direction * 3}px)` },
         { opacity: 1, transform: 'translateX(0)' },
-      ], { duration: 160, easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)' });
+      ], { duration: 260, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
     }
   }
   function prepared(file, action) {
@@ -150,11 +150,12 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     return closingPromise;
   }
   $('problemDetailBackBtn').onclick = close;
-  for (const [id, step] of [['problemPrevItemBtn', -1], ['problemNextItemBtn', 1]]) $(id).onclick = () => {
-    if (!active) return;
+  function navigate(step) {
+    if (!active || closing) return;
     const index = items.findIndex(file => file.id === (pending || active).id) + step;
-    if (items[index]) prepared(items[index], () => show(items[index], step));
-  };
+    if (items[index]) return prepared(items[index], () => show(items[index], step));
+  }
+  for (const [id, step] of [['problemPrevItemBtn', -1], ['problemNextItemBtn', 1]]) $(id).onclick = () => navigate(step);
   $('problemDetailTitleInput').oninput = e => { e.target.setCustomValidity(''); };
   function commitTitle() {
     if (!active) return;
@@ -252,6 +253,11 @@ export function createProblemDetail({ persist, getItems, onChange, background, p
     active.solution.markdown = e.target.value; schedule(active, $('solutionMdStatus'));
   };
   page.addEventListener('keydown', e => {
+    if (['ArrowLeft', 'ArrowRight'].includes(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey &&
+        !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName) && !e.target.isContentEditable && !document.querySelector?.('dialog[open]')) {
+      e.preventDefault(); e.stopPropagation();
+      navigate(e.key === 'ArrowLeft' ? -1 : 1); return;
+    }
     if (e.target.tagName === 'IMG' && ['Enter', ' '].includes(e.key)) {
       e.preventDefault(); imageZoom.open(e.target); return;
     }
