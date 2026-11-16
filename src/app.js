@@ -6,7 +6,7 @@ import { validateUpload, uploadName } from './uploads.js';
 import { createContextMenu } from './context-menu.js';
 import './context-menu.css';
 import { problemTitle } from './problem-data.js';
-import { escapeHtml as esc, parseDate, queryFiles, validatePdf, viewFromHash, collectionFiles, dateOf, readerRoute, readerHash, snapshotDocument } from './library.js';
+import { escapeHtml as esc, parseDate, queryFiles, validatePdf, viewFromHash, collectionFiles, dateOf, readerRoute, readerHash, snapshotDocument, subjectNames, subjectRecords, makeSubject } from './library.js';
 import { openLibrary, readDocuments, saveDocuments, deleteDocuments } from './storage.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -29,7 +29,7 @@ $('pdfViewerPage').setAttribute('role', 'dialog');
 $('pdfViewerPage').setAttribute('aria-modal', 'true');
 $('pdfNotesTextarea').setAttribute('aria-label', 'Document notes');
 
-function subjects() { return [...new Set(visibleFiles().map(f => f.subject))]; }
+function subjects() { return subjectNames(files, activeView); }
 function renderSidebar() {
   const q = searchQuery.trim().toLocaleLowerCase();
   const documents = visibleFiles();
@@ -280,7 +280,7 @@ async function removeFiles(items) {
   const removed = new Set(ids);
   files = files.filter(file => !removed.has(file.id));
   for (const file of items) if (file.blobUrl) URL.revokeObjectURL(file.blobUrl);
-  if (activeSubject !== 'all' && !visibleFiles().some(file => file.subject === activeSubject)) activeSubject = 'all';
+  if (activeSubject !== 'all' && !subjects().includes(activeSubject)) activeSubject = 'all';
   renderSidebar(); renderFiles();
 }
 $('fileList').addEventListener('contextmenu', event => {
@@ -293,12 +293,24 @@ $('fileList').addEventListener('contextmenu', event => {
     { label: 'Delete', run: () => removeFiles([file]) },
   ]);
 });
-$('subjectList').addEventListener('contextmenu', event => {
+async function addSubject() {
+  const view = activeView;
+  const name = window.prompt('Subject name');
+  if (name === null) return;
+  const subject = makeSubject(name, view, files);
+  await persist(subject);
+  files.unshift(subject);
+  if (activeView === view) renderSidebar();
+}
+$('subjectList').closest('.sidebar').addEventListener('contextmenu', event => {
   const subject = event.target.closest('[data-subject]')?.dataset.subject;
-  if (!subject || subject === 'all') return;
   event.preventDefault();
-  const items = visibleFiles().filter(file => file.subject === subject);
-  contextMenu.open(event, [{ label: 'Delete', run: () => removeFiles(items) }]);
+  const actions = [{ label: 'Add', run: addSubject }];
+  if (subject && subject !== 'all') {
+    const items = [...visibleFiles(), ...subjectRecords(files, activeView)].filter(file => file.subject === subject);
+    actions.push({ label: 'Delete', run: () => removeFiles(items) });
+  }
+  contextMenu.open(event, actions);
 });
 
 function syncToolbar() {
@@ -422,8 +434,6 @@ async function openViewer(file) {
   $('viewerDownloadBtn').download = file.name;
   app.inert = true; document.body.style.overflow = 'hidden';
   $('pdfCanvasViewport').textContent = 'Loading PDF\u2026';
-  $('pdfViewerPage').classList.add('is-open'); $('pdfViewerPage').setAttribute('aria-hidden', 'false');
-  $('viewerBackBtn').focus();
   syncToolbar();
   try {
     if (db?.cloud) await db.hydrate(file);

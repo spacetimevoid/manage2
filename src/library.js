@@ -8,7 +8,17 @@ export function readerRoute(hash) {
 }
 export const viewFromHash = hash => readerRoute(hash).view;
 export const readerHash = (view, id = null) => `#${view}${id ? `/${encodeURIComponent(id)}` : ''}`;
-export const collectionFiles = (files, view) => files.filter(file => (file.kind === 'problem' ? 'problems' : 'sources') === view);
+export const collectionFiles = (files, view) => files.filter(file => file.kind !== 'subject' && (file.kind === 'problem' ? 'problems' : 'sources') === view);
+export const subjectRecords = (files, view) => files.filter(file => file.kind === 'subject' && file.collection === view);
+export function subjectNames(files, view) {
+  return [...new Set([...subjectRecords(files, view), ...collectionFiles(files, view)].map(file => file.subject))];
+}
+export function makeSubject(value, view, files) {
+  const subject = value.trim().toLocaleLowerCase().replace(/\s+/g, '-');
+  if (!subject || subject === 'all' || /[\\/\x00-\x1f]/.test(subject)) throw new Error('Enter a subject without slashes. “all” is reserved.');
+  if (subjectNames(files, view).includes(subject)) throw new Error('This subject already exists.');
+  return { id: crypto.randomUUID(), kind: 'subject', collection: view, subject, createdAt: Date.now() };
+}
 export const dateOf = file => file.kind === 'problem' ? file.addedDate : file.dueDate;
 export const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 export function snapshotDocument(value) {

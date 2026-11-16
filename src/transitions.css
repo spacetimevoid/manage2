@@ -8,3 +8,9 @@
 }
 
 body.is-starting .manage-shell { visibility: hidden; }
+body:has(#uploadModalBackdrop.is-open) > .manage-shell { filter: blur(4px); }
+#uploadModalBackdrop { backdrop-filter: none; -webkit-backdrop-filter: none; }
+.manage-shell { transition: filter 160ms ease; }
+@media (prefers-reduced-motion: reduce) {
+    .manage-shell { transition: none; }
+}

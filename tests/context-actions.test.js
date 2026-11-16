@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import { IDBFactory } from 'fake-indexeddb';
-import { openLibrary, saveDocuments, readDocuments, deleteDocuments } from '../src/library.js';
+import { openLibrary, saveDocuments, readDocuments, deleteDocuments, subjectRecords, subjectNames, makeSubject } from '../src/library.js';
 
 test('local deletion persists after reload without removing other documents', async () => {
   const db = await openLibrary(new IDBFactory());
@@ -18,10 +18,13 @@ function mount() {
     { id: 's1', subject: 'math' }, { id: 's2', subject: 'math' },
     { id: 's3', subject: 'physics' }, { id: 'p1', kind: 'problem', subject: 'math' },
   ];
-  const context = vm.createContext({ files, activeSubject: 'math', db: {}, saveQueue: Promise.resolve(),
-    $: id => ({ addEventListener(type, handler) { handlers[id] = handler; } }),
+  const context = vm.createContext({ subjectRecords, makeSubject, activeView: 'sources',
+    subjects: () => subjectNames(context.files, context.activeView),
+    window: { prompt: () => context.promptValue }, async persist(file) { if(context.fail) throw Error('Offline'); context.saved = file; },
+    files, activeSubject: 'math', db: {}, saveQueue: Promise.resolve(),
+    $: id => ({ addEventListener(type, handler) { handlers[id] = handler; }, closest() { return { addEventListener(type, handler) { handlers.sidebar = handler; } }; } }),
     createContextMenu: () => ({ open(event, actions) { context.actions = actions; } }),
-    visibleFiles: () => context.files.filter(file => file.kind !== 'problem'),
+    visibleFiles: () => context.files.filter(file => file.kind !== 'problem' && file.kind !== 'subject'),
     async deleteDocuments(db, ids) { if (context.fail) throw Error('Offline'); removed.push(...ids); },
     setModal(open, file) { context.editing = file; }, renderSidebar() {}, renderFiles() {}, URL,
   });
@@ -29,7 +32,7 @@ function mount() {
   vm.runInContext(source.slice(source.indexOf('const contextMenu ='), source.indexOf('function syncToolbar(')), context);
   return { context, removed, click(target, dataset) {
     let prevented = false;
-    handlers[target]({ target: { closest: () => ({ dataset }) }, preventDefault() { prevented = true; } });
+    handlers[target === 'subjectList' ? 'sidebar' : target]({ target: { closest: () => ({ dataset }) }, preventDefault() { prevented = true; } });
     return prevented;
   } };
 }
@@ -41,10 +44,11 @@ test('row menu edits the selected document and deletes only that document', asyn
   assert.deepEqual(app.removed, ['s1']); assert.equal(app.context.files.length, 3);
 });
 test('subject menu deletes its collection documents, resets selection and never deletes All', async () => {
-  const app = mount(); assert.equal(app.click('subjectList', { subject: 'all' }), false);
+  const app = mount(); assert.equal(app.click('subjectList', { subject: 'all' }), true);
+  assert.deepEqual(Array.from(app.context.actions, action => action.label), ['Add']);
   app.click('subjectList', { subject: 'math' });
-  assert.deepEqual(Array.from(app.context.actions, action => action.label), ['Delete']);
-  await app.context.actions[0].run();
+  assert.deepEqual(Array.from(app.context.actions, action => action.label), ['Add', 'Delete']);
+  await app.context.actions[1].run();
   assert.deepEqual(app.removed, ['s1', 's2']); assert.equal(app.context.activeSubject, 'all');
   assert.deepEqual(Array.from(app.context.files, file => file.id), ['s3', 'p1']);
 });
@@ -52,4 +56,24 @@ test('delete failure leaves the visible library unchanged', async () => {
   const app = mount(); app.context.fail = true; app.click('fileList', { id: 's1' });
   await assert.rejects(app.context.actions[1].run(), /Offline/);
   assert.equal(app.context.files.length, 4); assert.equal(app.context.activeSubject, 'math');
+});
+
+test('Add works on the subject area, preserves an empty subject and cancellation creates nothing', async () => {
+  const app = mount();
+  app.click('subjectList', {});
+  assert.deepEqual(Array.from(app.context.actions, action => action.label), ['Add']);
+  app.context.promptValue = null; await app.context.actions[0].run();
+  assert.equal(app.context.files.length, 4);
+  app.context.promptValue = 'Linear Algebra'; await app.context.actions[0].run();
+  assert.equal(app.context.saved.kind, 'subject'); assert.equal(app.context.saved.subject, 'linear-algebra');
+  assert.equal(app.context.files.length, 5);
+  app.click('subjectList', { subject: 'linear-algebra' }); await app.context.actions[1].run();
+  assert.equal(app.context.files.length, 4);
+});
+test('Add failure and duplicate names leave the subject list unchanged', async () => {
+  const app = mount(); app.click('subjectList', {});
+  app.context.promptValue = 'MATH'; await assert.rejects(app.context.actions[0].run(), /already exists/);
+  app.context.promptValue = 'geometry'; app.context.fail = true;
+  await assert.rejects(app.context.actions[0].run(), /Offline/);
+  assert.equal(app.context.files.length, 4);
 });

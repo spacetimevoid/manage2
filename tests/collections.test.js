@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import { problemTitle } from '../src/problem-data.js';
 import { IDBFactory } from 'fake-indexeddb';
-import { viewFromHash, collectionFiles, queryFiles, openLibrary, readDocuments, saveDocuments, dateOf, escapeHtml, readerHash, readerRoute } from '../src/library.js';
+import { viewFromHash, collectionFiles, queryFiles, openLibrary, readDocuments, saveDocuments, dateOf, escapeHtml, readerHash, readerRoute, subjectNames, makeSubject, deleteDocuments } from '../src/library.js';
 
 test('URL preserves the selected view across reload and recognizes both navigation destinations', () => {
   for (const view of ['sources', 'problems']) {
@@ -57,7 +57,7 @@ test('runtime navigation and reload keep headings, columns, counts and records i
         { id: 's', name: 'Source.pdf', subject: 'math', topic: 'Source topic', dueDate: '20/11/2026', done: true },
         { id: 'p', kind: 'problem', name: 'Problem.pdf', subject: 'math', topic: 'Problem topic', addedDate: '15/11/2026', difficulty: 'hard' },
       ],
-      location: { hash }, $, queryFiles, collectionFiles, dateOf, esc: escapeHtml, viewFromHash, readerHash, readerRoute, problemTitle,
+      location: { hash }, $, queryFiles, collectionFiles, subjectNames, dateOf, esc: escapeHtml, viewFromHash, readerHash, readerRoute, problemTitle,
       libraryReady: true, routeSequence: 0, viewerClosing: false, viewerClosePromise: null,
       history: { replaceState(_state, _title, hash) { context.location.hash = hash; } },
       problemDetail: { isOpen: false, activeId: null },
@@ -116,4 +116,19 @@ test('runtime navigation and reload keep headings, columns, counts and records i
   await switching.navigate('#sources/s');
   assert.equal(switching.context.activeFile.id, 's');
   assert.equal(switching.context.location.hash, '#sources/s');
+});
+
+test('empty subjects persist separately by collection and never become documents or affect document counts', async () => {
+  const factory = new IDBFactory(); let db = await openLibrary(factory);
+  const source = makeSubject('Geometry', 'sources', []), problem = makeSubject('Geometry', 'problems', [source]);
+  await saveDocuments(db, [source, problem]); db.close(); db = await openLibrary(factory);
+  const records = await readDocuments(db);
+  for (const view of ['sources', 'problems']) {
+    assert.deepEqual(subjectNames(records, view), ['geometry']); assert.equal(collectionFiles(records, view).length, 0);
+  }
+  assert.throws(() => makeSubject('Geometry', 'sources', records), /already exists/);
+  for (const invalid of ['all', ' ', 'a/b']) assert.throws(() => makeSubject(invalid, 'sources', records));
+  await deleteDocuments(db, [source.id]);
+  assert.deepEqual(subjectNames(await readDocuments(db), 'sources'), []);
+  assert.deepEqual(subjectNames(await readDocuments(db), 'problems'), ['geometry']); db.close();
 });

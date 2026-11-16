@@ -41,7 +41,7 @@ test('reduced motion and closing an unopened reader finish without an animation 
   }
 });
 
-test('opening reveals the reader immediately while pages load; closing keeps the bitmap and background locked until the fade finishes', async () => {
+test('opening waits for the first painted page; closing keeps the bitmap and background locked until the fade finishes', async () => {
   const elements = new Map();
   const $ = id => { if (!elements.has(id)) elements.set(id, element(false)); return elements.get(id); };
   let ready, finishClose;
@@ -63,7 +63,7 @@ test('opening reveals the reader immediately while pages load; closing keeps the
   vm.runInContext(source.slice(source.indexOf('async function openViewer('), source.indexOf("$('fileList').onclick")), context);
   const opened = vm.runInContext('openViewer(file)', context);
   await Promise.resolve();
-  assert.equal($('pdfViewerPage').classList.contains('is-open'), true);
+  assert.equal($('pdfViewerPage').classList.contains('is-open'), false);
   assert.equal($('pdfCanvasViewport').textContent, 'Loading PDF\u2026');
   ready(); await opened;
   assert.equal($('pdfViewerPage').classList.contains('is-open'), true);
