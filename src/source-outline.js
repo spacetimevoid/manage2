@@ -1,7 +1,7 @@
 import { sourceEntries } from './source-extraction.js';
 import { problemTitle } from './problem-data.js';
 
-export function createSourceOutline(pane, jump) {
+export function createSourceOutline(pane, jump, contextMenu = null) {
   const notes = pane.querySelector('#pdfNotesTextarea'), saved = pane.querySelector('#pdfNotesSavedLabel');
   const header = pane.querySelector('.pdf-notes-header-left');
   const tabs = document.createElement('div');
@@ -45,7 +45,13 @@ export function createSourceOutline(pane, jump) {
         const button = document.createElement('button');
         button.type = 'button'; button.textContent = problemTitle(file);
         button.title = 'Page ' + file.sourceLocation.page;
+        button.setAttribute('data-id', file.id);
         button.onclick = () => jump(file.sourceLocation).catch(error => console.error('Unable to jump to problem:', error));
+        button.oncontextmenu = event => {
+          if (!contextMenu) return;
+          event.preventDefault(); event.stopPropagation();
+          contextMenu(event, file);
+        };
         return button;
       }));
     },

@@ -473,6 +473,8 @@ const sourceOutline = createSourceOutline($('pdfNotesPane'), async location => {
   const left = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, sheet.offsetLeft + size.width * location.rect.x - 24));
   isPageNavigation = viewport.scrollTop !== top || viewport.scrollLeft !== left;
   viewport.scrollTo({ top, left, behavior: globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ? 'instant' : 'smooth' });
+}, (event, file) => {
+  contextMenu.open(event, [{ label: 'Delete', run: () => removeFiles([file]) }]);
 });
 function renderSourceOutline() { sourceOutline.render(files, activeFile); }
 

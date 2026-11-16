@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { sourceEntries } from '../src/source-extraction.js';
 import { IDBFactory } from 'fake-indexeddb';
 import { openLibrary, saveDocuments, readDocuments, deleteDocuments, subjectRecords, subjectNames, makeSubject } from '../src/library.js';
 
@@ -76,4 +77,30 @@ test('Add failure and duplicate names leave the subject list unchanged', async (
   app.context.promptValue = 'geometry'; app.context.fail = true;
   await assert.rejects(app.context.actions[0].run(), /Offline/);
   assert.equal(app.context.files.length, 4);
+});
+
+
+test('deleting a linked problem from either menu removes the same record and refreshes the source outline', async () => {
+  for (const origin of ['outline', 'problems']) {
+    const app = mount();
+    const problem = app.context.files.find(file => file.id === 'p1');
+    problem.sourceLocation = { sourceId: 's1', page: 1, rect: { x: 0, y: 0 } };
+    let entries;
+    app.context.renderSourceOutline = () => { entries = sourceEntries(app.context.files, 's1'); };
+    if (origin === 'outline') {
+      let menu;
+      app.context.createSourceOutline = (_pane, _jump, context) => { menu = context; return {}; };
+      const source = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');
+      vm.runInContext(source.slice(source.indexOf('const sourceOutline ='), source.indexOf('function renderSourceOutline()')), app.context);
+      menu({}, problem);
+      assert.deepEqual(Array.from(app.context.actions, action => action.label), ['Delete']);
+    } else {
+      app.context.visibleFiles = () => app.context.files.filter(file => file.kind === 'problem');
+      app.click('fileList', { id: 'p1' });
+    }
+    await app.context.actions.find(action => action.label === 'Delete').run();
+    assert.deepEqual(app.removed, ['p1']); assert.equal(entries.length, 0);
+    assert.equal(app.context.files.some(file => file.id === 'p1'), false);
+    assert.equal(app.context.files.some(file => file.id === 's1'), true);
+  }
 });
