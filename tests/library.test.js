@@ -35,3 +35,16 @@ test('upload rejects missing and disguised non-PDF files', async () => {
   await assert.rejects(validatePdf(new File(['hello'], 'fake.pdf')), /valid PDF/);
   await validatePdf(new File(['%PDF-1.7\n'], 'actual.PDF'));
 });
+
+test('Status ties always use earliest due date first, with undated sources last', () => {
+  const records = [false, true].flatMap(done => [
+    { name: 'late', done, dueDate: '01/01/2027' },
+    { name: 'none', done, dueDate: '' },
+    { name: 'early', done, dueDate: '30/11/2026' },
+  ]);
+  for (const sortDir of ['asc', 'desc']) {
+    const sorted = queryFiles(records, { sortKey: 'status', sortDir }).allItems;
+    assert.deepEqual(sorted.map(file => file.name), ['early', 'late', 'none', 'early', 'late', 'none']);
+    assert.equal(sorted[0].done, sortDir === 'desc');
+  }
+});

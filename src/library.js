@@ -52,6 +52,10 @@ export function queryFiles(files, { subject = 'all', query = '', sortKey = null,
   if (sortKey) items.sort((a, b) => {
     // Unscheduled records remain last in either direction.
     if (sortKey === 'date' && (!dateOf(a) || !dateOf(b))) return dateOf(a) ? -1 : dateOf(b) ? 1 : 0;
+    if (sortKey === 'status' && Boolean(a.done) === Boolean(b.done)) {
+      if (!a.dueDate || !b.dueDate) return a.dueDate ? -1 : b.dueDate ? 1 : 0;
+      return parseDate(a.dueDate) - parseDate(b.dueDate);
+    }
     const difficultyRank = file => DIFFICULTIES.indexOf(normalizedDifficulty(file.difficulty));
     const n = sortKey === 'date' ? parseDate(dateOf(a)) - parseDate(dateOf(b)) : sortKey === 'difficulty' ? difficultyRank(a) - difficultyRank(b) : sortKey === 'status' ? Number(a.done) - Number(b.done) : a[sortKey].localeCompare(b[sortKey], undefined, { numeric: true });
     return sortDir === 'asc' ? n : -n;
