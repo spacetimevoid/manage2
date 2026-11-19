@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-import { validateUpload, uploadName } from '../src/uploads.js';
+import { validateUpload, uploadName, isImageFile } from '../src/uploads.js';
 import { problemTitle, renameProblem } from '../src/problem-data.js';
 import { dateOf, parseDate, collectionFiles } from '../src/library.js';
 
@@ -21,7 +21,7 @@ function form(view) {
     $, topicPicker: { close() {} }, activeView: view, activeSubject: 'all', currentPage: 1, files: [], lastFocus: null, app: {}, crypto,
     viewName: () => context.activeView === 'problems' ? 'Problems' : 'Sources',
     document: { activeElement: null, body: { style: {} }, querySelector: selector => selector.includes('modalBrowseBtn') ? browseLabel : dateLabel },
-    validateUpload: (file, view) => validateUpload(file, view, async () => {}), uploadName, parseDate, dateOf, collectionFiles, normalizeSubject, todayDate, renamedDocument, documentTitle, validateDocumentName, normalizedDifficulty,
+    validateUpload: (file, view) => validateUpload(file, view, async () => {}), uploadName, isImageFile, parseDate, dateOf, collectionFiles, normalizeSubject, todayDate, renamedDocument, documentTitle, validateDocumentName, normalizedDifficulty,
     visibleFiles: () => context.files, async persist(file) { stored.push(structuredClone(file)); }, renderSidebar() {}, renderFiles() {}, renderSourceOutline() {},
     pdfjsLib: { getDocument() { pdfLoads++; return { promise: Promise.resolve({ numPages: 4 }), async destroy() {} }; } },
   });
@@ -185,4 +185,16 @@ test('Upload and Edit show only titles while saved PDF and image names preserve 
     assert.equal(renamedDocument(documentTitle(name), name).toLowerCase(), name.toLowerCase());
   }
   assert.equal(documentTitle('Chapter 1.2'), 'Chapter 1.2');
+});
+
+test('images without MIME metadata upload as images instead of being parsed as PDFs', async () => {
+  for (const type of ['', 'application/octet-stream']) {
+    const image = new File([await png().arrayBuffer()], 'question.PNG', { type });
+    assert.equal(await validateUpload(image, 'problems', async () => {}), 'image');
+    const app = form('problems'); await app.submit(image);
+    assert.equal(app.pdfLoads, 0); assert.equal(app.stored[0].statementImages[0].blob.size, image.size);
+    await assert.rejects(validateUpload(image, 'sources'), /PDF/);
+  }
+  assert.equal(isImageFile(new File(['text'], 'text.png', { type: 'text/plain' })), false);
+  await assert.rejects(validateUpload(new File(['bad'], 'bad.png'), 'problems', async () => { throw Error('invalid'); }), /valid image/);
 });

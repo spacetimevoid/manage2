@@ -1,12 +1,15 @@
 import { validatePdf } from './library.js';
 
+export const isImageFile = file => !!file && (file.type.startsWith('image/') ||
+  ((!file.type || file.type === 'application/octet-stream') && /\.(png|jpe?g|webp|gif|avif|svg|bmp|ico|tiff?|heic|heif)$/i.test(file.name || '')));
+
 async function decodeImage(blob) {
   const image = new Image(), url = URL.createObjectURL(blob);
   try { image.src = url; await image.decode(); }
   finally { image.removeAttribute('src'); URL.revokeObjectURL(url); }
 }
 export async function validateUpload(file, view, imageDecoder = decodeImage) {
-  if (view === 'problems' && file?.type.startsWith('image/')) {
+  if (view === 'problems' && isImageFile(file)) {
     try { await imageDecoder(file); }
     catch { throw new Error('Unable to read this image. Please select a valid image or PDF.'); }
     return 'image';

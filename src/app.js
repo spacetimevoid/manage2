@@ -15,7 +15,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { createProblemDetail } from './problem-detail.js';
 import { closeReader } from './reader-transition.js';
-import { validateUpload, uploadName } from './uploads.js';
+import { validateUpload, uploadName, isImageFile } from './uploads.js';
 import { createContextMenu } from './context-menu.js';
 import './context-menu.css';
 import { problemTitle } from './problem-data.js';
@@ -267,7 +267,7 @@ $('uploadPdfForm').onsubmit = async e => {
     if (!editing && !blob) throw new Error(view === 'problems' ? 'Please select an image or PDF.' : 'Please select a PDF file.');
     const topic = $('modalTopicInput').value.trim() || 'General Notes';
     const difficulty = normalizedDifficulty($('modalDifficultyInput').value);
-    const mediaType = editing ? null : (blob?.type.startsWith('image/') && view === 'problems' ? 'image' : 'pdf');
+    const mediaType = editing ? null : (isImageFile(blob) && view === 'problems' ? 'image' : 'pdf');
     const subject = normalizeSubject($('modalPathSubjectInput').value);
     const name = editing ? renamedDocument($('modalPathFileNameInput').value, editing.name) : uploadName($('modalPathFileNameInput').value, blob, mediaType);
     validateDocumentName(name, subject, collectionFiles(files, view), editing?.id);

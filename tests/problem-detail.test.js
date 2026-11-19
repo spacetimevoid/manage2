@@ -259,3 +259,15 @@ test('media removal asks first, persists and can undo; failed deletion keeps its
     await history.undo(); assert.equal(await file.blob.text(), 'PDF');
   } finally { app.cleanup(); }
 });
+
+test('statement and solution accept image filenames when the picker omits MIME metadata', async () => {
+  const file = problem('missing-mime'), app = mount([file]);
+  try {
+    app.detail.open(file); app.$('addStatementMediaBtn').onclick();
+    await app.attach('statementMediaInput', new File(['pixels'], 'question.png'));
+    assert.equal(file.statementImages.length, 1);
+    app.choices[0].onclick();
+    await app.attach('solutionImageInput', new File(['pixels'], 'answer.jpg', { type: 'application/octet-stream' }));
+    assert.equal(file.solution.images.length, 1); assert.equal(file.solution.type, 'image');
+  } finally { app.cleanup(); }
+});

@@ -5,6 +5,7 @@ import { createImageZoom } from './image-zoom.js';
 import { closeReader } from './reader-transition.js';
 import { fadeDeleted, revealRestored } from './deletion.js';
 import { captureListMotion } from './list-motion.js';
+import { isImageFile } from './uploads.js';
 import { snapshotDocument } from './library.js';
 
 export function createProblemDetail({ persist, getItems, onChange, background, deletionHistory = null, prepare = null, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
@@ -258,9 +259,9 @@ export function createProblemDetail({ persist, getItems, onChange, background, d
       // Validate the whole selection before mutating the stored problem.
       for (const blob of selected) {
         if (id === 'solutionImageInput') {
-          if (!blob.type.startsWith('image/') || !blob.size) throw new Error('Please select an image.');
+          if (!isImageFile(blob) || !blob.size) throw new Error('Please select an image.');
         } else if (id === 'solutionPdfInput' || /\.pdf$/i.test(blob.name)) await checkPdf(blob);
-        else if (!blob.type.startsWith('image/') || !blob.size) throw new Error('Please select an image or PDF.');
+        else if (!isImageFile(blob) || !blob.size) throw new Error('Please select an image or PDF.');
       }
       if (active !== file) return;
       const image = blob => ({ id: crypto.randomUUID(), name: blob.name, blob });
