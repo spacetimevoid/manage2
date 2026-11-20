@@ -1,5 +1,5 @@
 import { normalizeSubject, DIFFICULTIES, normalizedDifficulty } from './metadata.js';
-import { documentSubjects, hasSubject } from './subject-tags.js';
+import { documentSubjects, hasSubject, problemCode } from './subject-tags.js';
 export const PAGE_SIZE = 10;
 export function readerRoute(hash) {
   const [section, encodedId] = hash.replace(/^#/, '').split('/');
@@ -58,6 +58,10 @@ export function queryFiles(files, { subject = 'all', query = '', sortKey = null,
       return parseDate(a.dueDate) - parseDate(b.dueDate);
     }
     const difficultyRank = file => DIFFICULTIES.indexOf(normalizedDifficulty(file.difficulty));
+    if (sortKey === 'name' && a.kind === 'problem' && b.kind === 'problem') {
+      const order = problemCode(a).localeCompare(problemCode(b), undefined, { numeric: true });
+      return sortDir === 'asc' ? order : -order;
+    }
     const n = sortKey === 'date' ? parseDate(dateOf(a)) - parseDate(dateOf(b)) : sortKey === 'difficulty' ? difficultyRank(a) - difficultyRank(b) : sortKey === 'status' ? Number(a.done) - Number(b.done) : a[sortKey].localeCompare(b[sortKey], undefined, { numeric: true });
     return sortDir === 'asc' ? n : -n;
   });

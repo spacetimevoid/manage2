@@ -1,5 +1,5 @@
 import { sourceEntries } from './source-extraction.js';
-import { problemTitle } from './problem-data.js';
+import { problemCode as problemTitle } from './problem-label.js';
 import { captureListMotion } from './list-motion.js';
 
 export function createSourceOutline(pane, jump, contextMenu = null) {

@@ -3,6 +3,7 @@ import { normalizeSubject } from './metadata.js';
 export const documentSubjects = file => file.kind === 'problem' && Array.isArray(file.subjects)
   ? [...new Set(file.subjects)] : file.subject ? [file.subject] : [];
 export const hasSubject = (file, subject) => documentSubjects(file).includes(subject);
+export const problemCode = file => `#${String(file.id).replace(/-/g, '').slice(0, 8).toUpperCase()}`;
 
 export function createSubjectTags(form) {
   const field = document.createElement('div'); field.className = 'modal-field problem-subject-field'; field.hidden = true;

@@ -1,3 +1,4 @@
+import { problemSummary, createProblemTagsPopover } from './problem-label.js';
 import { createSubjectTags, documentSubjects, hasSubject } from './subject-tags.js';
 import './subject-tags.css';
 import { createTopicPicker, existingTopics } from './topic-picker.js';
@@ -27,6 +28,7 @@ import { openLibrary, readDocuments, saveDocuments, deleteDocuments } from './st
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 const $ = id => document.getElementById(id);
 const app = document.querySelector('.manage-shell');
+const showProblemTags = createProblemTagsPopover();
 let activeView = viewFromHash(location.hash);
 const viewName = () => activeView === 'problems' ? 'Problems' : 'Sources';
 const visibleFiles = () => collectionFiles(files, activeView);
@@ -67,7 +69,7 @@ function renderFiles(animate = true) {
   const finishMotion = animate ? captureListMotion($('fileList')) : () => {};
   const result = queryFiles(visibleFiles(), { subject: activeSubject, sortKey, sortDir, page: currentPage });
   currentPage = result.page;
-  $('fileList').innerHTML = result.items.map(f => `<a class="file-row" href="${esc(readerHash(activeView, f.id))}" data-id="${esc(f.id)}"><div class="file-info"><span class="filename">${esc(activeView === 'problems' ? problemTitle(f) : f.name)}</span></div><span class="topic-cell">${esc(f.topic)}</span><span class="due-date">${esc(dateOf(f))}</span><div class="status-cell"><span class="${activeView === 'problems' ? `difficulty difficulty-${esc(normalizedDifficulty(f.difficulty))}` : `badge ${f.done ? 'badge-done' : 'badge-pending'}`}">${activeView === 'problems' ? difficultyLabel(f.difficulty) : f.done ? 'Completed' : 'Pending'}</span></div></a>`).join('') || '<div class="sidebar-empty" style="padding: 18px 10px;">No files in this subject</div>';
+  $('fileList').innerHTML = result.items.map(f => `<${activeView === 'problems' ? 'div role="link" tabindex="0"' : 'a'} class="file-row" href="${esc(readerHash(activeView, f.id))}" data-id="${esc(f.id)}"><div class="file-info"><span class="filename">${activeView === 'problems' ? problemSummary(f) : esc(f.name)}</span></div><span class="topic-cell">${esc(f.topic)}</span><span class="due-date">${esc(dateOf(f))}</span><div class="status-cell"><span class="${activeView === 'problems' ? `difficulty difficulty-${esc(normalizedDifficulty(f.difficulty))}` : `badge ${f.done ? 'badge-done' : 'badge-pending'}`}">${activeView === 'problems' ? difficultyLabel(f.difficulty) : f.done ? 'Completed' : 'Pending'}</span></div></${activeView === 'problems' ? 'div' : 'a'}>`).join('') || '<div class="sidebar-empty" style="padding: 18px 10px;">No files in this subject</div>';
   $('paginationBar').hidden = result.pages <= 1;
   $('paginationInfo').textContent = `${result.page} / ${result.pages}`;
   $('prevPageBtn').disabled = currentPage <= 1;
@@ -80,6 +82,7 @@ function renderFiles(animate = true) {
 function renderView() {
   const problems = activeView === 'problems';
   app.classList.toggle('is-problems', problems);
+  document.querySelector('[data-sort="name"] span').textContent = problems ? 'Problem' : 'File name';
   $('breadcrumbReset').textContent = viewName();
   document.title = viewName();
   document.querySelectorAll('[data-view]').forEach(link => {
@@ -575,6 +578,13 @@ function closeViewer() {
   return viewerClosePromise;
 }
 $('fileList').onclick = e => {
+  const more = e.target.closest('[data-problem-tags]');
+  if (more) {
+    e.preventDefault();
+    const file = files.find(file => file.id === more.dataset.problemTags);
+    if (file) showProblemTags(more, file);
+    return;
+  }
   const row = e.target.closest('[data-id]');
   if (row) {
     e.preventDefault();
@@ -588,6 +598,9 @@ for (const event of ['pointerover', 'focusin', 'touchstart']) $('fileList').addE
   const file = files.find(file => file.id === id);
   if (file) mediaLoader.load(file).catch(() => {});
 }, { passive: true });
+$('fileList').addEventListener('keydown', event => {
+  if (event.key === 'Enter' && event.target.matches('.file-row')) { event.preventDefault(); event.target.click(); }
+});
 $('viewerBackBtn').onclick = closeViewer;
 function goPage(n, smooth = true) {
   if (!pdfDoc) return;

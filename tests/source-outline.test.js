@@ -27,7 +27,7 @@ test('Notes and Problems tabs switch panels without losing notes, and entries st
     assert.equal(panel.children[0].attrs['data-id'], file.id);
     outline.render([], { id: 's' }); assert.equal(panel.children.length, 0);
     file.name = 'Renamed.png'; outline.render([file], { id: 's' });
-    assert.equal(panel.hidden, false); assert.equal(panel.children[0].textContent, 'Renamed');
+    assert.equal(panel.hidden, false); assert.equal(panel.children[0].textContent, '#P');
     outline.focus(); assert.equal(problemsTab.focused, true);
     notesTab.onclick(); assert.equal(notes.hidden, false); assert.equal(notes.value, 'Keep these notes');
     tabs.onkeydown({ key: 'ArrowRight', preventDefault() {} }); assert.equal(panel.hidden, false);

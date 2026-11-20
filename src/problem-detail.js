@@ -1,3 +1,4 @@
+import { problemCode } from './problem-label.js';
 import { documentSubjects } from './subject-tags.js';
 import { DIFFICULTIES, normalizedDifficulty, difficultyLabel } from './metadata.js';
 import { escapeHtml as esc, validatePdf } from './library.js';
@@ -128,8 +129,9 @@ export function createProblemDetail({ persist, getItems, onChange, background, d
     $('problemDetailPosLabel').textContent = `${index + 1} / ${items.length}`;
     $('problemPrevItemBtn').disabled = index <= 0;
     $('problemNextItemBtn').disabled = index < 0 || index >= items.length - 1;
-    $('problemDetailBreadcrumb').textContent = `Problems / ${documentSubjects(file).join(', ')}`;
-    $('problemDetailTitleInput').value = problemTitle(file);
+    $('problemDetailBreadcrumb').innerHTML = documentSubjects(file).map(tag => `<span class="subject-tag">${esc(tag)}</span>`).join(' ');
+    $('problemDetailTitleInput').value = `Problem ${problemCode(file)}`;
+    $('problemDetailTitleInput').readOnly = true;
     $('problemDetailTitleInput').setCustomValidity(''); $('problemDetailTitleInput').title = '';
     $('problemDetailAddedDate').textContent = `Added ${file.addedDate}`;
     $('problemStatementNoteInput').value = file.notes;
@@ -220,7 +222,7 @@ export function createProblemDetail({ persist, getItems, onChange, background, d
   for (const [id, step] of [['problemPrevItemBtn', -1], ['problemNextItemBtn', 1]]) $(id).onclick = () => navigate(step);
   $('problemDetailTitleInput').oninput = e => { e.target.setCustomValidity(''); };
   function commitTitle() {
-    if (!active) return;
+    if (!active || $('problemDetailTitleInput').readOnly) return;
     try {
       if (renameProblem(active, $('problemDetailTitleInput').value, getItems())) { save(active); onChange(); }
       $('problemDetailTitleInput').value = problemTitle(active);

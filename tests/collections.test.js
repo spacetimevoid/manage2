@@ -1,3 +1,4 @@
+import { problemSummary } from '../src/problem-label.js';
 import { documentSubjects, hasSubject } from '../src/subject-tags.js';
 import { normalizeSubject, todayDate, renamedDocument, validateDocumentName, normalizedDifficulty } from '../src/metadata.js';
 import test from 'node:test';
@@ -53,7 +54,7 @@ test('runtime navigation and reload keep headings, columns, counts and records i
     const date = makeElement(), dateLabel = makeElement(), status = makeElement(), statusLabel = makeElement();
     status.querySelector = () => statusLabel;
     let onHashChange;
-    const context = vm.createContext({ documentSubjects, hasSubject, captureListMotion: (element, options) => { if (options) element.motion = options; return () => {}; }, mediaLoader: { warm() {} }, app: { classList: { toggle() {} } },
+    const context = vm.createContext({ documentSubjects, hasSubject, problemSummary, captureListMotion: (element, options) => { if (options) element.motion = options; return () => {}; }, mediaLoader: { warm() {} }, app: { classList: { toggle() {} } },
       SUBJECTS: ['math'], activeView: viewFromHash(hash), activeSubject: 'all', currentPage: 1, sortKey: null, sortDir: 'asc', searchQuery: '', activeFile: null,
       files: [
         { id: 's', name: 'Source.pdf', subject: 'math', topic: 'Source topic', dueDate: '20/11/2026', done: true },
@@ -69,7 +70,7 @@ test('runtime navigation and reload keep headings, columns, counts and records i
       window: { addEventListener: (_event, callback) => { onHashChange = callback; } },
       document: {
         querySelectorAll: selector => selector === '[data-view]' ? links : [],
-        querySelector: selector => ({ '[data-sort="date"] span': dateLabel, '[data-sort="date"]': date, '.footer-status': status })[selector],
+        querySelector: selector => ({ '[data-sort="date"] span': dateLabel, '[data-sort="date"]': date, '.footer-status': status, '[data-sort="name"] span': makeElement() })[selector],
       },
     });
     context.openViewer = async file => { context.activeFile = file; context.rememberReader(file); };
@@ -96,7 +97,7 @@ test('runtime navigation and reload keep headings, columns, counts and records i
   assert.equal(app.dateLabel.textContent, 'Added Date');
   assert.equal(app.statusLabel.textContent, 'Difficulty');
   assert.equal(app.links[1].attrs['aria-current'], 'page');
-  assert.match(app.$('fileList').innerHTML, />Problem<.*15\/11\/2026.*>Hard</);
+  assert.match(app.$('fileList').innerHTML, /#P.*15\/11\/2026.*>Hard</);
   assert.doesNotMatch(app.$('fileList').innerHTML, /Source\.pdf|Problem\.pdf|Completed|Pending/);
   assert.match(app.$('subjectList').innerHTML, /subject-count">1</);
   const reloaded = mount(app.context.location.hash);
