@@ -24,6 +24,7 @@ import './context-menu.css';
 import { problemTitle } from './problem-data.js';
 import { escapeHtml as esc, parseDate, queryFiles, validatePdf, viewFromHash, collectionFiles, dateOf, readerRoute, readerHash, snapshotDocument, subjectNames, subjectRecords, makeSubject, reorderedSubjects } from './library.js';
 import { openLibrary, readDocuments, saveDocuments, deleteDocuments } from './storage.js';
+import './typography.css';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 const $ = id => document.getElementById(id);

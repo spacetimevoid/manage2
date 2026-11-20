@@ -1,0 +1,46 @@
+/* Give Vietnamese accents sufficient room without changing the page structure. */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+}
+button, input, textarea, select { font-family: inherit; }
+.manage-nav, .sidebar-search, .subject-item,
+.manage-shell .filename, .topic-cell, .due-date,
+.manage-shell .file-list .badge, .difficulty,
+.classic-input, .classic-aqua-btn, .classic-cancel-link,
+.classic-file-status, .modal-error, .library-context-menu button,
+.source-outline button, .topic-picker-option,
+.auth-gate input, .auth-gate label {
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: normal;
+}
+.problem-meta-bar, .problem-diff-btn, .doc-action-link,
+.add-popover-item, .md-subtab-btn {
+    font-size: 14px;
+    line-height: 1.5;
+    letter-spacing: normal;
+}
+.sidebar-label, .subject-count, .modal-label,
+.list-footer, .sort-btn, .source-notes-tab,
+.pdf-notes-title, .pdf-notes-saved, .auth-message,
+.section-heading, .md-toolbar {
+    font-size: 13px;
+    line-height: 1.5;
+    letter-spacing: normal;
+}
+.subject-name, .path-inline-input, .modal-breadcrumb,
+.problem-breadcrumb-line, .problem-detail-title-input,
+.problem-row-tag, .problem-more-tags, .subject-tag {
+    letter-spacing: normal;
+    line-height: 1.6;
+}
+.subject-tag, .problem-row-tag, .problem-more-tags {
+    font-size: 13.5px;
+}
+.subject-tags input { font-size: 14px; line-height: 1.6; }
+.breadcrumb-title, .problem-detail-title-input { line-height: 1.35; }
+.breadcrumb-title { font-family: inherit; }
+.problem-breadcrumb-line { flex-wrap: wrap; }
+.path-inline-input { font-weight: 600; }
