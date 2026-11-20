@@ -1,3 +1,5 @@
+import { createSubjectTags, documentSubjects, hasSubject } from './subject-tags.js';
+import './subject-tags.css';
 import { createTopicPicker, existingTopics } from './topic-picker.js';
 import { captureListMotion } from './list-motion.js';
 import { createDeletionHistory, createDeleteConfirmation, installDeleteUndo, fadeDeleted, revealRestored } from './deletion.js';
@@ -56,7 +58,7 @@ function renderSidebar(animate = true) {
   if (activeSubject !== 'all' && !subjects().includes(activeSubject)) { activeSubject = 'all'; currentPage = 1; }
   const q = searchQuery.trim().toLocaleLowerCase();
   const documents = visibleFiles();
-  const rows = [{ name: 'all', label: 'All', count: documents.length }, ...subjects().map(s => ({ name: s, label: s, count: documents.filter(f => f.subject === s).length }))];
+  const rows = [{ name: 'all', label: 'All', count: documents.length }, ...subjects().map(s => ({ name: s, label: s, count: documents.filter(f => hasSubject(f, s)).length }))];
   $('subjectList').innerHTML = rows.filter(s => s.label.toLocaleLowerCase().includes(q)).map(s => `<button type="button" class="subject-item ${s.name === activeSubject ? 'is-active' : ''}" data-subject="${esc(s.name)}" draggable="${s.name !== 'all'}" aria-current="${s.name === activeSubject ? 'page' : 'false'}"><span class="subject-name">${esc(s.label)}</span><span class="subject-count">${s.count}</span></button>`).join('') || '<div class="sidebar-empty">No subjects found</div>';
   $('modalSubjectsDatalist').innerHTML = subjects().map(s => `<option value="${esc(s)}"></option>`).join('');
   finishMotion();
@@ -77,6 +79,7 @@ function renderFiles(animate = true) {
 }
 function renderView() {
   const problems = activeView === 'problems';
+  app.classList.toggle('is-problems', problems);
   $('breadcrumbReset').textContent = viewName();
   document.title = viewName();
   document.querySelectorAll('[data-view]').forEach(link => {
@@ -217,6 +220,8 @@ function setModal(open, file = null, extraction = null) {
     $('modalCollectionName').textContent = setModal.view === 'problems' ? 'Problems' : 'Sources';
     $('modalDifficultyField').hidden = setModal.view !== 'problems';
     const problems = setModal.view === 'problems';
+    $('uploadModalBackdrop').classList.toggle('is-problems', problems);
+    subjectTags.set(file ? documentSubjects(file) : extraction ? documentSubjects(extraction.source) : activeSubject === 'all' ? [] : [activeSubject], problems);
     document.querySelector('label[for="modalBrowseBtn"]').textContent = problems ? 'Select problem' : 'Select source';
     $('pdfFileInput').accept = problems ? 'image/*,application/pdf,.pdf' : 'application/pdf,.pdf';
     $('modalPathFileNameInput').placeholder = problems ? 'new-problem' : 'new-file';
@@ -239,7 +244,7 @@ function setModal(open, file = null, extraction = null) {
       $('modalTopicInput').value = extraction.source.topic;
       $('modalFileStatus').textContent = extraction.blob.name;
     }
-    $('modalPathFileNameInput').focus();
+    if (problems) subjectTags.focus(); else $('modalPathFileNameInput').focus();
   } else setModal.returnFocus?.focus();
 }
 $('uploadPdfBtn').onclick = () => setModal(true);
@@ -265,17 +270,20 @@ $('uploadPdfForm').onsubmit = async e => {
     const extraction = setModal.extraction;
     const blob = extraction?.blob || $('pdfFileInput').files[0];
     if (!editing && !blob) throw new Error(view === 'problems' ? 'Please select an image or PDF.' : 'Please select a PDF file.');
-    const topic = $('modalTopicInput').value.trim() || 'General Notes';
+    const problem = view === 'problems';
+    const tags = problem ? subjectTags.get() : null;
+    const topic = problem ? (editing?.topic || '') : $('modalTopicInput').value.trim() || 'General Notes';
     const difficulty = normalizedDifficulty($('modalDifficultyInput').value);
     const mediaType = editing ? null : (isImageFile(blob) && view === 'problems' ? 'image' : 'pdf');
-    const subject = normalizeSubject($('modalPathSubjectInput').value);
-    const name = editing ? renamedDocument($('modalPathFileNameInput').value, editing.name) : uploadName($('modalPathFileNameInput').value, blob, mediaType);
-    validateDocumentName(name, subject, collectionFiles(files, view), editing?.id);
+    const subject = problem ? tags[0] : normalizeSubject($('modalPathSubjectInput').value);
+    const name = problem ? (editing?.name || blob.name || `Problem-${crypto.randomUUID()}`) : editing ? renamedDocument($('modalPathFileNameInput').value, editing.name) : uploadName($('modalPathFileNameInput').value, blob, mediaType);
+    if (!problem) validateDocumentName(name, subject, collectionFiles(files, view), editing?.id);
     let dueDate = view === 'problems' ? (editing?.addedDate || '') : $('modalDueDateInput').value.trim();
     if (Number.isNaN(parseDate(dueDate))) throw new Error('Enter a real date in dd/mm/yyyy format, or leave it blank.');
     if (!dueDate && !editing) dueDate = todayDate();
     if (editing) {
       const updated = { ...editing, name, subject, topic };
+      if (problem) updated.subjects = tags;
       if (editing.kind === 'problem') { updated.addedDate = dueDate; updated.difficulty = difficulty; }
       else updated.dueDate = dueDate;
       await persist(updated);
@@ -293,7 +301,7 @@ $('uploadPdfForm').onsubmit = async e => {
       file.statementImages = [{ id: crypto.randomUUID(), name: blob.name, blob }];
     }
     if (view === 'problems') {
-      file.kind = 'problem'; file.addedDate = todayDate();
+      file.kind = 'problem'; file.subjects = tags; file.addedDate = todayDate();
       file.difficulty = difficulty;
       delete file.dueDate;
     }
@@ -362,7 +370,7 @@ $('subjectList').closest('.sidebar').addEventListener('contextmenu', event => {
   if (subject === 'all') { contextMenu.close?.(); return; }
   const actions = subject ? [] : [{ label: 'Add', run: addSubject }];
   if (subject && subject !== 'all') {
-    const items = [...visibleFiles(), ...subjectRecords(files, activeView)].filter(file => file.subject === subject);
+    const items = [...visibleFiles(), ...subjectRecords(files, activeView)].filter(file => hasSubject(file, subject));
     actions.push({ label: 'Delete', run: () => removeFiles(items) });
   }
   contextMenu.open(event, actions);
@@ -724,6 +732,7 @@ window.addEventListener('keydown', e => {
     if (['=', '+', '-', '0'].includes(e.key)) { e.preventDefault(); setZoom(e.key === '0' ? 100 : zoom + (e.key === '-' ? -15 : 15)); }
   }
 });
+const subjectTags = createSubjectTags($('uploadPdfForm'));
 const topicPicker = createTopicPicker($('modalTopicInput'), () => existingTopics(files));
 
 async function initialize() {

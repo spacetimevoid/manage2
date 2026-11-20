@@ -1,3 +1,4 @@
+import { documentSubjects, hasSubject } from '../src/subject-tags.js';
 import { normalizeSubject, todayDate, renamedDocument, documentTitle, validateDocumentName, normalizedDifficulty } from '../src/metadata.js';
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,8 +18,8 @@ function form(view) {
   };
   const browseLabel = {}, dateField = {}, dateLabel = { closest: () => dateField };
   let pdfLoads = 0;
-  const context = vm.createContext({
-    $, topicPicker: { close() {} }, activeView: view, activeSubject: 'all', currentPage: 1, files: [], lastFocus: null, app: {}, crypto,
+  const context = vm.createContext({ documentSubjects, hasSubject,
+    $ , subjectTags: { set(items, visible) { this.items = items; this.visible = visible; }, get() { return this.items.length ? this.items : ['math']; }, focus() {} }, topicPicker: { close() {} }, activeView: view, activeSubject: 'all', currentPage: 1, files: [], lastFocus: null, app: {}, crypto,
     viewName: () => context.activeView === 'problems' ? 'Problems' : 'Sources',
     document: { activeElement: null, body: { style: {} }, querySelector: selector => selector.includes('modalBrowseBtn') ? browseLabel : dateLabel },
     validateUpload: (file, view) => validateUpload(file, view, async () => {}), uploadName, isImageFile, parseDate, dateOf, collectionFiles, normalizeSubject, todayDate, renamedDocument, documentTitle, validateDocumentName, normalizedDifficulty,
@@ -76,7 +77,7 @@ test('Edit saves metadata without requiring or replacing attachments and preserv
   app.$('modalPathFileNameInput').value = 'edited.png'; app.$('modalTopicInput').value = 'New';
   await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
   assert.equal(app.stored.length, 1); assert.equal(app.context.files.length, 1);
-  assert.equal(file.name, 'edited.png'); assert.equal(file.topic, 'New');
+  assert.equal(file.name, 'old.png'); assert.equal(file.topic, 'Old');
   assert.equal(file.notes, 'Keep'); assert.equal(file.statementImages.length, 1); assert.equal(app.pdfLoads, 0);
 });
 
@@ -94,8 +95,8 @@ test('cancel keeps Edit fields hidden throughout the closing transition and Uplo
   assert.equal(app.$('modalDueDateInput').value, today);
 });
 
-test('Edit preserves the original extension, optional dates and duplicate checks for both collections', async () => {
-  for (const view of ['sources', 'problems']) {
+test('Sources Edit preserves the original extension, optional dates and duplicate checks', async () => {
+  for (const view of ['sources']) {
     const app = form(view);
     const file = { id: 'a', name: 'original.pdf', subject: 'math', topic: 'Topic', ...(view === 'problems' ? { kind: 'problem', addedDate: '' } : { dueDate: '' }) };
     app.context.files.push(file, { ...file, id: 'b', name: 'taken.pdf' }); app.context.editTarget = file;
@@ -114,7 +115,7 @@ test('a slow problem upload uses the collection and metadata captured before nav
   const saved = app.submit(png());
   app.context.activeView = 'sources'; app.$('modalTopicInput').value = 'Changed during upload';
   app.$('modalDifficultyInput').value = 'easy'; finish('image'); await saved;
-  assert.equal(app.stored[0].kind, 'problem'); assert.equal(app.stored[0].topic, 'Geometry');
+  assert.equal(app.stored[0].kind, 'problem'); assert.equal(app.stored[0].topic, '');
   assert.equal(app.stored[0].difficulty, 'hard'); assert.equal(app.stored[0].statementImages.length, 1);
 });
 
@@ -197,4 +198,17 @@ test('images without MIME metadata upload as images instead of being parsed as P
   }
   assert.equal(isImageFile(new File(['text'], 'text.png', { type: 'text/plain' })), false);
   await assert.rejects(validateUpload(new File(['bad'], 'bad.png'), 'problems', async () => { throw Error('invalid'); }), /valid image/);
+});
+
+test('Problems upload uses the file name automatically and persists all subject tags; edit preserves its name', async () => {
+  const app = form('problems');
+  app.context.subjectTags.items = ['math', 'geometry'];
+  await app.submit(png());
+  const file = app.context.files[0];
+  assert.equal(file.name, 'question.png'); assert.deepEqual(Array.from(file.subjects), ['math', 'geometry']);
+  app.context.editTarget = file; vm.runInContext('setModal(true, editTarget)', app.context);
+  assert.deepEqual(Array.from(app.context.subjectTags.items), ['math', 'geometry']);
+  app.context.subjectTags.items = ['algebra', 'math'];
+  await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
+  assert.equal(file.name, 'question.png'); assert.deepEqual(Array.from(file.subjects), ['algebra', 'math']);
 });

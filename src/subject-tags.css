@@ -1,0 +1,17 @@
+.modal-backdrop.is-problems .modal-breadcrumb .sep,
+.modal-backdrop.is-problems #modalPathSubjectInput,
+.modal-backdrop.is-problems #modalPathFileNameInput,
+.modal-backdrop.is-problems .modal-field:has(#modalTopicInput) { display: none; }
+.manage-shell.is-problems .topic-cell,
+.manage-shell.is-problems .footer-topic { display: none; }
+.manage-shell.is-problems .file-row,
+.manage-shell.is-problems .list-footer { grid-template-columns: minmax(200px, 1fr) 90px 88px; }
+.subject-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; height: auto; min-height: 31px; }
+.subject-tag-items { display: contents; }
+.subject-tag { display: inline-flex; align-items: center; gap: 5px; padding: 2px 7px; border-radius: 5px; background: #e8e8ed; font-size: 12px; }
+.subject-tag button { border: 0; background: transparent; color: #86868b; padding: 0; cursor: pointer; font: inherit; }
+.subject-tags input { min-width: 100px; flex: 1; width: 100px; border: 0; background: transparent; outline: none; color: inherit; font: inherit; }
+@media (max-width: 760px) {
+  .manage-shell.is-problems .file-row,
+  .manage-shell.is-problems .list-footer { grid-template-columns: minmax(0, 1fr) 90px 70px; }
+}

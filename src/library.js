@@ -1,4 +1,5 @@
 import { normalizeSubject, DIFFICULTIES, normalizedDifficulty } from './metadata.js';
+import { documentSubjects, hasSubject } from './subject-tags.js';
 export const PAGE_SIZE = 10;
 export function readerRoute(hash) {
   const [section, encodedId] = hash.replace(/^#/, '').split('/');
@@ -14,7 +15,7 @@ export const subjectRecords = (files, view) => files.filter(file => file.kind ==
 export function subjectNames(files, view) {
   const records = subjectRecords(files, view);
   const ranks = new Map(records.filter(file => Number.isFinite(file.position)).map(file => [file.subject, file.position]));
-  return [...new Set([...records, ...collectionFiles(files, view)].map(file => file.subject))]
+  return [...new Set([...records, ...collectionFiles(files, view)].flatMap(documentSubjects))]
     .sort((a, b) => (ranks.get(a) ?? Infinity) - (ranks.get(b) ?? Infinity));
 }
 export function reorderedSubjects(files, view, from, to, after = false) {
@@ -48,7 +49,7 @@ export function parseDate(value) {
 }
 export function queryFiles(files, { subject = 'all', query = '', sortKey = null, sortDir = 'asc', page = 1 } = {}) {
   const q = query.trim().toLocaleLowerCase();
-  const items = files.filter(f => (subject === 'all' || f.subject === subject) && (!q || [f.name, f.topic, f.subject].some(s => s.toLocaleLowerCase().includes(q))));
+  const items = files.filter(f => (subject === 'all' || hasSubject(f, subject)) && (!q || [f.name, f.topic, ...documentSubjects(f)].some(s => String(s || '').toLocaleLowerCase().includes(q))));
   if (sortKey) items.sort((a, b) => {
     // Unscheduled records remain last in either direction.
     if (sortKey === 'date' && (!dateOf(a) || !dateOf(b))) return dateOf(a) ? -1 : dateOf(b) ? 1 : 0;

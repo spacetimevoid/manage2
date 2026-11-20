@@ -1,3 +1,4 @@
+import { documentSubjects } from './subject-tags.js';
 import { DIFFICULTIES, normalizedDifficulty, difficultyLabel } from './metadata.js';
 import { escapeHtml as esc, validatePdf } from './library.js';
 import { ensureProblemData, renameProblem, renderMarkdown, problemTitle } from './problem-data.js';
@@ -127,7 +128,7 @@ export function createProblemDetail({ persist, getItems, onChange, background, d
     $('problemDetailPosLabel').textContent = `${index + 1} / ${items.length}`;
     $('problemPrevItemBtn').disabled = index <= 0;
     $('problemNextItemBtn').disabled = index < 0 || index >= items.length - 1;
-    $('problemDetailBreadcrumb').textContent = `Problems / ${file.subject} / ${file.topic}`;
+    $('problemDetailBreadcrumb').textContent = `Problems / ${documentSubjects(file).join(', ')}`;
     $('problemDetailTitleInput').value = problemTitle(file);
     $('problemDetailTitleInput').setCustomValidity(''); $('problemDetailTitleInput').title = '';
     $('problemDetailAddedDate').textContent = `Added ${file.addedDate}`;
