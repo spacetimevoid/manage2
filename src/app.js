@@ -1,4 +1,5 @@
 import { problemSummary, createProblemTagsPopover } from './problem-label.js';
+import { installBrowsePaste } from './browse-paste.js';
 import { createSubjectTags, documentSubjects, hasSubject } from './subject-tags.js';
 import './subject-tags.css';
 import { createTopicPicker, existingTopics } from './topic-picker.js';
@@ -221,6 +222,7 @@ function setModal(open, file = null, extraction = null) {
   if (open) {
     setModal.returnFocus = document.activeElement;
     $('uploadPdfForm').reset(); $('pdfFileInput').value = '';
+    setModal.pastedFile = null;
     $('modalCollectionName').textContent = setModal.view === 'problems' ? 'Problems' : 'Sources';
     $('modalDifficultyField').hidden = setModal.view !== 'problems';
     const problems = setModal.view === 'problems';
@@ -255,6 +257,7 @@ $('uploadPdfBtn').onclick = () => setModal(true);
 $('modalCancelBtn').onclick = () => setModal(false);
 $('modalBrowseBtn').onclick = () => $('pdfFileInput').click();
 $('pdfFileInput').onchange = () => {
+  setModal.pastedFile = null;
   const file = $('pdfFileInput').files[0];
   $('modalFileStatus').textContent = file?.name || 'No file selected';
   if (file && !$('modalPathFileNameInput').value.trim()) $('modalPathFileNameInput').value = documentTitle(file.name);
@@ -272,7 +275,7 @@ $('uploadPdfForm').onsubmit = async e => {
     const editing = setModal.file;
     const view = setModal.view;
     const extraction = setModal.extraction;
-    const blob = extraction?.blob || $('pdfFileInput').files[0];
+    const blob = extraction?.blob || setModal.pastedFile || $('pdfFileInput').files[0];
     if (!editing && !blob) throw new Error(view === 'problems' ? 'Please select an image or PDF.' : 'Please select a PDF file.');
     const problem = view === 'problems';
     const tags = problem ? subjectTags.get() : null;
@@ -747,6 +750,17 @@ window.addEventListener('keydown', e => {
   }
 });
 const subjectTags = createSubjectTags($('uploadPdfForm'));
+installBrowsePaste($('uploadModalBackdrop'), {
+  getView: () => setModal.view,
+  enabled: () => $('uploadModalBackdrop').classList.contains('is-open') && !setModal.file && !setModal.extraction,
+  onFile(file) {
+    setModal.pastedFile = file;
+    $('modalFileStatus').textContent = file.name || 'Pasted file';
+    $('modalErrorMsg').textContent = '';
+    if (!$('modalPathFileNameInput').value.trim()) $('modalPathFileNameInput').value = documentTitle(file.name);
+  },
+  onError(message) { $('modalErrorMsg').textContent = message; },
+});
 const topicPicker = createTopicPicker($('modalTopicInput'), () => existingTopics(files));
 
 async function initialize() {

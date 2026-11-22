@@ -36,3 +36,16 @@ test('multiple subjects survive reload and each filters the same problem once; l
   assert.deepEqual(documentSubjects({ kind: 'problem', subject: 'old' }), ['old']);
   assert.deepEqual(documentSubjects({ subject: 'math', subjects: ['ignored'] }), ['math']);
 });
+
+test('inline tag changes await saving and restore the previous tags if saving fails', async () => {
+ const previous=globalThis.document, elements=[]; let rejectSave, saved;
+ globalThis.document={createElement(){const el={children:[],value:'',setAttribute(){},setCustomValidity(v){this.error=v},reportValidity(){},focus(){},append(...items){this.children.push(...items)},replaceChildren(...items){this.children=items}};elements.push(el);return el;}};
+ try {
+ const editor=createSubjectTags({prepend(){}},{id:'inline',onChange:values=>new Promise((resolve,reject)=>{saved=values;rejectSave=reject;})});
+ editor.set(['math','geometry'],true);
+ const tags=elements.find(el=>el.className==='subject-tag-items');
+ const pending=tags.children[0].children[1].onclick();
+ assert.deepEqual(saved,['geometry']); rejectSave(Error('offline')); await pending;
+ assert.deepEqual(editor.get(),['math','geometry']);
+ }finally{globalThis.document=previous;}
+});

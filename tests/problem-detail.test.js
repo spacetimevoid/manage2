@@ -44,7 +44,7 @@ test('problem details load the actual statement, navigate in supplied order and 
   const app = mount([a, b]);
   try {
     app.detail.open(a);
-    assert.equal(app.$('problemDetailTitleInput').value, 'Problem #A');
+    assert.equal(app.$('problemDetailTitleInput').value, 'A');
     assert.equal(app.$('problemStatementNoteInput').value, 'Existing notes');
     assert.equal(app.$('statementPdfEmbed').hidden, false);
     assert.match(app.$('statementPdfIframe').src, /^blob:/);
@@ -160,7 +160,7 @@ test('restoring a problem waits for its media and cancelled loading never opens 
     app.detail.close(); finish(); await opened;
     assert.equal(app.detail.isOpen, false); assert.equal(app.$('problemDetailTitleInput').value, '');
     await app.detail.open(file);
-    assert.equal(app.$('problemDetailTitleInput').value, 'Problem #LAZY');
+    assert.equal(app.$('problemDetailTitleInput').value, 'LAZY');
   } finally { app.cleanup(); }
 });
 
@@ -173,10 +173,10 @@ test('rapid problem navigation follows the pending target and a failed load rest
     app.$('problemNextItemBtn').onclick(); app.$('problemNextItemBtn').onclick();
     assert.equal(app.detail.activeId, 'c');
     requests.get('b').resolve(); await new Promise(resolve => setImmediate(resolve));
-    assert.equal(app.$('problemDetailTitleInput').value, 'Problem #A');
+    assert.equal(app.$('problemDetailTitleInput').value, 'A');
     requests.get('c').reject(Error('Offline')); await new Promise(resolve => setImmediate(resolve));
     assert.equal(app.detail.activeId, 'a'); assert.equal(routes.at(-1), 'a');
-    assert.equal(app.$('problemDetailTitleInput').value, 'Problem #A');
+    assert.equal(app.$('problemDetailTitleInput').value, 'A');
   } finally { app.cleanup(); }
 });
 
@@ -211,12 +211,12 @@ test('navigation retains the current problem until image decoding and fade-out f
     } });
     const changed = app.$('problemNextItemBtn').onclick();
     await new Promise(resolve => setImmediate(resolve));
-    assert.equal(app.$('problemDetailTitleInput').value, 'Problem #A'); assert.equal(animations.length, 0);
+    assert.equal(app.$('problemDetailTitleInput').value, 'A'); assert.equal(animations.length, 0);
     assert.equal(app.$('problemDetailPage').scrollTop, 400);
     decoded(); await new Promise(resolve => setImmediate(resolve));
-    assert.equal(animations.length, 1); assert.equal(app.$('problemDetailTitleInput').value, 'Problem #A');
+    assert.equal(animations.length, 1); assert.equal(app.$('problemDetailTitleInput').value, 'A');
     animations[0].finish(); await new Promise(resolve => setImmediate(resolve));
-    assert.equal(app.$('problemDetailTitleInput').value, 'Problem #B'); assert.equal(animations.length, 2);
+    assert.equal(app.$('problemDetailTitleInput').value, 'B'); assert.equal(animations.length, 2);
     assert.equal(app.$('problemDetailPage').scrollTop, 0);
     assert.ok(animations.every(animation => animation.frames.every(frame => frame.transform === undefined)));
     animations[1].finish(); await changed;
@@ -240,7 +240,7 @@ test('adjacent problem images decode before navigation and are reused when movin
     assert.equal(decodes, 3);
     await app.$('problemPrevItemBtn').onclick();
     assert.equal(decodes, 3, 'returning to previous problem reuses decoded pixels');
-    assert.equal(app.$('problemDetailTitleInput').value, 'Problem #A');
+    assert.equal(app.$('problemDetailTitleInput').value, 'A');
   } finally { app.cleanup(); if (beforeImage === undefined) delete globalThis.Image; else globalThis.Image = beforeImage; }
 });
 

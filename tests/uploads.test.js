@@ -212,3 +212,13 @@ test('Problems upload uses the file name automatically and persists all subject 
   await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
   assert.equal(file.name, 'question.png'); assert.deepEqual(Array.from(file.subjects), ['algebra', 'math']);
 });
+
+test('pasted file is submitted through normal upload validation without a native file selection', async () => {
+ const app=form('problems'); const image=png();
+ app.context.pasted=image;
+ vm.runInContext('setModal.pastedFile = pasted', app.context);
+ app.$('pdfFileInput').files=[];
+ await app.$('uploadPdfForm').onsubmit({preventDefault(){}});
+ assert.equal(app.stored.length,1); assert.equal(app.stored[0].statementImages[0].blob.size,image.size);
+ vm.runInContext('setModal(true)', app.context); assert.equal(app.context.setModal.pastedFile,null);
+});

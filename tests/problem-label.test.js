@@ -6,7 +6,7 @@ import { queryFiles } from '../src/library.js';
 test('summary shows two tags and accurate overflow count, escaping all user content', () => {
  const file = { id: 'abc12345-0000', kind: 'problem', subjects: ['math', 'candy', '<script>', 'modulo'] };
  const html = problemSummary(file);
- assert.match(html, /#ABC12345/); assert.match(html, /math/); assert.match(html, /candy/); assert.match(html, />\+2</);
+ assert.ok(html.includes(problemCode(file))); assert.match(problemCode(file), /^#[0-9]{5}-[0-9]{5}$/); assert.match(html, /math/); assert.match(html, /candy/); assert.match(html, />\+2</);
  assert.doesNotMatch(html, /modulo|<script>/);
  assert.doesNotMatch(problemSummary({ ...file, subjects: ['math'] }), /data-problem-tags/);
  assert.equal(problemCode({ ...file, name: 'renamed' }), problemCode(file));

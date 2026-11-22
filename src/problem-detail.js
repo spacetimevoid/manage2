@@ -1,5 +1,5 @@
 import { problemCode } from './problem-label.js';
-import { documentSubjects } from './subject-tags.js';
+import { documentSubjects, createSubjectTags } from './subject-tags.js';
 import { DIFFICULTIES, normalizedDifficulty, difficultyLabel } from './metadata.js';
 import { escapeHtml as esc, validatePdf } from './library.js';
 import { ensureProblemData, renameProblem, renderMarkdown, problemTitle } from './problem-data.js';
@@ -15,6 +15,15 @@ export function createProblemDetail({ persist, getItems, onChange, background, d
   const page = $('problemDetailPage');
   const imageZoom = createImageZoom();
   let active = null, items = [], returnFocus = null;
+  const subjectEditor = $('problemDetailBreadcrumb').prepend ? createSubjectTags($('problemDetailBreadcrumb'), {
+    id: 'detailSubjectTagsInput',
+    async onChange(subjects) {
+      const file = active;
+      if (!file) return;
+      await persist({ ...file, subjects, subject: subjects[0] });
+      Object.assign(file, { subjects, subject: subjects[0] }); onChange();
+    },
+  }) : null;
   let contentAnimation = null, prefetchTimer = null;
   let closing = false, closingPromise = null, preparation = 0, pending = null;
   const readyImages = new Map(), decodingImages = new WeakMap();
@@ -129,8 +138,9 @@ export function createProblemDetail({ persist, getItems, onChange, background, d
     $('problemDetailPosLabel').textContent = `${index + 1} / ${items.length}`;
     $('problemPrevItemBtn').disabled = index <= 0;
     $('problemNextItemBtn').disabled = index < 0 || index >= items.length - 1;
-    $('problemDetailBreadcrumb').innerHTML = documentSubjects(file).map(tag => `<span class="subject-tag">${esc(tag)}</span>`).join(' ');
-    $('problemDetailTitleInput').value = `Problem ${problemCode(file)}`;
+    if (subjectEditor) subjectEditor.set(documentSubjects(file), true);
+    else $('problemDetailBreadcrumb').innerHTML = documentSubjects(file).map(tag => `<span class="subject-tag">${esc(tag)}</span>`).join(' ');
+    $('problemDetailTitleInput').value = problemCode(file).replace(/^#/, '');
     $('problemDetailTitleInput').readOnly = true;
     $('problemDetailTitleInput').setCustomValidity(''); $('problemDetailTitleInput').title = '';
     $('problemDetailAddedDate').textContent = `Added ${file.addedDate}`;
