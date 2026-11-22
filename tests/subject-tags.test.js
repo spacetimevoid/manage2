@@ -85,3 +85,21 @@ test('detail starts with compact tags only and opens editing on demand without a
  assert.equal(field.hidden,true); assert.equal(display.hidden,false);
  }finally{globalThis.document=previous;}
 });
+
+test('detail can delete the last tag, save an empty list, and add tags again; Backspace preserves ordinary typing', async () => {
+ const previous=globalThis.document,elements=[],saved=[];
+ const make=()=>({children:[],value:'',events:{},setAttribute(){},setCustomValidity(){},reportValidity(){},focus(){},append(...items){this.children.push(...items)},prepend(...items){this.children.unshift(...items)},replaceChildren(...items){this.children=items},addEventListener(type,fn){this.events[type]=fn;}});
+ globalThis.document={createElement(){const el=make();elements.push(el);return el;}};
+ try {
+ const editor=createDetailSubjectTags(make(),async values=>saved.push(values)); editor.set(['math','geometry']);
+ const display=elements.find(el=>el.className==='detail-subject-display'); display.children[0].onclick();
+ const input=elements.find(el=>el.id==='detailSubjectTagsInput'), tags=elements.find(el=>el.className==='subject-tag-items');
+ input.value='draft'; input.onkeydown({key:'Backspace',preventDefault(){assert.fail('normal typing must remain native')}}); assert.equal(saved.length,0);
+ input.value=''; await input.onkeydown({key:'Backspace',preventDefault(){}});
+ assert.deepEqual(saved[0],['math']); assert.equal(tags.children.length,1);
+ await tags.children[0].children[1].onclick(); assert.deepEqual(saved[1],[]);
+ assert.equal(tags.children.length,0); assert.equal(display.children[0].textContent,'Add subject');
+ input.value='algebra'; input.onkeydown({key:',',preventDefault(){}}); await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(saved[2],['algebra']); assert.equal(display.children[0].textContent,'algebra');
+ }finally{globalThis.document=previous;}
+});

@@ -18,8 +18,8 @@ export function createProblemDetail({ persist, getItems, onChange, background, d
   const subjectEditor = $('problemDetailBreadcrumb').prepend ? createDetailSubjectTags($('problemDetailBreadcrumb'), async subjects => {
       const file = active;
       if (!file) return;
-      await persist({ ...file, subjects, subject: subjects[0] });
-      Object.assign(file, { subjects, subject: subjects[0] }); onChange();
+      await persist({ ...file, subjects, subject: subjects[0] || '' });
+      Object.assign(file, { subjects, subject: subjects[0] || '' }); onChange();
   }) : null;
   let contentAnimation = null, prefetchTimer = null;
   let closing = false, closingPromise = null, preparation = 0, pending = null;

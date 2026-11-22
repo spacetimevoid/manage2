@@ -10,7 +10,7 @@ export const problemCode = file => {
   return `#${digits.slice(0, 5)}-${digits.slice(5)}`;
 };
 
-export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChange = null } = {}) {
+export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChange = null, allowEmpty = false } = {}) {
   const field = document.createElement('div'); field.className = 'modal-field problem-subject-field'; field.hidden = true;
   const label = document.createElement('label'); label.className = 'modal-label'; label.htmlFor = id; label.textContent = 'Subjects';
   const box = document.createElement('div'); box.className = 'subject-tags';
@@ -24,7 +24,7 @@ export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChan
     const version = generation;
     const change = ++revision, next = [...values];
     try {
-      if (!next.length) throw new Error('Keep at least one subject.');
+      if (!allowEmpty && !next.length) throw new Error('Keep at least one subject.');
       await onChange(next);
       if (version === generation && change > confirmedRevision) { confirmed = next; confirmedRevision = change; }
     } catch (error) {
@@ -38,9 +38,13 @@ export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChan
       const tag = document.createElement('span'); tag.className = 'subject-tag';
       const name = document.createElement('span'); name.textContent = value;
       const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', `Remove ${value}`);
-      remove.onclick = () => { const before = [...values]; values = values.filter(item => item !== value); render(); input.focus(); return changed(before); };
+      remove.onclick = () => removeTag(value);
       tag.append(name, remove); return tag;
     }));
+  }
+  function removeTag(value) {
+    const before = [...values]; values = values.filter(item => item !== value);
+    render(); input.setCustomValidity(''); input.focus(); return changed(before);
   }
   function commit() {
     if (!input.value.trim()) return;
@@ -51,6 +55,9 @@ export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChan
   }
   input.oninput = () => input.setCustomValidity('');
   input.onkeydown = event => {
+    if (event.key === 'Backspace' && !event.isComposing && !event.ctrlKey && !event.metaKey && !event.altKey && !event.repeat && input.value === '' && values.length) {
+      event.preventDefault(); event.stopPropagation?.(); return removeTag(values.at(-1));
+    }
     if (event.isComposing || !['Enter', ','].includes(event.key)) return;
     event.preventDefault();
     event.stopPropagation?.();
@@ -60,7 +67,7 @@ export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChan
   return {
     element: field,
     set(items, visible) { generation++; revision = confirmedRevision = 0; values = [...new Set(items)]; confirmed = [...values]; input.value = ''; input.setCustomValidity(''); field.hidden = !visible; render(); },
-    get() { commit(); if (!values.length) throw new Error('Add at least one subject.'); return [...values]; },
+    get() { commit(); if (!allowEmpty && !values.length) throw new Error('Add at least one subject.'); return [...values]; },
     focus() { input.focus(); },
   };
 }
@@ -70,16 +77,19 @@ export function createDetailSubjectTags(container, save) {
   let values = [], version = 0;
   const editor = createSubjectTags(container, {
     id: 'detailSubjectTagsInput',
+    allowEmpty: true,
     async onChange(next) {
-      const current = version;
-      await save(next);
-      if (current === version) { values = next; render(); }
+      const current = version, before = values;
+      values = next; render();
+      try { await save(next); }
+      catch (error) { if (current === version && values === next) { values = before; render(); } throw error; }
     },
   });
   container.prepend(display);
   function render() {
-    display.replaceChildren(...values.map(value => {
+    display.replaceChildren(...(values.length ? values : [null]).map(value => {
       const tag = document.createElement('button'); tag.type = 'button'; tag.className = 'subject-tag'; tag.textContent = value;
+      if (value === null) { tag.className = 'doc-action-link'; tag.textContent = 'Add subject'; }
       tag.setAttribute('aria-label', `Edit subjects: ${value}`);
       tag.onclick = () => { display.hidden = true; editor.set(values, true); editor.focus(); };
       return tag;
