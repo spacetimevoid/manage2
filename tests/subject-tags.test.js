@@ -103,3 +103,27 @@ test('detail can delete the last tag, save an empty list, and add tags again; Ba
  assert.deepEqual(saved[2],['algebra']); assert.equal(display.children[0].textContent,'algebra');
  }finally{globalThis.document=previous;}
 });
+
+test('clicking X cannot collapse the editor during input-to-button focus transfer', async () => {
+ const previous=globalThis.document,elements=[],saved=[];
+ const make=()=>({children:[],value:'',events:{},setAttribute(){},setCustomValidity(){},reportValidity(){},focus(){globalThis.document.activeElement=this},contains(node){return this===node||this.children.some(child=>child.contains?.(node))},append(...items){this.children.push(...items)},prepend(...items){this.children.unshift(...items)},replaceChildren(...items){this.children=items},addEventListener(type,fn){this.events[type]=fn;}});
+ globalThis.document={activeElement:null,createElement(){const el=make();elements.push(el);return el;}};
+ try {
+ const container=make(), editor=createDetailSubjectTags(container,async values=>saved.push(values)); editor.set(['math','geometry']);
+ const display=elements.find(el=>el.className==='detail-subject-display'); display.children[0].onclick();
+ const field=elements.find(el=>el.className==='modal-field problem-subject-field');
+ const tags=elements.find(el=>el.className==='subject-tag-items'), remove=tags.children[0].children[1];
+ globalThis.document.activeElement=null;
+ field.events.focusout({relatedTarget:remove});
+ await new Promise(resolve=>setTimeout(resolve,5));
+ assert.equal(field.hidden,false,'focus inside the editor never closes it');
+ let prevented=false,stopped=false;
+ remove.onpointerdown({button:0,preventDefault(){prevented=true}}); assert.equal(prevented,true);
+ await remove.onclick({preventDefault(){},stopPropagation(){stopped=true}});
+ assert.equal(stopped,true); assert.deepEqual(saved,[['geometry']]);
+ assert.equal(field.hidden,false); assert.equal(display.hidden,true);
+ field.events.focusout({relatedTarget:null});
+ await new Promise(resolve=>setTimeout(resolve,5));
+ assert.equal(field.hidden,false,'input has regained focus after removal');
+ }finally{globalThis.document=previous;}
+});

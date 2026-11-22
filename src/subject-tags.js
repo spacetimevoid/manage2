@@ -38,7 +38,11 @@ export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChan
       const tag = document.createElement('span'); tag.className = 'subject-tag';
       const name = document.createElement('span'); name.textContent = value;
       const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', `Remove ${value}`);
-      remove.onclick = () => removeTag(value);
+      // Keep the input focused until click runs. Otherwise blur can collapse
+      // the editor between pointerdown and click, leaving a display tag under
+      // the pointer instead of the delete button.
+      remove.onpointerdown = event => { if (event.button === 0) event.preventDefault(); };
+      remove.onclick = event => { event?.preventDefault(); event?.stopPropagation(); return removeTag(value); };
       tag.append(name, remove); return tag;
     }));
   }
@@ -99,11 +103,15 @@ export function createDetailSubjectTags(container, save) {
   editor.element.addEventListener('keydown', event => {
     if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); collapse(); display.firstElementChild?.focus(); }
   });
-  editor.element.addEventListener('focusout', () => {
-    queueMicrotask(() => {
+  editor.element.addEventListener('focusout', event => {
+    if (event.relatedTarget && container.contains(event.relatedTarget)) return;
+    const current = version;
+    // A microtask can run before the browser finishes transferring focus.
+    setTimeout(() => {
+      if (current !== version) return;
       if (container.contains(document.activeElement)) return;
       try { editor.get(); collapse(); } catch { /* Keep invalid input available for correction. */ }
-    });
+    }, 0);
   });
   return { set(next) { version++; values = [...next]; editor.set(values, false); display.hidden = false; render(); } };
 }
