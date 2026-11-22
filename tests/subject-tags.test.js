@@ -127,3 +127,21 @@ test('clicking X cannot collapse the editor during input-to-button focus transfe
  assert.equal(field.hidden,false,'input has regained focus after removal');
  }finally{globalThis.document=previous;}
 });
+
+test('subject suggestions exclude selected tags, filter typing, and commit mouse/keyboard choices once', () => {
+ const previous={document:globalThis.document,window:globalThis.window}, elements=[];
+ const make=()=>({children:[],value:'',events:{},style:{},attrs:{},classList:{add(){}},setAttribute(k,v){this.attrs[k]=v},removeAttribute(k){delete this.attrs[k]},setCustomValidity(){},reportValidity(){},focus(){},contains(){return true},scrollIntoView(){},getBoundingClientRect(){return {top:100,bottom:130}},append(...items){for(const item of items){item.parentElement=this;this.children.push(item)}},prepend(...items){this.append(...items)},replaceChildren(...items){this.children=[];this.append(...items)},addEventListener(type,fn,capture){this.events[type]={fn,capture}}});
+ globalThis.document={createElement(){const el=make();elements.push(el);return el},addEventListener(){}};globalThis.window={innerHeight:800,addEventListener(){}};
+ try {
+ const editor=createSubjectTags(make(),{getSuggestions:()=>['math','geometry','algebra','math']}); editor.set(['math'],true);
+ const input=elements.find(el=>el.id==='problemSubjectTagsInput'), list=elements.find(el=>el.attrs.role==='listbox');
+ input.events.focus.fn(); assert.deepEqual(list.children.map(el=>el.textContent),['algebra','geometry']); assert.equal(list.style.maxHeight,'194px');
+ list.children[0].onclick(); assert.deepEqual(editor.get(),['math','algebra']); assert.equal(input.value,'');
+ input.value='geo'; input.events.input.fn(); assert.equal(list.children.length,1);
+ input.events.keydown.fn({key:'ArrowDown',preventDefault(){}});
+ let stopped=false; input.events.keydown.fn({key:'Enter',preventDefault(){},stopImmediatePropagation(){stopped=true}});
+ assert.equal(input.events.keydown.capture,true); assert.equal(stopped,true);
+ assert.deepEqual(editor.get(),['math','algebra','geometry']); assert.equal(list.hidden,true);
+ input.events.focus.fn(); assert.equal(list.hidden,true,'all existing subjects selected');
+ }finally{Object.assign(globalThis,previous)}
+});

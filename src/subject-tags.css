@@ -7,6 +7,8 @@
 .manage-shell.is-problems .file-row,
 .manage-shell.is-problems .list-footer { grid-template-columns: minmax(200px, 1fr) 90px 88px; }
 .subject-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; height: auto; min-height: 31px; border: 0; background: transparent; padding: 0; box-shadow: none; }
+.modal-backdrop .problem-subject-field .subject-tags { border: 1px solid #d2d2d7; border-radius: 6px; padding: 5px 8px; box-sizing: border-box; }
+.modal-backdrop .problem-subject-field .subject-tags:focus-within { border-color: #007aff; }
 .subject-tag-items { display: contents; }
 .subject-tag { display: inline-flex; align-items: center; gap: 5px; padding: 2px 7px; border-radius: 5px; background: #e8e8ed; font-size: 12px; }
 .subject-tag button { border: 0; background: transparent; color: #86868b; padding: 0; cursor: pointer; font: inherit; }

@@ -1,4 +1,5 @@
 import { normalizeSubject } from './metadata.js';
+import { createTopicPicker } from './topic-picker.js';
 
 export const documentSubjects = file => file.kind === 'problem' && Array.isArray(file.subjects)
   ? [...new Set(file.subjects)] : file.subject ? [file.subject] : [];
@@ -10,7 +11,7 @@ export const problemCode = file => {
   return `#${digits.slice(0, 5)}-${digits.slice(5)}`;
 };
 
-export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChange = null, allowEmpty = false } = {}) {
+export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChange = null, allowEmpty = false, getSuggestions = null } = {}) {
   const field = document.createElement('div'); field.className = 'modal-field problem-subject-field'; field.hidden = true;
   const label = document.createElement('label'); label.className = 'modal-label'; label.htmlFor = id; label.textContent = 'Subjects';
   const box = document.createElement('div'); box.className = 'subject-tags';
@@ -18,7 +19,7 @@ export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChan
   const input = document.createElement('input'); input.id = id; input.placeholder = 'Add subject'; input.autocomplete = 'off';
   input.setAttribute('aria-label', 'Add subject with Enter or comma');
   box.append(tags, input); field.append(label, box); form.prepend(field);
-  let values = [], confirmed = [], generation = 0, revision = 0, confirmedRevision = 0;
+  let values = [], confirmed = [], generation = 0, revision = 0, confirmedRevision = 0, picker = null;
   async function changed(before) {
     if (!onChange) return;
     const version = generation;
@@ -55,6 +56,7 @@ export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChan
     const before = [...values];
     const next = input.value.split(',').filter(value => value.trim()).map(normalizeSubject);
     values = [...new Set([...values, ...next])]; input.value = ''; input.setCustomValidity(''); render();
+    picker?.close();
     return changed(before);
   }
   input.oninput = () => input.setCustomValidity('');
@@ -68,20 +70,24 @@ export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChan
     try { commit(); } catch (error) { input.setCustomValidity(error.message); input.reportValidity(); }
     input.focus();
   };
+  if (getSuggestions) picker = createTopicPicker(input,
+    () => [...new Set(getSuggestions())].filter(value => !values.includes(value)).sort((a, b) => a.localeCompare(b)),
+    { id: `${id}Suggestions`, label: 'Subjects', captureKeys: true, onChoose() { commit(); input.focus(); } });
   return {
     element: field,
-    set(items, visible) { generation++; revision = confirmedRevision = 0; values = [...new Set(items)]; confirmed = [...values]; input.value = ''; input.setCustomValidity(''); field.hidden = !visible; render(); },
+    set(items, visible) { picker?.close(); generation++; revision = confirmedRevision = 0; values = [...new Set(items)]; confirmed = [...values]; input.value = ''; input.setCustomValidity(''); field.hidden = !visible; render(); },
     get() { commit(); if (!allowEmpty && !values.length) throw new Error('Add at least one subject.'); return [...values]; },
     focus() { input.focus(); },
   };
 }
 
-export function createDetailSubjectTags(container, save) {
+export function createDetailSubjectTags(container, save, getSuggestions = null) {
   const display = document.createElement('div'); display.className = 'detail-subject-display';
   let values = [], version = 0;
   const editor = createSubjectTags(container, {
     id: 'detailSubjectTagsInput',
     allowEmpty: true,
+    getSuggestions,
     async onChange(next) {
       const current = version, before = values;
       values = next; render();

@@ -171,6 +171,7 @@ function persist(file) {
   return result;
 }
 const problemDetail = createProblemDetail({
+  getSubjects: () => [...subjectNames(files, 'sources'), ...subjectNames(files, 'problems')],
   deletionHistory,
   persist,
   prepare: file => mediaLoader.load(file),
@@ -748,7 +749,7 @@ window.addEventListener('keydown', e => {
     if (['=', '+', '-', '0'].includes(e.key)) { e.preventDefault(); setZoom(e.key === '0' ? 100 : zoom + (e.key === '-' ? -15 : 15)); }
   }
 });
-const subjectTags = createSubjectTags($('uploadPdfForm'));
+const subjectTags = createSubjectTags($('uploadPdfForm'), { getSuggestions: () => [...subjectNames(files, 'sources'), ...subjectNames(files, 'problems')] });
 installBrowsePaste($('uploadModalBackdrop'), {
   getView: () => setModal.view,
   enabled: () => $('uploadModalBackdrop').classList.contains('is-open') && !setModal.file && !setModal.extraction,

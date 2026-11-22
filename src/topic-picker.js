@@ -3,12 +3,12 @@ export function existingTopics(files) {
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
 }
 
-export function createTopicPicker(input, getTopics) {
+export function createTopicPicker(input, getTopics, { id = 'topicSuggestions', label = 'Topics', onChoose = null, captureKeys = false } = {}) {
   const field = input.parentElement;
   field.classList.add('topic-picker-field');
   const list = document.createElement('div');
-  list.id = 'topicSuggestions'; list.className = 'topic-picker-list'; list.hidden = true;
-  list.setAttribute('role', 'listbox'); list.setAttribute('aria-label', 'Topics'); field.append(list);
+  list.id = id; list.className = 'topic-picker-list'; list.hidden = true;
+  list.setAttribute('role', 'listbox'); list.setAttribute('aria-label', label); field.append(list);
   input.setAttribute('role', 'combobox'); input.setAttribute('aria-autocomplete', 'list');
   input.setAttribute('aria-controls', list.id);
   let selected = -1, choices = [];
@@ -16,13 +16,13 @@ export function createTopicPicker(input, getTopics) {
     list.hidden = true; selected = -1;
     input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant');
   }
-  function choose(value) { input.value = value; close(); }
+  function choose(value) { input.value = value; close(); onChoose?.(value); }
   function open(filter = '') {
     choices = getTopics().filter(topic => topic.toLocaleLowerCase().includes(filter.trim().toLocaleLowerCase()));
     selected = -1; input.removeAttribute('aria-activedescendant');
     list.replaceChildren(...choices.map((topic, index) => {
       const option = document.createElement('div');
-      option.id = `topicOption${index}`; option.className = 'topic-picker-option'; option.textContent = topic;
+      option.id = `${id}Option${index}`; option.className = 'topic-picker-option'; option.textContent = topic;
       option.setAttribute('role', 'option'); option.setAttribute('aria-selected', 'false');
       option.onpointerdown = event => event.preventDefault();
       option.onclick = () => choose(topic);
@@ -51,9 +51,10 @@ export function createTopicPicker(input, getTopics) {
       input.setAttribute('aria-activedescendant', list.children[selected].id);
       list.children[selected].scrollIntoView({ block: 'nearest' });
     } else if (event.key === 'Enter' && !list.hidden && selected >= 0) {
+      if (captureKeys) event.stopImmediatePropagation();
       event.preventDefault(); choose(choices[selected]);
     } else if (event.key === 'Tab') close();
-  });
+  }, captureKeys);
   document.addEventListener('pointerdown', event => { if (!field.contains(event.target)) close(); });
   window.addEventListener('resize', close);
   close();

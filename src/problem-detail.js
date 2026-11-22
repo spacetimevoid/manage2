@@ -10,7 +10,7 @@ import { captureListMotion } from './list-motion.js';
 import { isImageFile } from './uploads.js';
 import { snapshotDocument } from './library.js';
 
-export function createProblemDetail({ persist, getItems, onChange, background, deletionHistory = null, prepare = null, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
+export function createProblemDetail({ persist, getItems, onChange, background, getSubjects = null, deletionHistory = null, prepare = null, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
   const $ = id => document.getElementById(id);
   const page = $('problemDetailPage');
   const imageZoom = createImageZoom();
@@ -20,7 +20,7 @@ export function createProblemDetail({ persist, getItems, onChange, background, d
       if (!file) return;
       await persist({ ...file, subjects, subject: subjects[0] || '' });
       Object.assign(file, { subjects, subject: subjects[0] || '' }); onChange();
-  }) : null;
+  }, getSubjects) : null;
   let contentAnimation = null, prefetchTimer = null;
   let closing = false, closingPromise = null, preparation = 0, pending = null;
   const readyImages = new Map(), decodingImages = new WeakMap();
