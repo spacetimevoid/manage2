@@ -164,7 +164,7 @@ test('overflow ellipsis expands all detail tags and resets for the next problem'
  const more=display.children.at(-1); assert.equal(more.textContent,'...'); assert.equal(more.hidden,false);
  assert.equal(display.children[1].hidden,true);
  assert.ok(more.className.includes('subject-tag'));
- more.onclick();assert.equal(more.hidden,false);assert.equal(more.textContent,'Thu g\u1ecdn');assert.ok(display.children.slice(0,-1).every(tag=>!tag.hidden));
+ more.onclick();assert.equal(more.hidden,false);assert.match(more.innerHTML, /<svg/); assert.match(more.innerHTML, /aria-hidden="true"/);assert.ok(display.children.slice(0,-1).every(tag=>!tag.hidden));
  more.onclick();assert.equal(more.textContent,'...');assert.equal(display.children[1].hidden,true);
  editor.set(['math','geometry','modulo']);assert.equal(display.children.at(-1).hidden,false);
  }finally{globalThis.document=previous;}

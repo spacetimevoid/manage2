@@ -115,7 +115,9 @@ export function createDetailSubjectTags(container, save, getSuggestions = null) 
     const tags = [...display.children].filter(tag => tag !== more);
     tags.forEach(tag => { tag.hidden = false; });
     more.hidden = true;
-    more.textContent = expanded ? 'Thu gọn' : '...';
+    if (expanded) {
+      more.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M3 7.5 6 4.5 9 7.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    } else more.textContent = '...';
     more.setAttribute('aria-label', expanded ? 'Collapse subjects' : 'Show all subjects');
     more.setAttribute('aria-expanded', String(expanded));
     if (expanded) { more.hidden = false; return; }

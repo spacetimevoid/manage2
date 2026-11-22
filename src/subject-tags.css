@@ -31,5 +31,6 @@
 .detail-subject-display.is-expanded { flex-wrap: wrap; }
 .detail-subject-display:not(.is-expanded) .subject-tag { flex-shrink: 0; white-space: nowrap; }
 .detail-subject-more { flex-shrink: 0; }
+.detail-subject-more svg { display: block; }
 .detail-subject-display .subject-tag { border: 0; color: inherit; font-family: inherit; font-weight: 400; line-height: normal; cursor: pointer; }
 .problem-breadcrumb-line .problem-subject-field { margin: 0; }
