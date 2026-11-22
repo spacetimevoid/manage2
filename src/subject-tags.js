@@ -105,9 +105,9 @@ export function createDetailSubjectTags(container, save, getSuggestions = null) 
       tag.onclick = () => { display.hidden = true; editor.set(values, true); editor.focus(); };
       return tag;
     }));
-    more = document.createElement('button'); more.type = 'button'; more.className = 'doc-action-link detail-subject-more'; more.textContent = '...';
+    more = document.createElement('button'); more.type = 'button'; more.className = 'subject-tag detail-subject-more'; more.textContent = '...';
     more.setAttribute('aria-label', 'Show all subjects'); more.hidden = true;
-    more.onclick = () => { expanded = true; fit(); };
+    more.onclick = () => { expanded = !expanded; fit(); };
     display.append(more); fit();
   }
   function fit() {
@@ -115,7 +115,11 @@ export function createDetailSubjectTags(container, save, getSuggestions = null) 
     const tags = [...display.children].filter(tag => tag !== more);
     tags.forEach(tag => { tag.hidden = false; });
     more.hidden = true;
-    if (expanded || display.hidden || !display.getBoundingClientRect) return;
+    more.textContent = expanded ? 'Thu gọn' : '...';
+    more.setAttribute('aria-label', expanded ? 'Collapse subjects' : 'Show all subjects');
+    more.setAttribute('aria-expanded', String(expanded));
+    if (expanded) { more.hidden = false; return; }
+    if (display.hidden || !display.getBoundingClientRect) return;
     const width = display.getBoundingClientRect().width;
     if (!width) return;
     const sizes = tags.map(tag => tag.getBoundingClientRect().width);
