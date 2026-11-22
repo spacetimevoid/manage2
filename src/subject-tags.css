@@ -24,3 +24,4 @@
 .problem-tags-popover:popover-open { display: flex; flex-wrap: wrap; gap: 6px; }
 .subject-tag { max-width: 100%; overflow-wrap: anywhere; }
 .problem-breadcrumb-line { white-space: normal; overflow-wrap: anywhere; }
+.problem-breadcrumb-line .problem-subject-field > .modal-label { display: none; }
