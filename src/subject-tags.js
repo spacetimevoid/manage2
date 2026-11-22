@@ -83,7 +83,7 @@ export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChan
 
 export function createDetailSubjectTags(container, save, getSuggestions = null) {
   const display = document.createElement('div'); display.className = 'detail-subject-display';
-  let values = [], version = 0;
+  let values = [], version = 0, expanded = false, more = null;
   const editor = createSubjectTags(container, {
     id: 'detailSubjectTagsInput',
     allowEmpty: true,
@@ -97,6 +97,7 @@ export function createDetailSubjectTags(container, save, getSuggestions = null) 
   });
   container.prepend(display);
   function render() {
+    display.classList?.toggle('is-expanded', expanded);
     display.replaceChildren(...(values.length ? values : [null]).map(value => {
       const tag = document.createElement('button'); tag.type = 'button'; tag.className = 'subject-tag'; tag.textContent = value;
       if (value === null) { tag.className = 'doc-action-link'; tag.textContent = 'Add subject'; }
@@ -104,8 +105,27 @@ export function createDetailSubjectTags(container, save, getSuggestions = null) 
       tag.onclick = () => { display.hidden = true; editor.set(values, true); editor.focus(); };
       return tag;
     }));
+    more = document.createElement('button'); more.type = 'button'; more.className = 'doc-action-link detail-subject-more'; more.textContent = '...';
+    more.setAttribute('aria-label', 'Show all subjects'); more.hidden = true;
+    more.onclick = () => { expanded = true; fit(); };
+    display.append(more); fit();
   }
-  function collapse() { editor.element.hidden = true; display.hidden = false; }
+  function fit() {
+    display.classList?.toggle('is-expanded', expanded);
+    const tags = [...display.children].filter(tag => tag !== more);
+    tags.forEach(tag => { tag.hidden = false; });
+    more.hidden = true;
+    if (expanded || display.hidden || !display.getBoundingClientRect) return;
+    const width = display.getBoundingClientRect().width;
+    if (!width) return;
+    const sizes = tags.map(tag => tag.getBoundingClientRect().width);
+    more.hidden = false;
+    const count = tagRowCount(width, sizes, more.getBoundingClientRect().width);
+    tags.forEach((tag, index) => { tag.hidden = index >= count; });
+    more.hidden = count === tags.length;
+  }
+  if (globalThis.ResizeObserver) new ResizeObserver(fit).observe(container);
+  function collapse() { editor.element.hidden = true; display.hidden = false; fit(); }
   editor.element.addEventListener('keydown', event => {
     if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); collapse(); display.firstElementChild?.focus(); }
   });
@@ -119,5 +139,15 @@ export function createDetailSubjectTags(container, save, getSuggestions = null) 
       try { editor.get(); collapse(); } catch { /* Keep invalid input available for correction. */ }
     }, 0);
   });
-  return { set(next) { version++; values = [...next]; editor.set(values, false); display.hidden = false; render(); } };
+  return { set(next) { version++; expanded = false; values = [...next]; editor.set(values, false); display.hidden = false; render(); } };
+}
+
+export function tagRowCount(width, sizes, moreWidth, gap = 6) {
+  if (sizes.reduce((sum, size) => sum + size, 0) + Math.max(0, sizes.length - 1) * gap <= width) return sizes.length;
+  let used = 0, count = 0;
+  for (const size of sizes) {
+    if (used + size + gap + moreWidth > width) break;
+    used += size + gap; count++;
+  }
+  return count;
 }

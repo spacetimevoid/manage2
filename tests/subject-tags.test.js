@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSubjectTags, createDetailSubjectTags, documentSubjects } from '../src/subject-tags.js';
+import { createSubjectTags, createDetailSubjectTags, documentSubjects, tagRowCount } from '../src/subject-tags.js';
 import { queryFiles, subjectNames, openLibrary, saveDocuments, readDocuments } from '../src/library.js';
 import { IDBFactory } from 'fake-indexeddb';
 
@@ -144,4 +144,26 @@ test('subject suggestions exclude selected tags, filter typing, and commit mouse
  assert.deepEqual(editor.get(),['math','algebra','geometry']); assert.equal(list.hidden,true);
  input.events.focus.fn(); assert.equal(list.hidden,true,'all existing subjects selected');
  }finally{Object.assign(globalThis,previous)}
+});
+
+test('detail row reserves ellipsis space only when tags overflow and adapts to the available width', () => {
+ assert.equal(tagRowCount(200,[60,60,60],20),3);
+ assert.equal(tagRowCount(150,[60,60,60],20),1);
+ assert.equal(tagRowCount(170,[60,60,60],20),2);
+ assert.equal(tagRowCount(40,[60,60],20),0);
+ assert.equal(tagRowCount(200,[],20),0);
+});
+
+test('overflow ellipsis expands all detail tags and resets for the next problem', () => {
+ const previous=globalThis.document,elements=[];
+ const make=()=>({children:[],value:'',events:{},classList:{toggle(){}},setAttribute(){},setCustomValidity(){},reportValidity(){},focus(){},getBoundingClientRect(){return {width:this.className==='detail-subject-display'?150:this.className?.includes('detail-subject-more')?20:60}},append(...items){this.children.push(...items)},prepend(...items){this.children.unshift(...items)},replaceChildren(...items){this.children=items},addEventListener(type,fn){this.events[type]=fn;}});
+ globalThis.document={createElement(){const el=make();elements.push(el);return el;}};
+ try {
+ const editor=createDetailSubjectTags(make(),async()=>{});editor.set(['math','geometry','modulo']);
+ const display=elements.find(el=>el.className==='detail-subject-display');
+ const more=display.children.at(-1); assert.equal(more.textContent,'...'); assert.equal(more.hidden,false);
+ assert.equal(display.children[1].hidden,true);
+ more.onclick();assert.equal(more.hidden,true);assert.ok(display.children.slice(0,-1).every(tag=>!tag.hidden));
+ editor.set(['math','geometry','modulo']);assert.equal(display.children.at(-1).hidden,false);
+ }finally{globalThis.document=previous;}
 });
