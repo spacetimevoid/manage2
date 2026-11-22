@@ -58,8 +58,42 @@ export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChan
     input.focus();
   };
   return {
+    element: field,
     set(items, visible) { generation++; revision = confirmedRevision = 0; values = [...new Set(items)]; confirmed = [...values]; input.value = ''; input.setCustomValidity(''); field.hidden = !visible; render(); },
     get() { commit(); if (!values.length) throw new Error('Add at least one subject.'); return [...values]; },
     focus() { input.focus(); },
   };
+}
+
+export function createDetailSubjectTags(container, save) {
+  const display = document.createElement('div'); display.className = 'detail-subject-display';
+  let values = [], version = 0;
+  const editor = createSubjectTags(container, {
+    id: 'detailSubjectTagsInput',
+    async onChange(next) {
+      const current = version;
+      await save(next);
+      if (current === version) { values = next; render(); }
+    },
+  });
+  container.prepend(display);
+  function render() {
+    display.replaceChildren(...values.map(value => {
+      const tag = document.createElement('button'); tag.type = 'button'; tag.className = 'subject-tag'; tag.textContent = value;
+      tag.setAttribute('aria-label', `Edit subjects: ${value}`);
+      tag.onclick = () => { display.hidden = true; editor.set(values, true); editor.focus(); };
+      return tag;
+    }));
+  }
+  function collapse() { editor.element.hidden = true; display.hidden = false; }
+  editor.element.addEventListener('keydown', event => {
+    if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); collapse(); display.firstElementChild?.focus(); }
+  });
+  editor.element.addEventListener('focusout', () => {
+    queueMicrotask(() => {
+      if (container.contains(document.activeElement)) return;
+      try { editor.get(); collapse(); } catch { /* Keep invalid input available for correction. */ }
+    });
+  });
+  return { set(next) { version++; values = [...next]; editor.set(values, false); display.hidden = false; render(); } };
 }

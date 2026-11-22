@@ -25,3 +25,6 @@
 .subject-tag { max-width: 100%; overflow-wrap: anywhere; }
 .problem-breadcrumb-line { white-space: normal; overflow-wrap: anywhere; }
 .problem-breadcrumb-line .problem-subject-field > .modal-label { display: none; }
+.detail-subject-display { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.detail-subject-display .subject-tag { border: 0; color: inherit; font-family: inherit; font-weight: 400; line-height: normal; cursor: pointer; }
+.problem-breadcrumb-line .problem-subject-field { margin: 0; }

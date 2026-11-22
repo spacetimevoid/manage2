@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createSubjectTags, documentSubjects } from '../src/subject-tags.js';
+import { createSubjectTags, createDetailSubjectTags, documentSubjects } from '../src/subject-tags.js';
 import { queryFiles, subjectNames, openLibrary, saveDocuments, readDocuments } from '../src/library.js';
 import { IDBFactory } from 'fake-indexeddb';
 
@@ -66,5 +66,22 @@ test('comma keeps typing focused and accepts successive tags while earlier saves
  assert.equal(input.value,'next draft'); assert.notEqual(input.disabled,true);
  input.value=''; assert.deepEqual(editor.get(),['math','geometry','modulo']);
  assert.equal(elements.find(el=>el.className==='subject-tags').className,'subject-tags');
+ }finally{globalThis.document=previous;}
+});
+
+test('detail starts with compact tags only and opens editing on demand without a permanent input row', () => {
+ const previous=globalThis.document, elements=[];
+ const make=()=>({children:[],value:'',events:{},setAttribute(){},setCustomValidity(){},reportValidity(){},focus(){},append(...items){this.children.push(...items)},prepend(...items){this.children.unshift(...items)},replaceChildren(...items){this.children=items},addEventListener(type,fn){this.events[type]=fn;}});
+ globalThis.document={createElement(){const el=make();elements.push(el);return el;}};
+ try {
+ const container=make(), editor=createDetailSubjectTags(container,async()=>{});
+ editor.set(['geometry']);
+ const display=elements.find(el=>el.className==='detail-subject-display');
+ const field=elements.find(el=>el.className==='modal-field problem-subject-field');
+ assert.equal(field.hidden,true); assert.equal(display.hidden,false);
+ assert.equal(display.children[0].textContent,'geometry');
+ display.children[0].onclick(); assert.equal(field.hidden,false); assert.equal(display.hidden,true);
+ field.events.keydown({key:'Escape',preventDefault(){},stopPropagation(){}});
+ assert.equal(field.hidden,true); assert.equal(display.hidden,false);
  }finally{globalThis.document=previous;}
 });
