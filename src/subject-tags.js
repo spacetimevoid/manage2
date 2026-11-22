@@ -13,33 +13,37 @@ export const problemCode = file => {
 export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChange = null } = {}) {
   const field = document.createElement('div'); field.className = 'modal-field problem-subject-field'; field.hidden = true;
   const label = document.createElement('label'); label.className = 'modal-label'; label.htmlFor = id; label.textContent = 'Subjects';
-  const box = document.createElement('div'); box.className = 'subject-tags classic-input';
+  const box = document.createElement('div'); box.className = 'subject-tags';
   const tags = document.createElement('div'); tags.className = 'subject-tag-items';
   const input = document.createElement('input'); input.id = id; input.placeholder = 'Add subject'; input.autocomplete = 'off';
   input.setAttribute('aria-label', 'Add subject with Enter or comma');
   box.append(tags, input); field.append(label, box); form.prepend(field);
-  let values = [], busy = false, generation = 0;
+  let values = [], confirmed = [], generation = 0, revision = 0, confirmedRevision = 0;
   async function changed(before) {
     if (!onChange) return;
     const version = generation;
-    busy = true; input.disabled = true;
+    const change = ++revision, next = [...values];
     try {
-      if (!values.length) throw new Error('Keep at least one subject.');
-      await onChange([...values]);
-    } catch (error) { if (version === generation) { values = before; render(); input.setCustomValidity(error.message); input.reportValidity(); } }
-    finally { busy = false; input.disabled = false; }
+      if (!next.length) throw new Error('Keep at least one subject.');
+      await onChange(next);
+      if (version === generation && change > confirmedRevision) { confirmed = next; confirmedRevision = change; }
+    } catch (error) {
+      if (version === generation && change === revision) {
+        values = [...confirmed]; render(); input.setCustomValidity(error.message); input.reportValidity();
+      }
+    }
   }
   function render() {
     tags.replaceChildren(...values.map(value => {
       const tag = document.createElement('span'); tag.className = 'subject-tag';
       const name = document.createElement('span'); name.textContent = value;
       const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.setAttribute('aria-label', `Remove ${value}`);
-      remove.onclick = () => { if (busy) return; const before = [...values]; values = values.filter(item => item !== value); render(); input.focus(); return changed(before); };
+      remove.onclick = () => { const before = [...values]; values = values.filter(item => item !== value); render(); input.focus(); return changed(before); };
       tag.append(name, remove); return tag;
     }));
   }
   function commit() {
-    if (busy || !input.value.trim()) return;
+    if (!input.value.trim()) return;
     const before = [...values];
     const next = input.value.split(',').filter(value => value.trim()).map(normalizeSubject);
     values = [...new Set([...values, ...next])]; input.value = ''; input.setCustomValidity(''); render();
@@ -49,10 +53,12 @@ export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChan
   input.onkeydown = event => {
     if (event.isComposing || !['Enter', ','].includes(event.key)) return;
     event.preventDefault();
+    event.stopPropagation?.();
     try { commit(); } catch (error) { input.setCustomValidity(error.message); input.reportValidity(); }
+    input.focus();
   };
   return {
-    set(items, visible) { generation++; values = [...new Set(items)]; input.value = ''; input.setCustomValidity(''); field.hidden = !visible; render(); },
+    set(items, visible) { generation++; revision = confirmedRevision = 0; values = [...new Set(items)]; confirmed = [...values]; input.value = ''; input.setCustomValidity(''); field.hidden = !visible; render(); },
     get() { commit(); if (!values.length) throw new Error('Add at least one subject.'); return [...values]; },
     focus() { input.focus(); },
   };

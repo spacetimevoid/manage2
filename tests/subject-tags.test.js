@@ -49,3 +49,22 @@ test('inline tag changes await saving and restore the previous tags if saving fa
  assert.deepEqual(editor.get(),['math','geometry']);
  }finally{globalThis.document=previous;}
 });
+
+test('comma keeps typing focused and accepts successive tags while earlier saves are pending', async () => {
+ const previous=globalThis.document, elements=[], requests=[];
+ globalThis.document={createElement(){const el={children:[],value:'',setAttribute(){},setCustomValidity(v){this.error=v},reportValidity(){},focus(){this.focused=true},append(...items){this.children.push(...items)},replaceChildren(...items){this.children=items}};elements.push(el);return el;}};
+ try {
+ const editor=createSubjectTags({prepend(){}},{onChange:values=>new Promise((resolve,reject)=>requests.push({values,resolve,reject}))});
+ editor.set(['math'],true);
+ const input=elements.find(el=>el.id==='problemSubjectTagsInput');
+ input.value='geometry'; input.onkeydown({key:',',preventDefault(){}});
+ assert.equal(input.focused,true); assert.notEqual(input.disabled,true); assert.equal(input.value,'');
+ input.value='modulo'; input.onkeydown({key:',',preventDefault(){}});
+ assert.deepEqual(requests[1].values,['math','geometry','modulo']);
+ input.value='next draft'; requests[0].resolve(); requests[1].resolve();
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(input.value,'next draft'); assert.notEqual(input.disabled,true);
+ input.value=''; assert.deepEqual(editor.get(),['math','geometry','modulo']);
+ assert.equal(elements.find(el=>el.className==='subject-tags').className,'subject-tags');
+ }finally{globalThis.document=previous;}
+});
