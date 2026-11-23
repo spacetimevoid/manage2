@@ -28,6 +28,7 @@ export function createDeletionHistory(confirm) {
   const history = [];
   let busy = false;
   return {
+    record(undo) { history.push(undo); },
     get canUndo() { return history.length > 0 && !busy; },
     async remove(message, action) {
       if (busy) return;
@@ -41,7 +42,8 @@ export function createDeletionHistory(confirm) {
     async undo() {
       if (busy || !history.length) return;
       busy = true;
-      try { await history.at(-1)(); history.pop(); }
+      const action = history.at(-1);
+      try { await action(); history.splice(history.lastIndexOf(action), 1); }
       finally { busy = false; }
     },
   };

@@ -25,6 +25,17 @@ function mount(files, options = {}) {
   $('problemDetailPage').querySelector = () => null;
   globalThis.document = { getElementById: $, activeElement: null, body: { style: {} }, addEventListener() {}, querySelectorAll: () => [] };
   globalThis.window = { addEventListener() {} };
+  if (options.subjectUI) {
+    const tagElement = () => ({ ...make(), children: [],
+      append(...children) { this.children.push(...children); children.forEach(child => child.parentElement = this); },
+      prepend(...children) { this.children.unshift(...children); children.forEach(child => child.parentElement = this); },
+      replaceChildren(...children) { this.children=[]; this.append(...children); },
+      showPopover() { this.open=true; }, hidePopover() { this.open=false; }, matches() { return !!this.open; },
+      getBoundingClientRect() { return { width: 300, left: 20, bottom: 100 }; }, offsetWidth: 300, offsetHeight: 160,
+    });
+    globalThis.document.createElement = tagElement;
+    Object.assign($('problemDetailBreadcrumb'), tagElement());
+  }
   const background = {};
   const detail = createProblemDetail({ background, getItems: () => files, onChange() {},
     hideReader(page, finish) { page.classList.remove('is-open'); finish(); return Promise.resolve(); },
@@ -270,4 +281,24 @@ test('statement and solution accept image filenames when the picker omits MIME m
     await app.attach('solutionImageInput', new File(['pixels'], 'answer.jpg', { type: 'application/octet-stream' }));
     assert.equal(file.solution.images.length, 1); assert.equal(file.solution.type, 'image');
   } finally { app.cleanup(); }
+});
+
+test('detail edits in a floating picker and undo restores a removed tag without losing subsequent additions', async () => {
+ const { createDeletionHistory } = await import('../src/deletion.js');
+ const history=createDeletionHistory(async()=>true);
+ const file={...problem('tags'),subjects:['math','geometry']};
+ const beforeWidth=globalThis.innerWidth,beforeHeight=globalThis.innerHeight;
+ globalThis.innerWidth=800;globalThis.innerHeight=600;
+ const app=mount([file],{subjectUI:true,deletionHistory:history});
+ try {
+ await app.detail.open(file);
+ const root=app.$('problemDetailBreadcrumb'), display=root.children.find(el=>el.className==='detail-subject-display'), field=root.children.find(el=>el.className==='modal-field problem-subject-field');
+ display.children[0].onclick();assert.equal(field.open,true);assert.equal(display.hidden,false,'header does not move while editing');
+ const box=field.children.find(el=>el.className==='subject-tags'), chips=box.children[0],input=box.children[1];
+ await chips.children[0].children[1].onclick();assert.deepEqual(file.subjects,['geometry']);assert.equal(history.canUndo,true);
+ input.value='algebra';input.onkeydown({key:',',preventDefault(){}});await new Promise(resolve=>setImmediate(resolve));
+ assert.deepEqual(file.subjects,['geometry','algebra']);
+ await history.undo();assert.deepEqual(file.subjects,['math','geometry','algebra']);assert.equal(history.canUndo,false);
+ assert.ok(app.writes.at(-1).subjects.includes('math'));
+ }finally{app.cleanup();globalThis.innerWidth=beforeWidth;globalThis.innerHeight=beforeHeight;}
 });

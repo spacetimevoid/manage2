@@ -1,4 +1,5 @@
 import { problemSummary, createProblemTagsPopover } from './problem-label.js';
+import { subjectLabel } from './subject-picker.js';
 import { installBrowsePaste } from './browse-paste.js';
 import { createSubjectTags, documentSubjects, hasSubject } from './subject-tags.js';
 import './subject-tags.css';
@@ -61,7 +62,7 @@ function renderSidebar(animate = true) {
   if (activeSubject !== 'all' && !subjects().includes(activeSubject)) { activeSubject = 'all'; currentPage = 1; }
   const q = searchQuery.trim().toLocaleLowerCase();
   const documents = visibleFiles();
-  const rows = [{ name: 'all', label: 'All', count: documents.length }, ...subjects().map(s => ({ name: s, label: s, count: documents.filter(f => hasSubject(f, s)).length }))];
+  const rows = [{ name: 'all', label: 'All', count: documents.length }, ...subjects().map(s => ({ name: s, label: activeView === 'problems' ? subjectLabel(s) : s, count: documents.filter(f => hasSubject(f, s)).length }))];
   $('subjectList').innerHTML = rows.filter(s => s.label.toLocaleLowerCase().includes(q)).map(s => `<button type="button" class="subject-item ${s.name === activeSubject ? 'is-active' : ''}" data-subject="${esc(s.name)}" draggable="${s.name !== 'all'}" aria-current="${s.name === activeSubject ? 'page' : 'false'}"><span class="subject-name">${esc(s.label)}</span><span class="subject-count">${s.count}</span></button>`).join('') || '<div class="sidebar-empty">No subjects found</div>';
   $('modalSubjectsDatalist').innerHTML = subjects().map(s => `<option value="${esc(s)}"></option>`).join('');
   finishMotion();
@@ -171,6 +172,7 @@ function persist(file) {
   return result;
 }
 const problemDetail = createProblemDetail({
+  getFile: id => files.find(file => file.id === id),
   getSubjects: () => [...subjectNames(files, 'sources'), ...subjectNames(files, 'problems')],
   deletionHistory,
   persist,

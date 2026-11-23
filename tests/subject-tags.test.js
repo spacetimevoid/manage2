@@ -130,19 +130,19 @@ test('clicking X cannot collapse the editor during input-to-button focus transfe
 
 test('subject suggestions exclude selected tags, filter typing, and commit mouse/keyboard choices once', () => {
  const previous={document:globalThis.document,window:globalThis.window}, elements=[];
- const make=()=>({children:[],value:'',events:{},style:{},attrs:{},classList:{add(){}},setAttribute(k,v){this.attrs[k]=v},removeAttribute(k){delete this.attrs[k]},setCustomValidity(){},reportValidity(){},focus(){},contains(){return true},scrollIntoView(){},getBoundingClientRect(){return {top:100,bottom:130}},append(...items){for(const item of items){item.parentElement=this;this.children.push(item)}},prepend(...items){this.append(...items)},replaceChildren(...items){this.children=[];this.append(...items)},addEventListener(type,fn,capture){this.events[type]={fn,capture}}});
+ const make=()=>({children:[],value:'',events:{},style:{},attrs:{},classList:{add(){},toggle(){}},setAttribute(k,v){this.attrs[k]=v},removeAttribute(k){delete this.attrs[k]},setCustomValidity(){},reportValidity(){},focus(){},contains(){return true},scrollIntoView(){},getBoundingClientRect(){return {top:100,bottom:130}},append(...items){for(const item of items){item.parentElement=this;this.children.push(item)}},prepend(...items){this.append(...items)},replaceChildren(...items){this.children=[];this.append(...items)},addEventListener(type,fn,capture){this.events[type]={fn,capture}}});
  globalThis.document={createElement(){const el=make();elements.push(el);return el},addEventListener(){}};globalThis.window={innerHeight:800,addEventListener(){}};
  try {
  const editor=createSubjectTags(make(),{getSuggestions:()=>['math','geometry','algebra','math']}); editor.set(['math'],true);
  const input=elements.find(el=>el.id==='problemSubjectTagsInput'), list=elements.find(el=>el.attrs.role==='listbox');
- input.events.focus.fn(); assert.deepEqual(list.children.map(el=>el.textContent),['algebra','geometry']); assert.equal(list.style.maxHeight,'194px');
+ input.events.focus.fn(); assert.deepEqual(list.children.map(el=>el.children[0].textContent),['algebra','geometry','math']); assert.equal(list.style.maxHeight,'194px');
  list.children[0].onclick(); assert.deepEqual(editor.get(),['math','algebra']); assert.equal(input.value,'');
- input.value='geo'; input.events.input.fn(); assert.equal(list.children.length,1);
+ input.value='geo'; input.events.input.fn(); assert.equal(list.children.length,2);
  input.events.keydown.fn({key:'ArrowDown',preventDefault(){}});
  let stopped=false; input.events.keydown.fn({key:'Enter',preventDefault(){},stopImmediatePropagation(){stopped=true}});
  assert.equal(input.events.keydown.capture,true); assert.equal(stopped,true);
- assert.deepEqual(editor.get(),['math','algebra','geometry']); assert.equal(list.hidden,true);
- input.events.focus.fn(); assert.equal(list.hidden,true,'all existing subjects selected');
+ assert.deepEqual(editor.get(),['math','algebra','geometry']); assert.equal(list.hidden,false);
+ input.events.focus.fn(); assert.equal(list.children.length,3); assert.ok(list.children.every(row=>row.attrs['aria-selected']==='true'));
  }finally{Object.assign(globalThis,previous)}
 });
 
@@ -161,11 +161,37 @@ test('overflow ellipsis expands all detail tags and resets for the next problem'
  try {
  const editor=createDetailSubjectTags(make(),async()=>{});editor.set(['math','geometry','modulo']);
  const display=elements.find(el=>el.className==='detail-subject-display');
- const more=display.children.at(-1); assert.equal(more.textContent,'...'); assert.equal(more.hidden,false);
+ const more=display.children.at(-1); assert.equal(more.textContent,'+2'); assert.equal(more.hidden,false);
  assert.equal(display.children[1].hidden,true);
- assert.ok(more.className.includes('subject-tag'));
+ assert.ok(more.className.includes('detail-subject-more'));
  more.onclick();assert.equal(more.hidden,false);assert.match(more.innerHTML, /<svg/); assert.match(more.innerHTML, /aria-hidden="true"/);assert.ok(display.children.slice(0,-1).every(tag=>!tag.hidden));
- more.onclick();assert.equal(more.textContent,'...');assert.equal(display.children[1].hidden,true);
+ more.onclick();assert.equal(more.textContent,'+2');assert.equal(display.children[1].hidden,true);
  editor.set(['math','geometry','modulo']);assert.equal(display.children.at(-1).hidden,false);
  }finally{globalThis.document=previous;}
+});
+
+test('draft tag removal supports Ctrl+Z while text input remains native', () => {
+ const previous=globalThis.document,elements=[];
+ globalThis.document={createElement(){const el={children:[],value:'',setAttribute(){},setCustomValidity(){},reportValidity(){},focus(){},append(...items){this.children.push(...items)},replaceChildren(...items){this.children=items}};elements.push(el);return el;}};
+ try {
+ const editor=createSubjectTags({prepend(){}});editor.set(['math','geometry'],true);
+ const input=elements.find(el=>el.id==='problemSubjectTagsInput'),tags=elements.find(el=>el.className==='subject-tag-items');
+ tags.children[0].children[1].onclick();assert.deepEqual(editor.get(),['geometry']);
+ input.onkeydown({key:'z',ctrlKey:true,preventDefault(){},stopPropagation(){}});assert.deepEqual(editor.get(),['math','geometry']);
+ input.value='draft';input.onkeydown({key:'z',ctrlKey:true,preventDefault(){assert.fail('text undo must stay native')}});
+ }finally{globalThis.document=previous;}
+});
+
+test('picker explicitly creates a new subject, marks it selected, and can unselect it without closing', () => {
+ const previous={document:globalThis.document,window:globalThis.window},elements=[];
+ const make=()=>({children:[],value:'',events:{},style:{},attrs:{},classList:{add(){},toggle(){}},setAttribute(k,v){this.attrs[k]=v},removeAttribute(k){delete this.attrs[k]},setCustomValidity(){},reportValidity(){},focus(){},contains(){return true},scrollIntoView(){},getBoundingClientRect(){return {top:100,bottom:130}},append(...items){for(const item of items){item.parentElement=this;this.children.push(item)}},prepend(...items){this.append(...items)},replaceChildren(...items){this.children=[];this.append(...items)},addEventListener(type,fn,capture){this.events[type]={fn,capture}}});
+ globalThis.document={createElement(){const el=make();elements.push(el);return el},addEventListener(){}};globalThis.window={innerHeight:800,addEventListener(){}};
+ try {
+ const editor=createSubjectTags(make(),{allowEmpty:true,getSuggestions:()=>['math']});editor.set([],true);
+ const input=elements.find(el=>el.id==='problemSubjectTagsInput'),list=elements.find(el=>el.attrs.role==='listbox');
+ input.value='linear algebra';input.events.input.fn();assert.equal(list.children.length,1);assert.match(list.children[0].children[0].textContent,/Create/);
+ list.children[0].onclick();assert.deepEqual(editor.get(),['linear-algebra']);
+ const selected=list.children.find(el=>el.attrs['aria-selected']==='true');assert.equal(selected.children[0].textContent,'linear algebra');selected.onclick();
+ assert.deepEqual(editor.get(),[]);assert.equal(list.hidden,false);
+ }finally{Object.assign(globalThis,previous)}
 });

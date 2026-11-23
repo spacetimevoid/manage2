@@ -10,17 +10,29 @@ import { captureListMotion } from './list-motion.js';
 import { isImageFile } from './uploads.js';
 import { snapshotDocument } from './library.js';
 
-export function createProblemDetail({ persist, getItems, onChange, background, getSubjects = null, deletionHistory = null, prepare = null, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
+export function createProblemDetail({ persist, getItems, onChange, background, getFile = id => getItems().find(file => file.id === id), getSubjects = null, deletionHistory = null, prepare = null, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
   const $ = id => document.getElementById(id);
   const page = $('problemDetailPage');
   const imageZoom = createImageZoom();
   let active = null, items = [], returnFocus = null;
-  const subjectEditor = $('problemDetailBreadcrumb').prepend ? createDetailSubjectTags($('problemDetailBreadcrumb'), async subjects => {
+  const subjectEditor = $('problemDetailBreadcrumb').prepend ? createDetailSubjectTags($('problemDetailBreadcrumb'), async (subjects, previous) => {
       const file = active;
       if (!file) return;
+      const before = previous || documentSubjects(file);
       await persist({ ...file, subjects, subject: subjects[0] || '' });
-      Object.assign(file, { subjects, subject: subjects[0] || '' }); onChange();
-  }, getSubjects) : null;
+      const removed = before.filter(value => !subjects.includes(value));
+      Object.assign(file, { subjects, subject: subjects[0] || '' });
+      if (removed.length && deletionHistory) deletionHistory.record(async () => {
+        const target = getFile(file.id);
+        if (!target) throw new Error('Restore the problem before restoring its subjects.');
+        const restored = [...new Set([...before, ...documentSubjects(target)])];
+        await persist({ ...target, subjects: restored, subject: restored[0] || '' });
+        Object.assign(target, { subjects: restored, subject: restored[0] || '' });
+        if (active?.id === target.id) subjectEditor.set(restored);
+        onChange();
+      });
+      onChange();
+  }, getSubjects, () => deletionHistory?.undo()) : null;
   let contentAnimation = null, prefetchTimer = null;
   let closing = false, closingPromise = null, preparation = 0, pending = null;
   const readyImages = new Map(), decodingImages = new WeakMap();
