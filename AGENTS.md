@@ -25,6 +25,7 @@ Dự án phục vụ việc lưu trữ file đề và bài tập hay, khó đư�
 
 - Hoàn thành đầy đủ từng yêu cầu một cách tỉ mỉ, cẩn thận; ưu tiên tính đúng đắn hơn tốc độ. Dành thời gian cần thiết để rà soát và kiểm chứng, không dừng ở bản sửa tạm hoặc kết quả chưa đạt chỉ để báo xong sớm. Tuân thủ chi tiết tại mục 8 của `RULES.md`.
 - Trước khi sửa, xác định phạm vi yêu cầu và đọc phần mã liên quan.
+- Khi người dùng yêu cầu thêm hoặc điều chỉnh tính năng, chủ động liệt kê các phần bổ sung liên quan trực tiếp mà người dùng có thể chưa tính tới để người dùng duyệt trước khi triển khai; phân biệt với phần đã được yêu cầu và tiếp tục các phần độc lập đã được phép. Tuân thủ mục 9 của `RULES.md`.
 - Ưu tiên bản sửa nhỏ nhất đủ giải quyết vấn đề. Không tự tái cấu trúc hoặc thêm thư viện khi không cần thiết cho yêu cầu.
 - Giữ các chức năng hiện có ngoài phạm vi sửa. Không tự áp đặt giới hạn dữ liệu hoặc đổi giá trị mặc định.
 - Không tự đăng tải, triển khai hoặc truyền file và dữ liệu của người dùng ra ngoài khi chưa được yêu cầu.
