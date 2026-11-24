@@ -24,9 +24,9 @@ Uploads, notes, difficulty, completion status and solutions are saved to Supabas
 
 ## Problem tag suggestions
 
-In Upload Problem, **Suggest tags** sends the selected image or PDF and available subject labels to Gemini through Vercel AI Gateway. Suggestions join the editable Subjects field and are saved only when you choose **Save**.
+In Upload Problem, **Suggest tags** sends the selected image and available subject labels to `claude-haiku-5-5` through `1gw.gwai.cloud`. Suggestions join the editable Subjects field and are saved only when you choose **Save**. PDF uploads use manual tags.
 
-The route requires an approved Supabase session. On Vercel it uses the project's OIDC identity. For local AI testing, run the app with `vercel dev` and use a Vercel OIDC token or a server-only `AI_GATEWAY_API_KEY`. Vite alone serves the UI without the API route. If a file exceeds the Vercel Function request limit, it can still be uploaded with manual tags.
+The route requires an approved Supabase session and a server-only `PROBLEM_TAGS_API_KEY`. For local AI testing, run the app with `vercel dev`. Vite alone serves the UI. If an image exceeds the Vercel Function request limit, it can still be uploaded with manual tags.
 
 ## Checks
 

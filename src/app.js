@@ -267,14 +267,14 @@ function resetTagSuggestion() {
   tagSuggestion = null;
   const button = $('modalSuggestTagsBtn');
   button.hidden = setModal.view !== 'problems' || !!setModal.file;
-  button.disabled = button.hidden || !selectedUpload() || $('uploadPdfForm').querySelector('[type=submit]').disabled;
+  button.disabled = button.hidden || !isImageFile(selectedUpload()) || $('uploadPdfForm').querySelector('[type=submit]').disabled;
   button.textContent = 'Suggest tags';
 }
 
 $('modalSuggestTagsBtn').onclick = async () => {
   const button = $('modalSuggestTagsBtn');
   const file = selectedUpload();
-  if (button.hidden || button.disabled || !file) return;
+  if (button.hidden || button.disabled || !isImageFile(file)) return;
   const request = new AbortController();
   tagSuggestion = request;
   button.disabled = true;

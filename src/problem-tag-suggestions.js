@@ -1,12 +1,8 @@
 import { cloudClient } from './cloud.js';
-import { validatePdf } from './library.js';
 import { isImageFile } from './uploads.js';
 
 async function prepareAttachment(file) {
-  if (!isImageFile(file)) {
-    await validatePdf(file);
-    return file.slice(0, file.size, 'application/pdf');
-  }
+  if (!isImageFile(file)) throw new Error('Choose an image to suggest tags.');
   if (['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) return file;
 
   // Use the browser's decoder for image formats the upload form already accepts.
@@ -38,7 +34,7 @@ export async function suggestProblemTags(file, subjects, signal) {
 
   const attachment = await prepareAttachment(file);
   const body = new FormData();
-  body.append('file', attachment, attachment.type === 'application/pdf' ? 'problem.pdf' : 'problem');
+  body.append('file', attachment, 'problem');
   body.append('subjects', JSON.stringify(subjects));
   const response = await fetch('/api/problem-tags', {
     method: 'POST',

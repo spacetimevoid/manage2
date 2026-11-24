@@ -59,6 +59,18 @@ test('Problems still accepts PDFs and Sources remains PDF-only', async () => {
   await sources.submit(pdf); assert.equal(sources.stored[0].blob.type, 'application/pdf');
   assert.equal(sources.stored[0].kind, undefined);
 });
+test('AI suggestions are available for problem images, while PDFs still upload with manual tags', () => {
+  const app = form('problems');
+  const button = app.$('modalSuggestTagsBtn');
+  const input = app.$('pdfFileInput');
+  assert.equal(button.disabled, true);
+  input.files = [png()];
+  input.onchange();
+  assert.equal(button.disabled, false);
+  input.files = [new File(['%PDF-1.7\n'], 'exam.pdf', { type: 'application/pdf' })];
+  input.onchange();
+  assert.equal(button.disabled, true);
+});
 test('broken images are rejected and image uploads never receive a forced PDF extension', async () => {
   await assert.rejects(validateUpload(png(), 'problems', async () => { throw new Error('decode failed'); }), /valid image or PDF/);
   await assert.rejects(validateUpload(null, 'problems'), /image or PDF/);
