@@ -19,6 +19,18 @@
     cursor: pointer;
 }
 .source-outline button:hover, .source-outline button:focus-visible { background: #e8e8ed; }
+
+.pdf-page-sheet.has-problem-highlight::after {
+    content: "";
+    position: absolute;
+    left: var(--problem-x);
+    top: var(--problem-y);
+    width: var(--problem-width);
+    height: var(--problem-height);
+    outline: 2px solid #007aff;
+    pointer-events: none;
+}
+
 .modal-backdrop.is-extracting { z-index: 160; }
 .modal-backdrop.is-extracting .modal-field:has(#modalBrowseBtn) { display: none; }
 body:has(.modal-backdrop.is-extracting.is-open) > .pdf-fullscreen-page { filter: blur(4px); }
