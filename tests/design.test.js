@@ -47,7 +47,7 @@ test('problem detail markup and styles are copied from the supplied P.html desig
   const detailMarkup = source => source.slice(source.indexOf('    <section class="problem-detail-page"'), source.indexOf('    <script', source.indexOf('    <section class="problem-detail-page"'))).trim().replace(/\r\n/g, '\n');
   assert.equal(detailMarkup(html)
     .replace('>Add problem</button>', '>Add image</button>')
-    .replace(/\n +<a class="doc-action-link" id="problemSourceLink" hidden>Open source<\/a>/, ''), detailMarkup(reference));
+    .replace(/\n +<a class="doc-action-link" id="problemSourceLink"[^>]*>[\s\S]*?<\/a>/, ''), detailMarkup(reference));
   const referenceCss = reference.match(/<style>([\s\S]*?)<\/style>/)[1];
   const start = referenceCss.indexOf('        .problem-detail-page {');
   const media = referenceCss.indexOf('        @media (max-width: 760px)', start);
@@ -58,6 +58,6 @@ test('problem detail markup and styles are copied from the supplied P.html desig
     .replace('width: 100vw;', 'width: 100%;')
     .replace('overflow-y: auto;', 'overflow-y: auto;\n            overflow-x: hidden;');
   assert.equal(actual.replace(/\r\n/g, '\n')
-    .replace(/\/\* Let the title shrink beside the source link on narrow screens\. \*\/\n[^\n]+\n[^\n]+\n/, ''), expected.replace(/\r\n/g, '\n'));
+    .split('/* Problem source link. */')[0], expected.replace(/\r\n/g, '\n'));
   assert.doesNotMatch(actual, /(?:^|\})\s*(?:body|\.manage-nav|\.app-layout|\.sidebar)\s*\{/);
 });

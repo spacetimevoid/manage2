@@ -34,7 +34,7 @@ test('viewer opens a PDF URL with the installed PDF.js API, including after reop
     $: element, esc: value => value, app: {},
     document: { activeElement: null, body: { style: {} } },
     syncToolbar() {},
-    renderSourceOutline() {}, rememberReader() {},
+    renderSourceOutline() {}, rememberReader() {}, sourceReturnProblem: () => null,
     renderedPages: 0,
   });
   // Exercise the production openViewer function, rather than a separate loader.

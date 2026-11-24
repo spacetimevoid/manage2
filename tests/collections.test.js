@@ -54,6 +54,7 @@ test('runtime navigation and reload keep headings, columns, counts and records i
     const links = ['sources', 'problems'].map(view => Object.assign(makeElement(), { dataset: { view } }));
     const date = makeElement(), dateLabel = makeElement(), status = makeElement(), statusLabel = makeElement();
     status.querySelector = () => statusLabel;
+    const previousEntries = [];
     let onHashChange;
     const context = vm.createContext({ documentSubjects, hasSubject, problemSummary, subjectLabel, captureListMotion: (element, options) => { if (options) element.motion = options; return () => {}; }, mediaLoader: { warm() {} }, app: { classList: { toggle() {} } },
       SUBJECTS: ['math'], activeView: viewFromHash(hash), activeSubject: 'all', currentPage: 1, sortKey: null, sortDir: 'asc', searchQuery: '', activeFile: null,
@@ -63,7 +64,19 @@ test('runtime navigation and reload keep headings, columns, counts and records i
       ],
       location: { hash }, $, queryFiles, collectionFiles, subjectNames, normalizedDifficulty, dateOf, esc: escapeHtml, viewFromHash, readerHash, readerRoute, problemTitle,
       libraryReady: true, routeSequence: 0, viewerClosing: false, viewerClosePromise: null,
-      history: { replaceState(_state, _title, hash) { context.location.hash = hash; } },
+      history: {
+        state: null,
+        replaceState(state, _title, hash) { this.state = state; context.location.hash = hash; },
+        pushState(state, title, hash) {
+          previousEntries.push({ state: this.state, hash: context.location.hash });
+          this.replaceState(state, title, hash);
+        },
+        back() {
+          const previous = previousEntries.pop();
+          this.replaceState(previous.state, '', previous.hash);
+          return onHashChange();
+        },
+      },
       problemDetail: { isOpen: false, activeId: null },
       viewName: () => context.activeView === 'problems' ? 'Problems' : 'Sources',
       visibleFiles: () => collectionFiles(context.files, context.activeView),
@@ -124,6 +137,19 @@ test('runtime navigation and reload keep headings, columns, counts and records i
   await switching.navigate('#sources/s');
   assert.equal(switching.context.activeFile.id, 's');
   assert.equal(switching.context.location.hash, '#sources/s');
+  await switching.context.backFromSource();
+  assert.equal(switching.context.location.hash, '#sources');
+
+  const linked = mount('#problems/p');
+  const problem = linked.context.files.find(file => file.id === 'p');
+  problem.sourceLocation = { sourceId: 's' };
+  await linked.context.applyRoute();
+  await linked.context.openProblemSource(problem);
+  assert.equal(linked.context.activeFile.id, 's');
+  assert.equal(linked.context.history.state.returnProblemId, 'p');
+  await linked.context.backFromSource();
+  assert.equal(linked.context.location.hash, '#problems/p');
+  assert.equal(linked.context.problemDetail.activeId, 'p');
 });
 
 test('empty subjects persist separately by collection and never become documents or affect document counts', async () => {

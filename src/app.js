@@ -102,7 +102,8 @@ function renderView() {
 }
 function rememberReader(file) {
   const view = file.kind === 'problem' ? 'problems' : 'sources';
-  history.replaceState(null, '', readerHash(view, file.id));
+  const hash = readerHash(view, file.id);
+  history.replaceState(location.hash === hash ? history.state : null, '', hash);
 }
 function forgetReader(file) {
   const route = readerRoute(location.hash);
@@ -131,6 +132,20 @@ async function applyRoute() {
   } else if (activeFile?.id !== file.id) await openViewer(file);
 }
 window.addEventListener('hashchange', () => applyRoute().catch(error => console.error('Unable to restore reader:', error)));
+function openProblemSource(problem) {
+  const sourceId = problem.sourceLocation.sourceId;
+  history.pushState({ returnProblemId: problem.id }, '', readerHash('sources', sourceId));
+  return applyRoute().catch(error => console.error('Unable to open the original source:', error));
+}
+function sourceReturnProblem(source) {
+  if (!source || location.hash !== readerHash('sources', source.id)) return null;
+  const problemId = history.state?.returnProblemId;
+  return files.find(file => file.kind === 'problem' && file.id === problemId && file.sourceLocation?.sourceId === source.id);
+}
+function backFromSource() {
+  if (sourceReturnProblem(activeFile)) return history.back();
+  return closeViewer();
+}
 function selectSubject(subject) {
   activeSubject = subject; currentPage = 1;
   renderSidebar(); renderFiles();
@@ -183,6 +198,7 @@ const problemDetail = createProblemDetail({
   onChange: () => { renderSidebar(); renderFiles(); },
   onOpen(file) { mediaLoader.warm([]); rememberReader(file); },
   onClose: forgetReader,
+  onOpenSource: openProblemSource,
   async checkPdf(blob) {
     await validatePdf(blob);
     const task = pdfjsLib.getDocument({ data: await blob.arrayBuffer() });
@@ -581,7 +597,7 @@ async function openViewer(file) {
   const token = ++viewerToken;
   let url = file.blobUrl || (file.blob instanceof Blob ? file.blobUrl = URL.createObjectURL(file.blob) : null);
   const collection = file.kind === 'problem' ? 'Problems' : 'Sources';
-  $('viewerBackBtn').title = `Back to ${collection}`;
+  $('viewerBackBtn').title = sourceReturnProblem(file) ? 'Back to Problem' : `Back to ${collection}`;
   $('pdfViewerTitle').innerHTML = `${collection}<span class="sep">/</span>${esc(file.subject)}<span class="sep">/</span>${esc(file.name)}`;
   $('pdfViewerSub').textContent = file.kind === 'problem' ? `${file.topic}  ·  Added ${file.addedDate}  ·  ${difficultyLabel(file.difficulty)}` : `${file.topic}  ·  Due ${file.dueDate}`;
   $('pdfNotesTextarea').value = file.notes || '';
@@ -654,7 +670,7 @@ for (const event of ['pointerover', 'focusin', 'touchstart']) $('fileList').addE
 $('fileList').addEventListener('keydown', event => {
   if (event.key === 'Enter' && event.target.matches('.file-row')) { event.preventDefault(); event.target.click(); }
 });
-$('viewerBackBtn').onclick = closeViewer;
+$('viewerBackBtn').onclick = backFromSource;
 function goPage(n, smooth = true) {
   if (!pdfDoc) return;
   viewerPage = Math.max(1, Math.min(pdfDoc.numPages, n));

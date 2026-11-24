@@ -565,6 +565,25 @@
             }
 
 }
-/* Let the title shrink beside the source link on narrow screens. */
-.problem-title-row:has(#problemSourceLink:not([hidden])) .problem-detail-title-input { min-width: 0; }
-#problemSourceLink { flex-shrink: 0; }
+/* Problem source link. */
+.problem-title-row:has(#problemSourceLink:not([hidden])) {
+    justify-content: flex-start;
+    align-items: center;
+    gap: 2px;
+}
+.problem-title-row:has(#problemSourceLink:not([hidden])) .problem-detail-title-input {
+    width: calc(11ch + 14px);
+    min-width: 0;
+}
+@supports (field-sizing: content) {
+    .problem-title-row:has(#problemSourceLink:not([hidden])) .problem-detail-title-input {
+        width: auto;
+        field-sizing: content;
+    }
+}
+#problemSourceLink {
+    display: inline-flex;
+    flex-shrink: 0;
+    padding: 6px;
+    margin: 0;
+}

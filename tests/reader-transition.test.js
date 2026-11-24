@@ -56,7 +56,7 @@ test('opening waits for the first painted page; closing keeps the bitmap and bac
     pdfSession: { open: () => task }, mediaLoader: { warm() {}, load: async file => file }, esc: value => value, console,
     document: { activeElement: null, body: { style: {} } }, app: {},
     syncToolbar() {}, renderPages: () => firstPaint, saveNote() {}, cancelRenders() {}, setSelectMode() {}, renderFiles() {},
-    renderSourceOutline() {}, rememberReader() {}, forgetReader() {},
+    renderSourceOutline() {}, rememberReader() {}, forgetReader() {}, sourceReturnProblem: () => null,
     closeReader(_page, finish) { $ ('pdfViewerPage').classList.remove('is-open'); finishClose = finish; },
   });
   const source = fs.readFileSync(new URL('../src/app.js', import.meta.url), 'utf8');

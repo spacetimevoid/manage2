@@ -10,12 +10,18 @@ import { captureListMotion } from './list-motion.js';
 import { isImageFile } from './uploads.js';
 import { snapshotDocument } from './library.js';
 
-export function createProblemDetail({ persist, getItems, onChange, background, getFile = id => getItems().find(file => file.id === id), getSubjects = null, deletionHistory = null, prepare = null, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
+export function createProblemDetail({ persist, getItems, onChange, background, getFile = id => getItems().find(file => file.id === id), getSubjects = null, deletionHistory = null, prepare = null, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, onOpenSource = null, hideReader = closeReader }) {
   const $ = id => document.getElementById(id);
   const page = $('problemDetailPage');
   const sourceLink = $('problemSourceLink');
   const imageZoom = createImageZoom();
   let active = null, items = [], returnFocus = null;
+  sourceLink.onclick = event => {
+    if (!onOpenSource || !active || sourceLink.hidden || event.defaultPrevented || event.button !== 0 ||
+        event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+    event.preventDefault();
+    onOpenSource(active);
+  };
   const subjectEditor = $('problemDetailBreadcrumb').prepend ? createDetailSubjectTags($('problemDetailBreadcrumb'), async (subjects, previous) => {
       const file = active;
       if (!file) return;
