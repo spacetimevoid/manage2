@@ -6,7 +6,7 @@ test('the tag route checks membership and sends only images to the configured mo
   const env = {
     VITE_SUPABASE_URL: 'https://library.example',
     VITE_SUPABASE_PUBLISHABLE_KEY: 'example-publishable-key',
-    PROBLEM_TAGS_API_KEY: 'test-api-key',
+    GEMINI_API_KEY: 'test-api-key',
   };
   for (const [key, value] of Object.entries(env)) {
     const previous = process.env[key];
@@ -29,15 +29,14 @@ test('the tag route checks membership and sends only images to the configured mo
       assert.equal(pathname, '/rest/v1/library_members');
       return Response.json(member ? [{ email: 'owner@example.com' }] : []);
     }
-    assert.equal(hostname, '1gw.gwai.cloud');
-    assert.equal(pathname, '/v1/messages');
-    assert.equal(request.headers.get('x-api-key'), 'test-api-key');
-    assert.equal(request.headers.get('anthropic-version'), '2023-06-01');
+    assert.equal(hostname, 'generativelanguage.googleapis.com');
+    assert.equal(pathname, '/v1beta/models/gemini-3.5-flash-lite:generateContent');
+    assert.equal(request.headers.get('x-goog-api-key'), 'test-api-key');
     calls.push(await request.json());
     if (upstreamStatus !== 200) return Response.json({ error: { type: 'upstream' } }, { status: upstreamStatus });
     const tags = JSON.stringify({ tags: ['linear-algebra', 'Matrix Rank', 'matrix-rank', 'all', 'two,tags', 'bad/tag'] });
     return Response.json({
-      content: [{ type: 'thinking', thinking: 'Internal analysis.' }, { type: 'text', text: '\x60\x60\x60json\n' + tags + '\n\x60\x60\x60' }],
+      candidates: [{ content: { parts: [{ thought: true, text: 'Internal analysis.' }, { text: tags }] } }],
     });
   });
 
@@ -64,10 +63,10 @@ test('the tag route checks membership and sends only images to the configured mo
   assert.equal(response.status, 200, JSON.stringify(result));
   assert.deepEqual(result, { tags: ['linear-algebra', 'matrix-rank'] });
   assert.equal(calls.length, 1);
-  assert.equal(calls[0].model, 'claude-haiku-5-5');
-  const [image, catalog] = calls[0].messages[0].content;
-  assert.deepEqual(image, { type: 'image', source: {
-    type: 'base64', media_type: 'image/png', data: Buffer.from('synthetic exercise').toString('base64'),
+  assert.equal(calls[0].generationConfig.responseMimeType, 'application/json');
+  const [image, catalog] = calls[0].contents[0].parts;
+  assert.deepEqual(image, { inlineData: {
+    mimeType: 'image/png', data: Buffer.from('synthetic exercise').toString('base64'),
   } });
   assert.match(catalog.text, /linear-algebra/);
 

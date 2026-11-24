@@ -3,7 +3,7 @@ import { isImageFile } from './uploads.js';
 
 async function prepareAttachment(file) {
   if (!isImageFile(file)) throw new Error('Choose an image to suggest tags.');
-  if (['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) return file;
+  if (['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return file;
 
   // Use the browser's decoder for image formats the upload form already accepts.
   const url = URL.createObjectURL(file);
