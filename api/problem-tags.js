@@ -95,7 +95,15 @@ export default {
         return null;
       });
       if (!response) return json({ error: 'Unable to reach the AI gateway. Try again or add tags manually.' }, 502);
-      if (!response.ok) console.warn('Problem tags: AI gateway status', response.status);
+      if (!response.ok) {
+        const source = response.headers.get('cf-mitigated') === 'challenge'
+          ? 'challenge'
+          : (response.headers.get('content-type') || '').includes('text/html') ? 'html' : 'api';
+        console.warn('Problem tags: AI gateway status', response.status, source);
+      }
+      if (response.status === 403) {
+        return json({ error: 'The AI gateway denied access (403). You can still add tags manually.' }, 502);
+      }
       if (response.status === 429) {
         return json({ error: 'AI is temporarily rate limited. Try again later or add tags manually.' }, 429);
       }

@@ -75,4 +75,9 @@ test('the tag route checks membership and sends only images to the configured mo
   const rateLimited = await upload('image/png');
   assert.equal(rateLimited.status, 429);
   assert.match((await rateLimited.json()).error, /rate limited/);
+
+  upstreamStatus = 403;
+  const forbidden = await upload('image/png');
+  assert.equal(forbidden.status, 502);
+  assert.match((await forbidden.json()).error, /denied access \(403\)/);
 });
