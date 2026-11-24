@@ -1,6 +1,6 @@
 import { normalizeSubject } from './metadata.js';
 
-export const subjectLabel = value => String(value || '').replace(/-/g, ' ');
+export const subjectLabel = value => String(value || '');
 
 export function createSubjectPicker(input, { getOptions, getSelected, toggle, create, inline = false }) {
   const box = input.parentElement, list = document.createElement('div');

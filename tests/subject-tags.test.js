@@ -191,7 +191,7 @@ test('picker explicitly creates a new subject, marks it selected, and can unsele
  const input=elements.find(el=>el.id==='problemSubjectTagsInput'),list=elements.find(el=>el.attrs.role==='listbox');
  input.value='linear algebra';input.events.input.fn();assert.equal(list.children.length,1);assert.match(list.children[0].children[0].textContent,/Create/);
  list.children[0].onclick();assert.deepEqual(editor.get(),['linear-algebra']);
- const selected=list.children.find(el=>el.attrs['aria-selected']==='true');assert.equal(selected.children[0].textContent,'linear algebra');selected.onclick();
+ const selected=list.children.find(el=>el.attrs['aria-selected']==='true');assert.equal(selected.children[0].textContent,'linear-algebra');selected.onclick();
  assert.deepEqual(editor.get(),[]);assert.equal(list.hidden,false);
  }finally{Object.assign(globalThis,previous)}
 });
