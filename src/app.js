@@ -10,6 +10,7 @@ import { createDeletionHistory, createDeleteConfirmation, installDeleteUndo, fad
 import './deletion.css';
 import { createMediaPreloader } from './media-preloader.js';
 import { createPdfSession } from './pdf-session.js';
+import { renderPdfText } from './pdf-text.js';
 import './topic-picker.css';
 import { selectedRegion, cropPage } from './source-extraction.js';
 import { createSourceOutline } from './source-outline.js';
@@ -531,7 +532,7 @@ async function renderPages(anchorPage = 1, preservePosition = false) {
     const vp = page.getViewport({ scale });
     sheet.dataset.pdfWidth = vp.width / scale;
     sheet.dataset.pdfHeight = vp.height / scale;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(12_000_000 / (vp.width * vp.height)));
+    const dpr = Math.min(Math.max(2, window.devicePixelRatio || 1), Math.sqrt(12_000_000 / (vp.width * vp.height)));
     const canvas = document.createElement('canvas');
     canvas.width = Math.ceil(vp.width * dpr); canvas.height = Math.ceil(vp.height * dpr);
     canvas.style.width = `${vp.width}px`; canvas.style.height = `${vp.height}px`;
@@ -539,7 +540,11 @@ async function renderPages(anchorPage = 1, preservePosition = false) {
     const task = page.render({ canvasContext: canvas.getContext('2d'), viewport: vp, transform: [dpr, 0, 0, dpr, 0, 0] });
     renderTasks.add(task);
     try { await task.promise; } finally { renderTasks.delete(task); }
-    if (token === viewerToken) sheet.replaceChildren(canvas);
+    if (token !== viewerToken) return;
+    sheet.replaceChildren(canvas);
+    renderPdfText(page, vp, sheet, canvas, renderTasks).catch(error => {
+      if (token === viewerToken && error.name !== 'AbortException') console.warn('Unable to read PDF text:', error);
+    });
   }
   // Prepare visible pages before revealing the reader, avoiding empty white sheets.
   const initialPaint = !oldSheets.length ? Promise.all(sheets

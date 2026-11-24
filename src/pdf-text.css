@@ -1,0 +1,30 @@
+/* Geometry used by PDF.js TextLayer, including pages stored with rotation. */
+.pdf-text-layer {
+  position: absolute;
+  inset: 0;
+  overflow: clip;
+  transform-origin: 0 0;
+  line-height: 1;
+  text-align: initial;
+  letter-spacing: normal;
+  word-spacing: normal;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  --scale-round-x: 1px;
+  --scale-round-y: 1px;
+}
+.pdf-text-layer[data-main-rotation="90"] { transform: rotate(90deg) translateY(-100%); }
+.pdf-text-layer[data-main-rotation="180"] { transform: rotate(180deg) translate(-100%, -100%); }
+.pdf-text-layer[data-main-rotation="270"] { transform: rotate(270deg) translateX(-100%); }
+.pdf-text-layer :is(span, br) {
+  position: absolute;
+  transform-origin: 0 0;
+  white-space: pre;
+  color: transparent;
+  cursor: text;
+  user-select: text;
+  font-size: calc(var(--total-scale-factor) * var(--min-font-size) * var(--font-height, 0));
+  transform: rotate(var(--rotate, 0deg)) scaleX(var(--scale-x, 1)) scale(calc(1 / var(--min-font-size)));
+}
+.pdf-text-layer ::selection { color: transparent; background: rgb(50 130 255 / 35%); }
+.is-selecting .pdf-text-layer { visibility: hidden; }

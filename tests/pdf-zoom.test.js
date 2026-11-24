@@ -28,7 +28,7 @@ function setup() {
   const context = vm.createContext({
     zoom: 100, zoomFrame: null, viewerPage: 2, viewerToken: 0,
     isPageNavigation: false, observer: null, renderTasks: new Set(), console,
-    window: { devicePixelRatio: 1 }, $: id => elements[id], syncToolbar() {},
+    window: { devicePixelRatio: 1 }, $: id => elements[id], syncToolbar() {}, async renderPdfText() {},
     requestAnimationFrame(callback) { frames.set(++frameId, callback); return frameId; },
     cancelAnimationFrame(id) { frames.delete(id); },
     document: { createElement() { return { style: {}, getContext: () => ({}) }; } },
@@ -66,7 +66,7 @@ test('zoom retains the old bitmap until a replacement is fully rendered and keep
   assert.equal(sheet.bitmap, old);
   zoom.tasks[0].finish(); await tick();
   assert.notEqual(sheet.bitmap, old);
-  assert.equal(sheet.bitmap.width, 1125);
+  assert.equal(sheet.bitmap.width, 2250);
   assert.equal(zoom.viewport.clears, 0);
 });
 
@@ -82,7 +82,7 @@ test('rapid wheel zoom coalesces per frame and cancelled renders never blank or 
   const latest = sheet.bitmap;
   zoom.tasks[0].finish(); await tick();
   assert.equal(sheet.bitmap, latest);
-  assert.equal(latest.width, 1125);
+  assert.equal(latest.width, 2250);
   assert.equal(zoom.viewport.clears, 0);
 });
 
@@ -122,5 +122,5 @@ test('initial page preparation waits for visible canvas rendering instead of ret
   assert.equal(viewport.children[0].bitmap, undefined);
   tasks[0].finish(); await prepared;
   assert.equal(ready, true);
-  assert.equal(viewport.children[0].bitmap.width, 750);
+  assert.equal(viewport.children[0].bitmap.width, 1500);
 });
