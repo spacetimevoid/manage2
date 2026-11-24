@@ -61,6 +61,8 @@ export default {
       if (!apiKey) return json({ error: 'AI tagging is unavailable.' }, 503);
       const data = Buffer.from(await file.arrayBuffer()).toString('base64');
       const subjectCatalog = cleanTags(subjects);
+      const timeout = AbortSignal.timeout(55_000);
+      const signal = AbortSignal.any([request.signal, timeout]);
       const response = await fetch(endpoint, {
         method: 'POST',
         redirect: 'error',
@@ -86,18 +88,38 @@ export default {
             { type: 'text', text: `Available subject tags: ${JSON.stringify(subjectCatalog)}` },
           ] }],
         }),
-        signal: AbortSignal.any([request.signal, AbortSignal.timeout(30_000)]),
+        signal,
+      }).catch(error => {
+        if (request.signal.aborted || timeout.aborted) throw error;
+        console.warn('Problem tags: could not reach the AI gateway.');
+        return null;
       });
+      if (!response) return json({ error: 'Unable to reach the AI gateway. Try again or add tags manually.' }, 502);
+      if (!response.ok) console.warn('Problem tags: AI gateway status', response.status);
       if (response.status === 429) {
         return json({ error: 'AI is temporarily rate limited. Try again later or add tags manually.' }, 429);
       }
-      if (!response.ok) throw new Error('Model request failed.');
-      const result = await response.json();
-      const text = result.content.filter(part => part.type === 'text').map(part => part.text).join('').trim();
-      const output = JSON.parse(text.replace(/^\x60{3}(?:json)?\s*([\s\S]*?)\s*\x60{3}$/i, '$1'));
-      if (!Array.isArray(output?.tags)) throw new Error('Invalid tag response.');
+      if (!response.ok) return json({ error: 'The AI gateway rejected the request. Try again or add tags manually.' }, 502);
+      let output;
+      try {
+        const result = await response.json();
+        const text = result.content.filter(part => part.type === 'text').map(part => part.text).join('').trim();
+        const fencedJson = /^\x60{3}(?:json)?\s*([\s\S]*?)\s*\x60{3}$/i.exec(text)?.[1];
+        output = JSON.parse(fencedJson ?? text);
+      } catch {
+        if (signal.aborted) throw signal.reason;
+      }
+      if (!Array.isArray(output?.tags)) {
+        console.warn('Problem tags: the AI gateway did not return a tag list.');
+        return json({ error: 'AI did not return a usable tag list. Try again or add tags manually.' }, 502);
+      }
       return json({ tags: cleanTags(output.tags) });
-    } catch {
+    } catch (error) {
+      if (error?.name === 'TimeoutError') {
+        console.warn('Problem tags: AI gateway timed out.');
+        return json({ error: 'AI took too long to respond. Try again or add tags manually.' }, 504);
+      }
+      if (!request.signal.aborted) console.warn('Problem tags: request could not be completed.');
       return json({ error: 'AI could not suggest tags. Try again or add tags manually.' }, 502);
     }
   },

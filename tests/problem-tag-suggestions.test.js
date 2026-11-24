@@ -18,6 +18,7 @@ test('the tag route checks membership and sends only images to the configured mo
   }
 
   let member = false;
+  let upstreamStatus = 200;
   const calls = [];
   t.mock.method(globalThis, 'fetch', async (input, options) => {
     const request = new Request(input, options);
@@ -33,8 +34,10 @@ test('the tag route checks membership and sends only images to the configured mo
     assert.equal(request.headers.get('x-api-key'), 'test-api-key');
     assert.equal(request.headers.get('anthropic-version'), '2023-06-01');
     calls.push(await request.json());
+    if (upstreamStatus !== 200) return Response.json({ error: { type: 'upstream' } }, { status: upstreamStatus });
+    const tags = JSON.stringify({ tags: ['linear-algebra', 'Matrix Rank', 'matrix-rank', 'all', 'two,tags', 'bad/tag'] });
     return Response.json({
-      content: [{ type: 'text', text: JSON.stringify({ tags: ['linear-algebra', 'Matrix Rank', 'matrix-rank', 'all', 'two,tags', 'bad/tag'] }) }],
+      content: [{ type: 'thinking', thinking: 'Internal analysis.' }, { type: 'text', text: '\x60\x60\x60json\n' + tags + '\n\x60\x60\x60' }],
     });
   });
 
@@ -67,4 +70,9 @@ test('the tag route checks membership and sends only images to the configured mo
     type: 'base64', media_type: 'image/png', data: Buffer.from('synthetic exercise').toString('base64'),
   } });
   assert.match(catalog.text, /linear-algebra/);
+
+  upstreamStatus = 429;
+  const rateLimited = await upload('image/png');
+  assert.equal(rateLimited.status, 429);
+  assert.match((await rateLimited.json()).error, /rate limited/);
 });
