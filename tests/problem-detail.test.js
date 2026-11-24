@@ -50,6 +50,22 @@ function mount(files, options = {}) {
 }
 const problem = id => ({ id, kind: 'problem', name: `${id}.pdf`, topic: 'Geometry', subject: 'math', difficulty: 'easy', addedDate: '15/11/2026', notes: '' });
 
+test('source links point to the original PDF and disappear when browsing an unlinked problem', () => {
+  const source = { id: 'exam / 1', name: 'Exam.pdf' };
+  const linked = { ...problem('a'), sourceLocation: { sourceId: source.id, page: 2 } };
+  const missing = { ...problem('b'), sourceLocation: { sourceId: 'deleted', page: 1 } };
+  const app = mount([linked, missing], { getFile: id => id === source.id ? source : null });
+  try {
+    app.detail.open(linked);
+    const link = app.$('problemSourceLink');
+    assert.equal(link.hidden, false);
+    assert.equal(link.getAttribute('href'), '#sources/exam%20%2F%201');
+    app.$('problemNextItemBtn').onclick();
+    assert.equal(link.hidden, true);
+    assert.equal(link.getAttribute('href'), null);
+  } finally { app.cleanup(); }
+});
+
 test('problem details load the actual statement, navigate in supplied order and flush notes to the correct record', () => {
   const a = problem('a'), b = problem('b'); a.blob = new Blob(['%PDF-1.7']); a.notes = 'Existing notes';
   const app = mount([a, b]);

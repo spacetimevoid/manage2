@@ -565,3 +565,6 @@
             }
 
 }
+/* Let the title shrink beside the source link on narrow screens. */
+.problem-title-row:has(#problemSourceLink:not([hidden])) .problem-detail-title-input { min-width: 0; }
+#problemSourceLink { flex-shrink: 0; }

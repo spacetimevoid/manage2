@@ -1,7 +1,7 @@
 import { problemCode } from './problem-label.js';
 import { documentSubjects, createDetailSubjectTags } from './subject-tags.js';
 import { DIFFICULTIES, normalizedDifficulty, difficultyLabel } from './metadata.js';
-import { escapeHtml as esc, validatePdf } from './library.js';
+import { escapeHtml as esc, readerHash, validatePdf } from './library.js';
 import { ensureProblemData, renameProblem, renderMarkdown, problemTitle } from './problem-data.js';
 import { createImageZoom } from './image-zoom.js';
 import { closeReader } from './reader-transition.js';
@@ -13,6 +13,7 @@ import { snapshotDocument } from './library.js';
 export function createProblemDetail({ persist, getItems, onChange, background, getFile = id => getItems().find(file => file.id === id), getSubjects = null, deletionHistory = null, prepare = null, checkPdf = validatePdf, onOpen = () => {}, onClose = () => {}, hideReader = closeReader }) {
   const $ = id => document.getElementById(id);
   const page = $('problemDetailPage');
+  const sourceLink = $('problemSourceLink');
   const imageZoom = createImageZoom();
   let active = null, items = [], returnFocus = null;
   const subjectEditor = $('problemDetailBreadcrumb').prepend ? createDetailSubjectTags($('problemDetailBreadcrumb'), async (subjects, previous) => {
@@ -151,6 +152,16 @@ export function createProblemDetail({ persist, getItems, onChange, background, g
     else $('problemDetailBreadcrumb').innerHTML = documentSubjects(file).map(tag => `<span class="subject-tag">${esc(tag)}</span>`).join(' ');
     $('problemDetailTitleInput').value = problemCode(file).replace(/^#/, '');
     $('problemDetailTitleInput').readOnly = true;
+    const sourceId = file.sourceLocation?.sourceId;
+    const source = sourceId ? getFile(sourceId) : null;
+    sourceLink.hidden = !source || ['problem', 'subject'].includes(source.kind);
+    if (sourceLink.hidden) {
+      sourceLink.removeAttribute('href');
+      sourceLink.removeAttribute('title');
+    } else {
+      sourceLink.setAttribute('href', readerHash('sources', source.id));
+      sourceLink.setAttribute('title', source.name);
+    }
     $('problemDetailTitleInput').setCustomValidity(''); $('problemDetailTitleInput').title = '';
     $('problemDetailAddedDate').textContent = `Added ${file.addedDate}`;
     $('problemStatementNoteInput').value = file.notes;
