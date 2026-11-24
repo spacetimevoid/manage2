@@ -46,3 +46,15 @@
 .detail-subject-picker { position: fixed; inset: auto; margin: 0; width: min(310px, calc(100vw - 16px)); max-height: calc(100vh - 16px); box-sizing: border-box; overflow-y: auto; padding: 10px; border: 1px solid #d2d2d7; border-radius: 8px; background: #fff; color: #1d1d1f; box-shadow: 0 4px 16px rgb(0 0 0 / 8%); }
 .detail-subject-picker .subject-tags { width: 100%; }
 .detail-subject-picker .subject-picker-list { flex-basis: 100%; }
+.subject-tags-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.subject-tags-heading .modal-label { margin: 0; }
+#modalSuggestTagsBtn:disabled {
+  opacity: .55;
+  cursor: default;
+}

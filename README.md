@@ -22,6 +22,12 @@ Without Supabase environment variables, the app uses the original browser-local 
 
 Uploads, notes, difficulty, completion status and solutions are saved to Supabase. Existing non-sample records on the same browser origin are imported without overwriting cloud records. Data on localhost or a different deployment URL remains on that origin and is not automatically transferred across origins.
 
+## Problem tag suggestions
+
+In Upload Problem, **Suggest tags** sends the selected image or PDF and available subject labels to Gemini through Vercel AI Gateway. Suggestions join the editable Subjects field and are saved only when you choose **Save**.
+
+The route requires an approved Supabase session. On Vercel it uses the project's OIDC identity. For local AI testing, run the app with `vercel dev` and use a Vercel OIDC token or a server-only `AI_GATEWAY_API_KEY`. Vite alone serves the UI without the API route. If a file exceeds the Vercel Function request limit, it can still be uploaded with manual tags.
+
 ## Checks
 
 ```powershell

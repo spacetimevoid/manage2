@@ -1,6 +1,7 @@
 import { problemSummary, createProblemTagsPopover } from './problem-label.js';
 import { subjectLabel } from './subject-picker.js';
 import { installBrowsePaste } from './browse-paste.js';
+import { suggestProblemTags } from './problem-tag-suggestions.js';
 import { createSubjectTags, documentSubjects, hasSubject } from './subject-tags.js';
 import './subject-tags.css';
 import { createTopicPicker, existingTopics } from './topic-picker.js';
@@ -254,14 +255,55 @@ function setModal(open, file = null, extraction = null) {
     }
     if (problems) subjectTags.focus(); else $('modalPathFileNameInput').focus();
   } else setModal.returnFocus?.focus();
+  resetTagSuggestion();
 }
+function selectedUpload() {
+  return setModal.extraction?.blob || setModal.pastedFile || $('pdfFileInput').files?.[0];
+}
+
+let tagSuggestion;
+function resetTagSuggestion() {
+  tagSuggestion?.abort();
+  tagSuggestion = null;
+  const button = $('modalSuggestTagsBtn');
+  button.hidden = setModal.view !== 'problems' || !!setModal.file;
+  button.disabled = button.hidden || !selectedUpload() || $('uploadPdfForm').querySelector('[type=submit]').disabled;
+  button.textContent = 'Suggest tags';
+}
+
+$('modalSuggestTagsBtn').onclick = async () => {
+  const button = $('modalSuggestTagsBtn');
+  const file = selectedUpload();
+  if (button.hidden || button.disabled || !file) return;
+  const request = new AbortController();
+  tagSuggestion = request;
+  button.disabled = true;
+  button.textContent = 'Suggesting…';
+  $('modalErrorMsg').textContent = '';
+  try {
+    const subjects = [...new Set([...subjectNames(files, 'problems'), ...subjectNames(files, 'sources')])];
+    const tags = await suggestProblemTags(file, subjects, request.signal);
+    if (request.signal.aborted) return;
+    if (!tags.length) throw new Error('No tags suggested. You can add tags manually.');
+    subjectTags.add(tags);
+  } catch (error) {
+    if (!request.signal.aborted) $('modalErrorMsg').textContent = error.message;
+  } finally {
+    if (tagSuggestion === request) {
+      tagSuggestion = null;
+      resetTagSuggestion();
+    }
+  }
+};
 $('uploadPdfBtn').onclick = () => setModal(true);
 $('modalCancelBtn').onclick = () => setModal(false);
 $('modalBrowseBtn').onclick = () => $('pdfFileInput').click();
 $('pdfFileInput').onchange = () => {
   setModal.pastedFile = null;
-  const file = $('pdfFileInput').files[0];
+  const file = selectedUpload();
   $('modalFileStatus').textContent = file?.name || 'No file selected';
+  $('modalErrorMsg').textContent = '';
+  resetTagSuggestion();
   if (file && !$('modalPathFileNameInput').value.trim()) $('modalPathFileNameInput').value = documentTitle(file.name);
 };
 for (const id of ['modalPathSubjectInput', 'modalPathFileNameInput']) $(id).onkeydown = e => {
@@ -272,12 +314,13 @@ $('uploadPdfForm').onsubmit = async e => {
   const submit = e.submitter || $('uploadPdfForm').querySelector('[type=submit]');
   if (submit.disabled) return;
   submit.disabled = true; $('modalCancelBtn').disabled = true;
+  resetTagSuggestion();
   let validation;
   try {
     const editing = setModal.file;
     const view = setModal.view;
     const extraction = setModal.extraction;
-    const blob = extraction?.blob || setModal.pastedFile || $('pdfFileInput').files[0];
+    const blob = selectedUpload();
     if (!editing && !blob) throw new Error(view === 'problems' ? 'Please select an image or PDF.' : 'Please select a PDF file.');
     const problem = view === 'problems';
     const tags = problem ? subjectTags.get() : null;
@@ -326,7 +369,11 @@ $('uploadPdfForm').onsubmit = async e => {
     $('modalErrorMsg').textContent = error.name === 'PasswordException' ? 'Password-protected PDFs are not supported yet.' : error.message || 'Unable to save file.';
   } finally {
     try { await validation?.destroy(); }
-    finally { submit.disabled = false; $('modalCancelBtn').disabled = false; }
+    finally {
+      submit.disabled = false;
+      $('modalCancelBtn').disabled = false;
+      resetTagSuggestion();
+    }
   }
 };
 
@@ -751,12 +798,16 @@ window.addEventListener('keydown', e => {
     if (['=', '+', '-', '0'].includes(e.key)) { e.preventDefault(); setZoom(e.key === '0' ? 100 : zoom + (e.key === '-' ? -15 : 15)); }
   }
 });
-const subjectTags = createSubjectTags($('uploadPdfForm'), { getSuggestions: () => [...subjectNames(files, 'sources'), ...subjectNames(files, 'problems')] });
+const subjectTags = createSubjectTags($('uploadPdfForm'), {
+  getSuggestions: () => [...subjectNames(files, 'sources'), ...subjectNames(files, 'problems')],
+  action: $('modalSuggestTagsBtn'),
+});
 installBrowsePaste($('uploadModalBackdrop'), {
   getView: () => setModal.view,
   enabled: () => $('uploadModalBackdrop').classList.contains('is-open') && !setModal.file && !setModal.extraction,
   onFile(file) {
     setModal.pastedFile = file;
+    resetTagSuggestion();
     $('modalFileStatus').textContent = file.name || 'Pasted file';
     $('modalErrorMsg').textContent = '';
     if (!$('modalPathFileNameInput').value.trim()) $('modalPathFileNameInput').value = documentTitle(file.name);

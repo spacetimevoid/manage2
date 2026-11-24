@@ -11,14 +11,20 @@ export const problemCode = file => {
   return `#${digits.slice(0, 5)}-${digits.slice(5)}`;
 };
 
-export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChange = null, allowEmpty = false, getSuggestions = null, inline = false, onUndo = null } = {}) {
+export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChange = null, allowEmpty = false, getSuggestions = null, inline = false, onUndo = null, action = null } = {}) {
   const field = document.createElement('div'); field.className = 'modal-field problem-subject-field'; field.hidden = true;
   const label = document.createElement('label'); label.className = 'modal-label'; label.htmlFor = id; label.textContent = 'Subjects';
   const box = document.createElement('div'); box.className = 'subject-tags';
   const tags = document.createElement('div'); tags.className = 'subject-tag-items';
   const input = document.createElement('input'); input.id = id; input.placeholder = getSuggestions ? 'Search or create subject' : 'Add subject'; input.autocomplete = 'off';
   input.setAttribute('aria-label', 'Add subject with Enter or comma');
-  box.append(tags, input); field.append(label, box); form.prepend(field);
+  let heading = label;
+  if (action) {
+    heading = document.createElement('div');
+    heading.className = 'subject-tags-heading';
+    heading.append(label, action);
+  }
+  box.append(tags, input); field.append(heading, box); form.prepend(field);
   let values = [], confirmed = [], generation = 0, revision = 0, confirmedRevision = 0, picker = null, undo = [];
   async function changed(before) {
     if (!onChange) return;
@@ -85,6 +91,13 @@ export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChan
   return {
     element: field,
     set(items, visible) { picker?.close(); undo = []; generation++; revision = confirmedRevision = 0; values = [...new Set(items)]; confirmed = [...values]; input.value = ''; input.setCustomValidity(''); field.hidden = !visible; render(); },
+    add(items) {
+      const before = values;
+      values = [...new Set([...values, ...items])];
+      render();
+      picker?.refresh();
+      return changed(before);
+    },
     get() { commit(); if (!allowEmpty && !values.length) throw new Error('Add at least one subject.'); return [...values]; },
     focus() { input.focus(); },
   };
