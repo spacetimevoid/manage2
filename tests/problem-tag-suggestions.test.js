@@ -64,6 +64,9 @@ test('the tag route checks membership and sends only images to the configured mo
   assert.deepEqual(result, { tags: ['linear-algebra', 'matrix-rank'] });
   assert.equal(calls.length, 1);
   assert.equal(calls[0].generationConfig.responseMimeType, 'application/json');
+  const prompt = calls[0].systemInstruction.parts[0].text;
+  assert.match(prompt, /create the missing specific tag/);
+  assert.match(prompt, /"tổ-hợp" and "tô-màu"/);
   const [image, catalog] = calls[0].contents[0].parts;
   assert.deepEqual(image, { inlineData: {
     mimeType: 'image/png', data: Buffer.from('synthetic exercise').toString('base64'),
