@@ -1,6 +1,3 @@
-.modal-backdrop.is-problems .modal-breadcrumb .sep,
-.modal-backdrop.is-problems #modalPathFileNameInput,
-.modal-backdrop.is-problems .modal-field:has(#modalTopicInput) { display: none; }
 .manage-shell.is-problems .topic-cell,
 .manage-shell.is-problems .footer-topic { display: none; }
 .manage-shell.is-problems .file-row,

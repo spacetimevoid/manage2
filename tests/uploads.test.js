@@ -13,10 +13,10 @@ function form(view) {
   const elements = new Map(), save = { disabled: false }, stored = [];
   const $ = id => {
     if (!elements.has(id)) elements.set(id, { value: '', style: {}, classList: { values: new Set(), add() {}, remove() {}, toggle(key, value) { if(value) this.values.add(key); else this.values.delete(key); } }, setAttribute() {}, focus() {},
-      addEventListener() {}, reset() {}, querySelector: () => save });
+      addEventListener() {}, reset() {}, prepend() {}, closest: () => dateField, querySelector: () => save });
     return elements.get(id);
   };
-  const browseLabel = {}, dateField = {}, dateLabel = { closest: () => dateField };
+  const browseLabel = {}, dateField = { before() {} }, dateLabel = {};
   let pdfLoads = 0;
   const context = vm.createContext({ documentSubjects, hasSubject,
     $ , subjectTags: { set(items, visible) { this.items = items; this.visible = visible; }, get() { return this.items.length ? this.items : ['math']; }, focus() {} }, topicPicker: { close() {} }, activeView: view, activeSubject: 'all', currentPage: 1, files: [], lastFocus: null, app: {}, crypto,
@@ -31,7 +31,7 @@ function form(view) {
   vm.runInContext('setModal(true)', context);
   return { $, context, browseLabel, dateField, stored, get pdfLoads() { return pdfLoads; }, async submit(file) {
     $('pdfFileInput').files = [file]; $('modalPathFileNameInput').value = file.name;
-    $('modalTopicInput').value = 'Geometry'; $('modalDueDateInput').value = ''; $('modalDifficultyInput').value = 'hard';
+    $('modalDueDateInput').value = ''; $('modalDifficultyInput').value = 'hard';
     await $('uploadPdfForm').onsubmit({ preventDefault() {}, submitter: save });
   } };
 }
@@ -85,7 +85,7 @@ test('Edit saves metadata without requiring or replacing attachments and preserv
   app.$('pdfFileInput').files = [];
   vm.runInContext('setModal(true, editTarget)', app.context);
   assert.equal(app.$('modalPathFileNameInput').value, 'old');
-  app.$('modalPathFileNameInput').value = 'edited.png'; app.$('modalTopicInput').value = 'New';
+  app.$('modalPathFileNameInput').value = 'edited.png';
   await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
   assert.equal(app.stored.length, 1); assert.equal(app.context.files.length, 1);
   assert.equal(file.name, 'old.png'); assert.equal(file.topic, 'Old');
@@ -120,6 +120,7 @@ test('Sources Edit preserves the original extension, optional dates and duplicat
     app.$('modalPathFileNameInput').value = 'renamed';
     await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
     assert.equal(file.name, 'renamed.pdf'); assert.equal(dateOf(file), '');
+    assert.equal(file.topic, 'Topic');
     assert.deepEqual(Array.from(file.subjects), ['math', 'geometry']);
   }
 });
@@ -127,7 +128,7 @@ test('a slow problem upload uses the collection and metadata captured before nav
   const app = form('problems'); let finish;
   app.context.validateUpload = () => new Promise(resolve => { finish = resolve; });
   const saved = app.submit(png());
-  app.context.activeView = 'sources'; app.$('modalTopicInput').value = 'Changed during upload';
+  app.context.activeView = 'sources';
   app.$('modalDifficultyInput').value = 'easy'; finish('image'); await saved;
   assert.equal(app.stored[0].kind, 'problem'); assert.equal(app.stored[0].topic, '');
   assert.equal(app.stored[0].difficulty, 'hard'); assert.equal(app.stored[0].statementImages.length, 1);
@@ -141,7 +142,7 @@ test('source extraction reuses the Problem upload form, saves one linked image a
   app.$('pdfFileInput').files = [];
   vm.runInContext('setModal(true, null, extracted)', app.context);
   assert.equal(app.browseLabel.textContent, 'Select problem');
-  assert.equal(app.$('modalTopicInput').value, 'Algebra');
+  assert.equal(app.$('modalFileNameField').hidden, true);
   assert.equal(app.$('pdfViewerPage').inert, true);
   app.$('modalPathFileNameInput').value = 'Question 1';
   await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
@@ -195,7 +196,6 @@ test('Upload and Edit show only titles while saved PDF and image names preserve 
     app.$('pdfFileInput').files = [new File(['bytes'], name, { type })];
     app.$('pdfFileInput').onchange();
     assert.equal(app.$('modalPathFileNameInput').value, documentTitle(name));
-    assert.doesNotMatch(app.$('modalPathFileNameInput').placeholder, /\.pdf/);
     app.$('modalPathFileNameInput').value = 'Custom title';
     app.$('pdfFileInput').onchange(); assert.equal(app.$('modalPathFileNameInput').value, 'Custom title');
     assert.equal(renamedDocument(documentTitle(name), name).toLowerCase(), name.toLowerCase());

@@ -58,6 +58,10 @@ export function queryFiles(files, { subject = 'all', query = '', sortKey = null,
       return parseDate(a.dueDate) - parseDate(b.dueDate);
     }
     const difficultyRank = file => DIFFICULTIES.indexOf(normalizedDifficulty(file.difficulty));
+    if (sortKey === 'tags') {
+      const order = documentSubjects(a).join(', ').localeCompare(documentSubjects(b).join(', '), undefined, { numeric: true });
+      return sortDir === 'asc' ? order : -order;
+    }
     if (sortKey === 'name' && a.kind === 'problem' && b.kind === 'problem') {
       const order = problemCode(a).localeCompare(problemCode(b), undefined, { numeric: true });
       return sortDir === 'asc' ? order : -order;

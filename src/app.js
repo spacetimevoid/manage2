@@ -4,7 +4,6 @@ import { installBrowsePaste } from './browse-paste.js';
 import { suggestProblemTags } from './problem-tag-suggestions.js';
 import { createSubjectTags, documentSubjects, hasSubject } from './subject-tags.js';
 import './subject-tags.css';
-import { createTopicPicker, existingTopics } from './topic-picker.js';
 import { captureListMotion } from './list-motion.js';
 import { createDeletionHistory, createDeleteConfirmation, installDeleteUndo, fadeDeleted, revealRestored } from './deletion.js';
 import './deletion.css';
@@ -72,7 +71,10 @@ function renderFiles(animate = true) {
   const finishMotion = animate ? captureListMotion($('fileList')) : () => {};
   const result = queryFiles(visibleFiles(), { subject: activeSubject, sortKey, sortDir, page: currentPage });
   currentPage = result.page;
-  $('fileList').innerHTML = result.items.map(f => `<${activeView === 'problems' ? 'div role="link" tabindex="0"' : 'a'} class="file-row" href="${esc(readerHash(activeView, f.id))}" data-id="${esc(f.id)}"><div class="file-info"><span class="filename">${activeView === 'problems' ? problemSummary(f) : esc(f.name)}</span></div><span class="topic-cell">${esc(f.topic)}</span><span class="due-date">${esc(dateOf(f))}</span><div class="status-cell"><span class="${activeView === 'problems' ? `difficulty difficulty-${esc(normalizedDifficulty(f.difficulty))}` : `badge ${f.done ? 'badge-done' : 'badge-pending'}`}">${activeView === 'problems' ? difficultyLabel(f.difficulty) : f.done ? 'Completed' : 'Pending'}</span></div></${activeView === 'problems' ? 'div' : 'a'}>`).join('') || '<div class="sidebar-empty" style="padding: 18px 10px;">No files in this subject</div>';
+  $('fileList').innerHTML = result.items.map(f => {
+    const tags = esc(documentSubjects(f).join(', '));
+    return `<${activeView === 'problems' ? 'div role="link" tabindex="0"' : 'a'} class="file-row" href="${esc(readerHash(activeView, f.id))}" data-id="${esc(f.id)}"><div class="file-info"><span class="filename">${activeView === 'problems' ? problemSummary(f) : esc(f.name)}</span></div><span class="topic-cell" title="${tags}">${tags}</span><span class="due-date">${esc(dateOf(f))}</span><div class="status-cell"><span class="${activeView === 'problems' ? `difficulty difficulty-${esc(normalizedDifficulty(f.difficulty))}` : `badge ${f.done ? 'badge-done' : 'badge-pending'}`}">${activeView === 'problems' ? difficultyLabel(f.difficulty) : f.done ? 'Completed' : 'Pending'}</span></div></${activeView === 'problems' ? 'div' : 'a'}>`;
+  }).join('') || '<div class="sidebar-empty" style="padding: 18px 10px;">No files in this subject</div>';
   $('paginationBar').hidden = result.pages <= 1;
   $('paginationInfo').textContent = `${result.page} / ${result.pages}`;
   $('prevPageBtn').disabled = currentPage <= 1;
@@ -226,7 +228,6 @@ $('pdfNotesTextarea').oninput = () => {
 document.addEventListener('visibilitychange', () => { if (document.hidden && activeFile) saveNote(); });
 
 function setModal(open, file = null, extraction = null) {
-  topicPicker.close();
   const wasExtracting = !!setModal.extraction;
   setModal.extraction = open ? extraction : null;
   if (open) $('uploadModalBackdrop').classList.toggle('is-extracting', !!extraction);
@@ -246,24 +247,25 @@ function setModal(open, file = null, extraction = null) {
     $('modalDifficultyField').hidden = setModal.view !== 'problems';
     const problems = setModal.view === 'problems';
     $('uploadModalBackdrop').classList.toggle('is-problems', problems);
+    $('modalFileNameField').hidden = problems;
+    const dateField = $('modalDueDateInput').closest('.modal-field');
+    if (problems) $('uploadPdfForm').prepend(subjectTags.element);
+    else dateField.before(subjectTags.element);
     subjectTags.set(file ? documentSubjects(file) : extraction ? documentSubjects(extraction.source) : activeSubject === 'all' ? [] : [activeSubject], true);
     document.querySelector('label[for="modalBrowseBtn"]').textContent = problems ? 'Select problem' : 'Select source';
     $('pdfFileInput').accept = problems ? 'image/*,application/pdf,.pdf' : 'application/pdf,.pdf';
-    $('modalPathFileNameInput').placeholder = problems ? 'new-problem' : 'new-file';
     document.querySelector('label[for="modalDueDateInput"]').textContent = problems ? 'Added date' : 'Due date';
-    document.querySelector('label[for="modalDueDateInput"]').closest('.modal-field').hidden = problems;
+    dateField.hidden = problems;
     $('modalPathFileNameInput').value = '';
     $('modalDueDateInput').value = todayDate();
     $('modalErrorMsg').textContent = '';
     $('modalFileStatus').textContent = 'No file selected';
     if (file) {
       $('modalPathFileNameInput').value = documentTitle(file.name);
-      $('modalTopicInput').value = file.topic;
       $('modalDueDateInput').value = dateOf(file) || '';
       $('modalDifficultyInput').value = normalizedDifficulty(file.difficulty);
     }
     if (extraction) {
-      $('modalTopicInput').value = extraction.source.topic;
       $('modalFileStatus').textContent = extraction.blob.name;
     }
     if (problems) subjectTags.focus(); else $('modalPathFileNameInput').focus();
@@ -337,7 +339,6 @@ $('uploadPdfForm').onsubmit = async e => {
     if (!editing && !blob) throw new Error(view === 'problems' ? 'Please select an image or PDF.' : 'Please select a PDF file.');
     const problem = view === 'problems';
     const tags = subjectTags.get();
-    const topic = problem ? (editing?.topic || '') : $('modalTopicInput').value.trim() || 'General Notes';
     const difficulty = normalizedDifficulty($('modalDifficultyInput').value);
     const mediaType = editing ? null : (isImageFile(blob) && view === 'problems' ? 'image' : 'pdf');
     const subject = tags[0];
@@ -350,7 +351,7 @@ $('uploadPdfForm').onsubmit = async e => {
     if (Number.isNaN(parseDate(dueDate))) throw new Error('Enter a real date in dd/mm/yyyy format, or leave it blank.');
     if (!dueDate && !editing) dueDate = todayDate();
     if (editing) {
-      const updated = { ...editing, name, subject, subjects: tags, topic };
+      const updated = { ...editing, name, subject, subjects: tags };
       if (editing.kind === 'problem') { updated.addedDate = dueDate; updated.difficulty = difficulty; }
       else updated.dueDate = dueDate;
       await persist(updated);
@@ -359,7 +360,7 @@ $('uploadPdfForm').onsubmit = async e => {
       return;
     }
     await validateUpload(blob, view);
-    const file = { id: crypto.randomUUID(), name, subject, subjects: tags, topic, dueDate, done: false, notes: '', sample: false, createdAt: Date.now() };
+    const file = { id: crypto.randomUUID(), name, subject, subjects: tags, topic: '', dueDate, done: false, notes: '', sample: false, createdAt: Date.now() };
     if (mediaType === 'pdf') {
       validation = pdfjsLib.getDocument({ data: await blob.arrayBuffer() });
       const doc = await validation.promise;
@@ -609,7 +610,7 @@ async function openViewer(file) {
   const collection = file.kind === 'problem' ? 'Problems' : 'Sources';
   $('viewerBackBtn').title = sourceReturnProblem(file) ? 'Back to Problem' : `Back to ${collection}`;
   $('pdfViewerTitle').innerHTML = `${collection}<span class="sep">/</span>${esc(file.subject)}<span class="sep">/</span>${esc(file.name)}`;
-  $('pdfViewerSub').textContent = file.kind === 'problem' ? `${file.topic}  ·  Added ${file.addedDate}  ·  ${difficultyLabel(file.difficulty)}` : `${file.topic}  ·  Due ${file.dueDate}`;
+  $('pdfViewerSub').textContent = file.kind === 'problem' ? `${file.topic}  ·  Added ${file.addedDate}  ·  ${difficultyLabel(file.difficulty)}` : file.dueDate ? `Due ${file.dueDate}` : '';
   $('pdfNotesTextarea').value = file.notes || '';
   $('pdfNotesSavedLabel').textContent = file.notes ? 'Saved' : 'Empty';
   if (url) $('viewerDownloadBtn').href = url; else $('viewerDownloadBtn').removeAttribute('href');
@@ -841,7 +842,6 @@ installBrowsePaste($('uploadModalBackdrop'), {
   },
   onError(message) { $('modalErrorMsg').textContent = message; },
 });
-const topicPicker = createTopicPicker($('modalTopicInput'), () => existingTopics(files));
 
 async function initialize() {
   $('uploadPdfBtn').disabled = true;
