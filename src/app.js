@@ -4,6 +4,7 @@ import { installBrowsePaste } from './browse-paste.js';
 import { suggestProblemTags } from './problem-tag-suggestions.js';
 import { createSubjectTags, documentSubjects, hasSubject } from './subject-tags.js';
 import './subject-tags.css';
+import './problem-modal.css';
 import { createTopicPicker, existingTopics } from './topic-picker.js';
 import { captureListMotion } from './list-motion.js';
 import { createDeletionHistory, createDeleteConfirmation, installDeleteUndo, fadeDeleted, revealRestored } from './deletion.js';
