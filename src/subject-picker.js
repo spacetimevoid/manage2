@@ -2,11 +2,12 @@ import { normalizeSubject } from './metadata.js';
 
 export const subjectLabel = value => String(value || '');
 
-export function createSubjectPicker(input, { getOptions, getSelected, toggle, create, inline = false }) {
+export function createSubjectPicker(input, { getOptions, getSelected, toggle, create, inline = false, hideSelected = false }) {
   const box = input.parentElement, list = document.createElement('div');
   box.classList.add('topic-picker-field');
   list.id = `${input.id}Suggestions`; list.className = `topic-picker-list subject-picker-list${inline ? ' is-inline' : ''}`;
-  list.setAttribute('role', 'listbox'); list.setAttribute('aria-label', 'Subjects'); list.setAttribute('aria-multiselectable', 'true');
+  list.setAttribute('role', 'listbox'); list.setAttribute('aria-label', 'Subjects');
+  if (!hideSelected) list.setAttribute('aria-multiselectable', 'true');
   box.append(list);
   input.setAttribute('role', 'combobox'); input.setAttribute('aria-autocomplete', 'list'); input.setAttribute('aria-controls', list.id);
   let choices = [], cursor = -1, open = false;
@@ -22,7 +23,8 @@ export function createSubjectPicker(input, { getOptions, getSelected, toggle, cr
     try { query = text ? normalizeSubject(text) : ''; } catch { close(); return; }
     const selected = getSelected();
     const all = [...new Set([...getOptions(), ...selected])].sort((a, b) => a.localeCompare(b));
-    choices = all.filter(value => value.includes(query)).map(value => ({ value }));
+    choices = all.filter(value => value.includes(query) && (!hideSelected || !selected.includes(value)))
+      .map(value => ({ value }));
     if (query && !all.includes(query)) choices.push({ value: query, create: true });
     list.replaceChildren(...choices.map((choice, index) => {
       const option = document.createElement('div'); option.className = 'topic-picker-option subject-picker-option'; option.id = `${list.id}Option${index}`;

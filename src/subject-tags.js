@@ -11,7 +11,7 @@ export const problemCode = file => {
   return `#${digits.slice(0, 5)}-${digits.slice(5)}`;
 };
 
-export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChange = null, allowEmpty = false, getSuggestions = null, inline = false, onUndo = null, action = null } = {}) {
+export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChange = null, allowEmpty = false, getSuggestions = null, inline = false, onUndo = null, action = null, hideSelected = false } = {}) {
   const field = document.createElement('div'); field.className = 'modal-field problem-subject-field'; field.hidden = true;
   const label = document.createElement('label'); label.className = 'modal-label'; label.htmlFor = id; label.textContent = 'Subjects';
   const box = document.createElement('div'); box.className = 'subject-tags';
@@ -84,7 +84,7 @@ export function createSubjectTags(form, { id = 'problemSubjectTagsInput', onChan
     input.focus();
   };
   if (getSuggestions) picker = createSubjectPicker(input, {
-    getOptions: getSuggestions, getSelected: () => [...values], inline,
+    getOptions: getSuggestions, getSelected: () => [...values], inline, hideSelected,
     toggle(value) { if (values.includes(value)) return removeTag(value); input.value = value; return commit(); },
     create(value) { input.value = value; return commit(); },
   });

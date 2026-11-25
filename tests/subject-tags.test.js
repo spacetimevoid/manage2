@@ -133,16 +133,20 @@ test('subject suggestions exclude selected tags, filter typing, and commit mouse
  const make=()=>({children:[],value:'',events:{},style:{},attrs:{},classList:{add(){},toggle(){}},setAttribute(k,v){this.attrs[k]=v},removeAttribute(k){delete this.attrs[k]},setCustomValidity(){},reportValidity(){},focus(){},contains(){return true},scrollIntoView(){},getBoundingClientRect(){return {top:100,bottom:130}},append(...items){for(const item of items){item.parentElement=this;this.children.push(item)}},prepend(...items){this.append(...items)},replaceChildren(...items){this.children=[];this.append(...items)},addEventListener(type,fn,capture){this.events[type]={fn,capture}}});
  globalThis.document={createElement(){const el=make();elements.push(el);return el},addEventListener(){}};globalThis.window={innerHeight:800,addEventListener(){}};
  try {
- const editor=createSubjectTags(make(),{getSuggestions:()=>['math','geometry','algebra','math']}); editor.set(['math'],true);
+ const editor=createSubjectTags(make(),{getSuggestions:()=>['math','geometry','algebra','math'],hideSelected:true}); editor.set(['math'],true);
  const input=elements.find(el=>el.id==='problemSubjectTagsInput'), list=elements.find(el=>el.attrs.role==='listbox');
- input.events.focus.fn(); assert.deepEqual(list.children.map(el=>el.children[0].textContent),['algebra','geometry','math']); assert.equal(list.style.maxHeight,'194px');
+ input.events.focus.fn(); assert.deepEqual(list.children.map(el=>el.children[0].textContent),['algebra','geometry']); assert.equal(list.style.maxHeight,'194px');
  list.children[0].onclick(); assert.deepEqual(editor.get(),['math','algebra']); assert.equal(input.value,'');
+ assert.deepEqual(list.children.map(el=>el.children[0].textContent),['geometry']);
  input.value='geo'; input.events.input.fn(); assert.equal(list.children.length,2);
  input.events.keydown.fn({key:'ArrowDown',preventDefault(){}});
  let stopped=false; input.events.keydown.fn({key:'Enter',preventDefault(){},stopImmediatePropagation(){stopped=true}});
  assert.equal(input.events.keydown.capture,true); assert.equal(stopped,true);
- assert.deepEqual(editor.get(),['math','algebra','geometry']); assert.equal(list.hidden,false);
- input.events.focus.fn(); assert.equal(list.children.length,3); assert.ok(list.children.every(row=>row.attrs['aria-selected']==='true'));
+ assert.deepEqual(editor.get(),['math','algebra','geometry']); assert.equal(list.hidden,true);
+ input.value='math'; input.events.input.fn(); assert.equal(list.children.length,0);
+ const tags=elements.find(el=>el.className==='subject-tag-items');
+ tags.children[0].children[1].onclick();
+ input.events.focus.fn(); assert.deepEqual(list.children.map(el=>el.children[0].textContent),['math']);
  }finally{Object.assign(globalThis,previous)}
 });
 
