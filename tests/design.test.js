@@ -25,6 +25,8 @@ test('page markup matches the sketch apart from the requested additions', () => 
     .replace(/<\/div>\s*<\/div>\s*(<!-- Compact Vintage Mac OS X Upload Modal -->)/, '</div> $1')
     .replace(/(<button[^>]*id="uploadPdfBtn"[^>]*>)Upload<\/button>/, '$1Upload PDF</button>')
     .replace('<span id="modalCollectionName">', '<span>')
+    .replace(/<span class="sep">\/<\/span><input[^>]*id="modalPathSubjectInput"[^>]*>/, '')
+    .replace(/<datalist id="modalSubjectsDatalist"><\/datalist>/, '')
     .replace(/<div class="list-body">\s*/, '')
     .replace(/(<\/footer>)\s*<\/div>/, '$1')
     .replace(/\s*<div class="modal-field" id="modalDifficultyField"[\s\S]*?<\/div>/, '')

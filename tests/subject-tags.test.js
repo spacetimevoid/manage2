@@ -26,7 +26,7 @@ test('tag input commits Enter/comma, normalizes and deduplicates, removes tags a
   } finally { globalThis.document = previous; }
 });
 
-test('multiple subjects survive reload and each filters the same problem once; legacy Sources are unchanged', async () => {
+test('multiple subjects survive reload and each filters the same document once', async () => {
   const file = { id: 'p', kind: 'problem', name: 'question.png', subject: 'math', subjects: ['math', 'geometry'], topic: '' };
   const db = await openLibrary(new IDBFactory()); await saveDocuments(db, [file]);
   const [restored] = await readDocuments(db); db.close();
@@ -34,7 +34,11 @@ test('multiple subjects survive reload and each filters the same problem once; l
   for (const subject of restored.subjects) assert.equal(queryFiles([restored], { subject }).total, 1);
   assert.equal(queryFiles([restored]).total, 1);
   assert.deepEqual(documentSubjects({ kind: 'problem', subject: 'old' }), ['old']);
-  assert.deepEqual(documentSubjects({ subject: 'math', subjects: ['ignored'] }), ['math']);
+  const source = { id: 's', subject: 'math', subjects: ['math', 'geometry'] };
+  assert.deepEqual(documentSubjects(source), ['math', 'geometry']);
+  assert.deepEqual(subjectNames([source], 'sources'), ['math', 'geometry']);
+  assert.equal(queryFiles([source], { subject: 'geometry' }).total, 1);
+  assert.deepEqual(documentSubjects({ subject: 'math' }), ['math']);
 });
 
 test('inline tag changes await saving and restore the previous tags if saving fails', async () => {

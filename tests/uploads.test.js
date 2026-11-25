@@ -31,7 +31,6 @@ function form(view) {
   vm.runInContext('setModal(true)', context);
   return { $, context, browseLabel, dateField, stored, get pdfLoads() { return pdfLoads; }, async submit(file) {
     $('pdfFileInput').files = [file]; $('modalPathFileNameInput').value = file.name;
-    $('modalPathSubjectInput').value = 'math';
     $('modalTopicInput').value = 'Geometry'; $('modalDueDateInput').value = ''; $('modalDifficultyInput').value = 'hard';
     await $('uploadPdfForm').onsubmit({ preventDefault() {}, submitter: save });
   } };
@@ -111,14 +110,17 @@ test('Sources Edit preserves the original extension, optional dates and duplicat
   for (const view of ['sources']) {
     const app = form(view);
     const file = { id: 'a', name: 'original.pdf', subject: 'math', topic: 'Topic', ...(view === 'problems' ? { kind: 'problem', addedDate: '' } : { dueDate: '' }) };
-    app.context.files.push(file, { ...file, id: 'b', name: 'taken.pdf' }); app.context.editTarget = file;
+    app.context.files.push(file, { ...file, id: 'b', name: 'taken.pdf', subject: 'physics', subjects: ['physics', 'geometry'] }); app.context.editTarget = file;
     app.$('pdfFileInput').files = []; vm.runInContext('setModal(true, editTarget)', app.context);
+    assert.deepEqual(Array.from(app.context.subjectTags.items), ['math']);
+    app.context.subjectTags.items = ['math', 'geometry'];
     app.$('modalPathFileNameInput').value = 'TAKEN';
     await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
     assert.equal(app.stored.length, 0); assert.match(app.$('modalErrorMsg').textContent, /already exists/);
     app.$('modalPathFileNameInput').value = 'renamed';
     await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
     assert.equal(file.name, 'renamed.pdf'); assert.equal(dateOf(file), '');
+    assert.deepEqual(Array.from(file.subjects), ['math', 'geometry']);
   }
 });
 test('a slow problem upload uses the collection and metadata captured before navigation', async () => {
@@ -133,7 +135,7 @@ test('a slow problem upload uses the collection and metadata captured before nav
 
 test('source extraction reuses the Problem upload form, saves one linked image and returns to its PDF', async () => {
   const app = form('sources');
-  const source = { id: 'source', name: 'exam.pdf', subject: 'math', topic: 'Algebra' };
+  const source = { id: 'source', name: 'exam.pdf', subject: 'math', subjects: ['math', 'algebra'], topic: 'Algebra' };
   app.context.files.push(source);
   app.context.extracted = { source, blob: png(), location: { sourceId: source.id, page: 2, rect: { x: .1, y: .3, width: .5, height: .2 } } };
   app.$('pdfFileInput').files = [];
@@ -145,6 +147,7 @@ test('source extraction reuses the Problem upload form, saves one linked image a
   await app.$('uploadPdfForm').onsubmit({ preventDefault() {} });
   assert.equal(app.stored.length, 1); const saved = app.stored[0];
   assert.equal(saved.kind, 'problem'); assert.equal(saved.sourceLocation.page, 2);
+  assert.deepEqual(Array.from(saved.subjects), ['math', 'algebra']);
   assert.equal(saved.sourceLocation.sourceId, source.id); assert.equal(saved.statementImages.length, 1);
   assert.equal(app.$('pdfViewerPage').inert, false); assert.equal(app.context.app.inert, true);
   assert.equal(app.context.document.body.style.overflow, 'hidden');

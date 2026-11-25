@@ -8,10 +8,10 @@ export function todayDate(now = new Date()) {
   return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 }
 
-export function validateDocumentName(name, subject, files, id) {
+export function validateDocumentName(name, subject, files, id, matchesSubject = (file, tag) => file.subject === tag) {
   if (!name.trim()) throw new Error('Enter a file name.');
   if (/[\\/\x00-\x1f]/.test(name)) throw new Error('File name cannot contain slashes or control characters.');
-  if (files.some(file => file.id !== id && !file.sample && file.subject === subject && file.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
+  if (files.some(file => file.id !== id && !file.sample && matchesSubject(file, subject) && file.name.toLocaleLowerCase() === name.toLocaleLowerCase())) {
     throw new Error('A file with this name already exists in that subject.');
   }
   return name;

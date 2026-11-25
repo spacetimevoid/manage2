@@ -1,5 +1,4 @@
 .modal-backdrop.is-problems .modal-breadcrumb .sep,
-.modal-backdrop.is-problems #modalPathSubjectInput,
 .modal-backdrop.is-problems #modalPathFileNameInput,
 .modal-backdrop.is-problems .modal-field:has(#modalTopicInput) { display: none; }
 .manage-shell.is-problems .topic-cell,

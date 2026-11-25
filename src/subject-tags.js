@@ -1,7 +1,7 @@
 import { normalizeSubject } from './metadata.js';
 import { createSubjectPicker, subjectLabel } from './subject-picker.js';
 
-export const documentSubjects = file => file.kind === 'problem' && Array.isArray(file.subjects)
+export const documentSubjects = file => file.kind !== 'subject' && Array.isArray(file.subjects)
   ? [...new Set(file.subjects)] : file.subject ? [file.subject] : [];
 export const hasSubject = (file, subject) => documentSubjects(file).includes(subject);
 export const problemCode = file => {
