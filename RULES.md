@@ -58,12 +58,6 @@ Không tự suy diễn hoặc triển khai phần mở rộng. Hỏi ngắn gọ
 
 ## 9. Chủ động đề xuất các phần liên quan để người dùng duyệt
 
-- Khi người dùng yêu cầu thêm hoặc điều chỉnh một tính năng, chủ động xem xét toàn bộ luồng sử dụng và liệt kê những phần bổ sung liên quan trực tiếp mà người dùng có thể chưa nghĩ tới, kể cả khi mô tả ban đầu còn mơ hồ.
-- Phân biệt rõ phần người dùng đã yêu cầu với các đề xuất bổ sung. Mỗi đề xuất cần có mô tả ngắn, lý do cần cân nhắc và ảnh hưởng đáng kể đến giao diện, thao tác hoặc dữ liệu nếu có, để người dùng dễ chọn duyệt.
-- Ví dụ: với tính năng nhiều tag Subject, cần cân nhắc đề xuất gợi ý tag có sẵn, xử lý tag trùng, sửa/xóa tag, thao tác bàn phím, hiển thị khi có nhiều tag và cách lọc theo tag. Đây là các ví dụ để cân nhắc theo ngữ cảnh, không phải danh sách tính năng mặc định phải triển khai.
-- Chỉ đưa ra các đề xuất phù hợp với yêu cầu thực tế và triết lý less is more; tránh liệt kê dài các tính năng không cần thiết. Không coi quy tắc này là lý do mở rộng phạm vi một bản sửa nhỏ, rõ ràng.
-- Trình bày các đề xuất đủ sớm để người dùng duyệt trước khi triển khai chúng. Chỉ thực hiện phần bổ sung sau khi có sự đồng ý; việc chưa trả lời không được coi là chấp thuận. Không hỏi duyệt lại những phần đã được người dùng đồng ý trong cuộc trao đổi.
-- Tiếp tục thực hiện những phần độc lập đã được yêu cầu hoặc phê duyệt trong khi chờ quyết định về phần bổ sung. Nếu một phần chưa được duyệt là điều kiện bắt buộc để tiếp tục, giải thích rõ sự phụ thuộc đó và hỏi người dùng.
-- Quy tắc này yêu cầu chủ động tư vấn, không cho phép tự thêm tính năng. Các giới hạn triển khai tại mục 3, 4 và 8 vẫn áp dụng.
+Khi người dùng yêu cầu thêm hoặc điều chỉnh tính năng, áp dụng skill [`review-feature-scope`](.agents/skills/review-feature-scope/SKILL.md). Các giới hạn triển khai tại mục 3, 4 và 8 vẫn áp dụng.
 
 Yêu cầu trực tiếp mới nhất của người dùng được ưu tiên khi có khác biệt với file này.
