@@ -1,4 +1,4 @@
-import { problemSummary, createProblemTagsPopover } from './problem-label.js';
+import { problemSummary, rowSubjectTags, createProblemTagsPopover } from './problem-label.js';
 import { subjectLabel } from './subject-picker.js';
 import { installBrowsePaste } from './browse-paste.js';
 import { suggestProblemTags } from './problem-tag-suggestions.js';
@@ -71,9 +71,10 @@ function renderFiles(animate = true) {
   const finishMotion = animate ? captureListMotion($('fileList')) : () => {};
   const result = queryFiles(visibleFiles(), { subject: activeSubject, sortKey, sortDir, page: currentPage });
   currentPage = result.page;
+  const problems = activeView === 'problems';
   $('fileList').innerHTML = result.items.map(f => {
-    const tags = esc(documentSubjects(f).join(', '));
-    return `<${activeView === 'problems' ? 'div role="link" tabindex="0"' : 'a'} class="file-row" href="${esc(readerHash(activeView, f.id))}" data-id="${esc(f.id)}"><div class="file-info"><span class="filename">${activeView === 'problems' ? problemSummary(f) : esc(f.name)}</span></div><span class="topic-cell" title="${tags}">${tags}</span><span class="due-date">${esc(dateOf(f))}</span><div class="status-cell"><span class="${activeView === 'problems' ? `difficulty difficulty-${esc(normalizedDifficulty(f.difficulty))}` : `badge ${f.done ? 'badge-done' : 'badge-pending'}`}">${activeView === 'problems' ? difficultyLabel(f.difficulty) : f.done ? 'Completed' : 'Pending'}</span></div></${activeView === 'problems' ? 'div' : 'a'}>`;
+    const title = problems ? problemSummary(f) : `<a class="source-file-link" href="${esc(readerHash(activeView, f.id))}">${esc(f.name)}</a>${rowSubjectTags(f)}`;
+    return `<div${problems ? ' role="link" tabindex="0"' : ''} class="file-row" data-id="${esc(f.id)}"><div class="file-info"><span class="filename">${title}</span></div><span class="due-date">${esc(dateOf(f))}</span><div class="status-cell"><span class="${problems ? `difficulty difficulty-${esc(normalizedDifficulty(f.difficulty))}` : `badge ${f.done ? 'badge-done' : 'badge-pending'}`}">${problems ? difficultyLabel(f.difficulty) : f.done ? 'Completed' : 'Pending'}</span></div></div>`;
   }).join('') || '<div class="sidebar-empty" style="padding: 18px 10px;">No files in this subject</div>';
   $('paginationBar').hidden = result.pages <= 1;
   $('paginationInfo').textContent = `${result.page} / ${result.pages}`;

@@ -5,9 +5,13 @@ import { subjectLabel } from './subject-picker.js';
 // Derived from the record ID, never from a filtered/sorted row position.
 export { problemCode };
 export function problemSummary(file) {
+  return `<span class="problem-code">${escapeHtml(problemCode(file))}</span>${rowSubjectTags(file)}`;
+}
+
+export function rowSubjectTags(file) {
   const tags = documentSubjects(file);
   const visible = tags.slice(0, 2).map(tag => `<span class="problem-row-tag">${escapeHtml(subjectLabel(tag))}</span>`).join('');
-  return `<span class="problem-code">${escapeHtml(problemCode(file))}</span>${visible}${tags.length > 2 ? `<button type="button" class="problem-more-tags" data-problem-tags="${escapeHtml(file.id)}" aria-label="Show all ${tags.length} subjects" aria-expanded="false">+${tags.length - 2}</button>` : ''}`;
+  return `${visible}${tags.length > 2 ? `<button type="button" class="problem-more-tags" data-problem-tags="${escapeHtml(file.id)}" aria-label="Show all ${tags.length} subjects" aria-expanded="false">+${tags.length - 2}</button>` : ''}`;
 }
 
 export function createProblemTagsPopover() {

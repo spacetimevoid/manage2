@@ -1,5 +1,5 @@
 import { subjectLabel } from '../src/subject-picker.js';
-import { problemSummary } from '../src/problem-label.js';
+import { problemSummary, rowSubjectTags } from '../src/problem-label.js';
 import { documentSubjects, hasSubject } from '../src/subject-tags.js';
 import { normalizeSubject, todayDate, renamedDocument, validateDocumentName, normalizedDifficulty } from '../src/metadata.js';
 import test from 'node:test';
@@ -56,7 +56,7 @@ test('runtime navigation and reload keep headings, columns, counts and records i
     status.querySelector = () => statusLabel;
     const previousEntries = [];
     let onHashChange;
-    const context = vm.createContext({ documentSubjects, hasSubject, problemSummary, subjectLabel, captureListMotion: (element, options) => { if (options) element.motion = options; return () => {}; }, mediaLoader: { warm() {} }, app: { classList: { toggle() {} } },
+    const context = vm.createContext({ documentSubjects, hasSubject, problemSummary, rowSubjectTags, subjectLabel, captureListMotion: (element, options) => { if (options) element.motion = options; return () => {}; }, mediaLoader: { warm() {} }, app: { classList: { toggle() {} } },
       SUBJECTS: ['math'], activeView: viewFromHash(hash), activeSubject: 'all', currentPage: 1, sortKey: null, sortDir: 'asc', searchQuery: '', activeFile: null,
       files: [
         { id: 's', name: 'Source.pdf', subject: 'math', topic: 'Source topic', dueDate: '20/11/2026', done: true },
