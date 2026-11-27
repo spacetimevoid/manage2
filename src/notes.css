@@ -92,6 +92,17 @@ body:has(#noteForm:not([hidden])) { overflow: hidden; }
   resize: none;
 }
 .notes-editor-input:focus-visible, .notes-preview:focus-visible { outline: 1px solid #a5b9cb; outline-offset: -1px; }
+.notes-code-host {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  background: #f5f5f7;
+  font: 13px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.notes-code-host .cm-editor { flex: 1; min-width: 0; }
+.notes-code-host .cm-scroller { font: inherit; }
+.notes-code-host .cm-content { padding: 16px 12px; }
+.notes-code-host .cm-focused { outline: 1px solid #a5b9cb; outline-offset: -1px; }
 .notes-markdown { font-size: 15px; line-height: 1.65; overflow-wrap: anywhere; }
 .notes-markdown > :first-child { margin-top: 0; }
 .notes-markdown > :last-child { margin-bottom: 0; }

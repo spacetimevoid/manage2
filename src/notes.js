@@ -14,6 +14,7 @@ export function createNotesPage({ store, deletionHistory, contextMenu, showTags,
   const list = $('noteList'), sidebar = $('noteSubjects'), reader = $('noteRead');
   const form = $('noteForm'), titleInput = $('noteTitleInput'), markdownInput = $('noteMarkdownInput');
   const preview = $('notePreview'), error = $('noteError'), editors = $('noteEditors');
+  const codeHost = $('noteCodeHost');
   const tabs = [...$('noteTabs').children];
   const compact = matchMedia('(max-width: 700px)');
   const tagNames = () => [...new Set(notes.flatMap(note => note.subjects))].sort((a, b) => a.localeCompare(b));
@@ -24,7 +25,7 @@ export function createNotesPage({ store, deletionHistory, contextMenu, showTags,
   let notes = [], note = null, baseline = null;
   let subject = 'all', page = 1, route = '', listVersion = 0, routeVersion = 0;
   let editVersion = 0, importVersion = 0, previewVersion = 0, previewTimer, saving = false;
-  let rendererPromise;
+  let rendererPromise, editorPromise, editor;
 
   function renderList() {
     const names = tagNames();
@@ -140,6 +141,23 @@ export function createNotesPage({ store, deletionHistory, contextMenu, showTags,
     else previewTimer = setTimeout(draw, 100);
   }
 
+  async function enhanceEditor(version) {
+    try {
+      editorPromise ??= import('./notes-code-editor.js');
+      const { createNoteEditor } = await editorPromise;
+      if (version !== editVersion || form.hidden) return;
+      const focused = document.activeElement === markdownInput;
+      codeHost.hidden = false;
+      editor = createNoteEditor(codeHost, markdownInput, queuePreview);
+      markdownInput.hidden = true;
+      if (focused) editor.focus();
+    } catch (error) {
+      console.warn('Unable to load the Notes code editor:', error);
+      editorPromise = null;
+      codeHost.hidden = true;
+    }
+  }
+
   function showEditor(source = null, imported = null) {
     showDetail();
     baseline = source ?? { title: '', markdown: '', subjects: [] };
@@ -156,6 +174,7 @@ export function createNotesPage({ store, deletionHistory, contextMenu, showTags,
     selectPane(0);
     queuePreview(true);
     (source || imported ? markdownInput : titleInput).focus({ preventScroll: true });
+    void enhanceEditor(editVersion);
   }
 
   function closeEditor() {
@@ -164,6 +183,10 @@ export function createNotesPage({ store, deletionHistory, contextMenu, showTags,
     clearTimeout(previewTimer);
     baseline = null;
     form.hidden = true;
+    editor?.destroy();
+    editor = null;
+    codeHost.hidden = true;
+    markdownInput.hidden = false;
     tagInput.set([], false);
   }
 
@@ -286,6 +309,7 @@ export function createNotesPage({ store, deletionHistory, contextMenu, showTags,
       const existing = note?.id !== sampleId ? note : null;
       const draft = { id: existing?.id ?? crypto.randomUUID(), title, markdown: markdownInput.value, subjects: tagInput.get() };
       saving = fieldset.disabled = true;
+      editor?.setEditable(false);
       error.textContent = '';
       const saved = existing ? await store.update({ ...draft, revision: existing.revision }) : await store.add(draft);
       const entryHash = readerHash('notes', saved.id);
@@ -297,7 +321,10 @@ export function createNotesPage({ store, deletionHistory, contextMenu, showTags,
       showReader();
     } catch (failure) {
       if (version === editVersion) error.textContent = failure.message || 'Unable to save this note.';
-    } finally { saving = fieldset.disabled = false; }
+    } finally {
+      saving = fieldset.disabled = false;
+      editor?.setEditable(true);
+    }
   };
 
   sidebar.onclick = event => {
