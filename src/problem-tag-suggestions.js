@@ -1,7 +1,7 @@
 import { cloudClient } from './cloud.js';
 import { isImageFile } from './uploads.js';
 
-async function prepareAttachment(file) {
+export async function prepareProblemImage(file) {
   if (!isImageFile(file)) throw new Error('Choose an image to suggest tags.');
   if (['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) return file;
 
@@ -32,7 +32,7 @@ export async function suggestProblemTags(file, subjects, signal) {
   if (!token) throw new Error('Sign in to suggest tags.');
   signal.throwIfAborted();
 
-  const attachment = await prepareAttachment(file);
+  const attachment = await prepareProblemImage(file);
   const body = new FormData();
   body.append('file', attachment, 'problem');
   body.append('subjects', JSON.stringify(subjects));

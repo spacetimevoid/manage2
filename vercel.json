@@ -6,6 +6,10 @@
   "functions": {
     "api/problem-tags.js": {
       "regions": ["sin1"]
+    },
+    "api/practice-variant.js": {
+      "regions": ["sin1"],
+      "maxDuration": 60
     }
   }
 }

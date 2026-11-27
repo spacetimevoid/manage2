@@ -110,16 +110,34 @@
             <p class="modal-error" id="practiceExamError" role="alert"></p>
             <div class="modal-actions">
                 <button type="submit" class="classic-aqua-btn is-primary">Create</button>
+                <button type="submit" class="classic-aqua-btn" id="practiceExamGenerate">Generate variants</button>
                 <button type="button" class="classic-cancel-link" data-close-exam>Cancel</button>
             </div>
         </form>
         <section id="practiceExamPreview" hidden>
             <ol id="practiceExamQuestions"></ol>
             <div class="modal-actions">
-                <button type="button" class="classic-aqua-btn" id="practiceExamBack">Back</button>
+                <button type="button" class="classic-aqua-btn" data-back-exam>Back</button>
                 <button type="button" class="classic-cancel-link" data-close-exam>Close</button>
             </div>
         </section>
+        <form id="practiceExamReview" hidden>
+            <ol class="practice-exam-questions"></ol>
+            <p class="modal-error" role="alert"></p>
+            <div class="modal-actions">
+                <button type="submit" class="classic-aqua-btn is-primary">Start exam</button>
+                <button type="button" class="classic-cancel-link" data-back-exam>Back</button>
+                <button type="button" class="classic-cancel-link" data-close-exam>Close</button>
+            </div>
+        </form>
+        <form id="practiceExamAttempt" hidden>
+            <p id="practiceExamScore" role="status" tabindex="-1" hidden></p>
+            <ol class="practice-exam-questions"></ol>
+            <div class="modal-actions">
+                <button type="submit" class="classic-aqua-btn is-primary">Submit answers</button>
+                <button type="button" class="classic-cancel-link" data-close-exam>Close</button>
+            </div>
+        </form>
     </dialog>
 
     <!-- Compact Vintage Mac OS X Upload Modal -->
