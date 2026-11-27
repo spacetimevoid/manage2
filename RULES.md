@@ -44,7 +44,7 @@ Không tự suy diễn hoặc triển khai phần mở rộng. Hỏi ngắn gọ
 - Sau mỗi thay đổi lớn, bắt buộc tạo Git commit khi phần công việc đó đã hoàn thành và vượt qua các kiểm tra phù hợp. Commit trước khi bắt đầu công việc khác hoặc báo hoàn tất; không chờ người dùng nhắc.
 - Thay đổi lớn gồm thêm tính năng, sửa lỗi ảnh hưởng hành vi hoặc dữ liệu, thay đổi đáng kể về giao diện, kiến trúc hay cấu trúc dự án. Đánh giá theo tác động, không chỉ số dòng mã.
 - Mỗi commit ghi nhận một nhóm thay đổi liên quan, có thông điệp mô tả rõ nội dung. Chỉ đưa vào commit các file thuộc công việc được giao, không gộp thay đổi không liên quan của người dùng.
-- Commit là ghi nhận cục bộ. Push lên remote theo yêu cầu của người dùng.
+- Commit là ghi nhận cục bộ. Push lên remote theo yêu cầu của người dùng hoặc để tạo Preview theo mục 10.
 - Nếu không thể commit, phải báo rõ nguyên nhân và phần thay đổi còn chưa được commit; không được tuyên bố đã commit khi chưa thực hiện thành công.
 
 ## 8. Làm việc tỉ mỉ, cẩn thận và đúng yêu cầu
@@ -59,5 +59,11 @@ Không tự suy diễn hoặc triển khai phần mở rộng. Hỏi ngắn gọ
 ## 9. Chủ động đề xuất các phần liên quan để người dùng duyệt
 
 Khi người dùng yêu cầu thêm hoặc điều chỉnh tính năng, áp dụng skill [`review-feature-scope`](.agents/skills/review-feature-scope/SKILL.md). Các giới hạn triển khai tại mục 3, 4 và 8 vẫn áp dụng.
+
+## 10. Gửi link Preview sau mỗi lần sửa ứng dụng
+
+- Sau khi sửa ứng dụng và hoàn tất các kiểm tra phù hợp, triển khai bản Vercel Preview của đúng phiên bản vừa kiểm tra. Xác nhận deployment đã sẵn sàng và kiểm tra link trước khi gửi trong phản hồi bàn giao.
+- Nếu cần push để tạo Preview, chỉ push nhánh làm việc. Giữ chế độ truy cập riêng tư hiện có. Việc tạo Preview không bao gồm merge vào main, triển khai Production hoặc thay đổi dữ liệu và cấu hình Production.
+- Nếu Preview chưa sẵn sàng hoặc bị chặn, báo rõ nguyên nhân và trạng thái hiện tại. Thay đổi chỉ liên quan đến tài liệu hoặc quy tắc không cần tạo Preview mới.
 
 Yêu cầu trực tiếp mới nhất của người dùng được ưu tiên khi có khác biệt với file này.

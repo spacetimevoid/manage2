@@ -28,7 +28,8 @@ Dự án phục vụ việc lưu trữ file đề và bài tập hay, khó đư�
 - Khi người dùng yêu cầu thêm hoặc điều chỉnh tính năng, đọc và áp dụng skill [`review-feature-scope`](.agents/skills/review-feature-scope/SKILL.md) theo mục 9 của `RULES.md`.
 - Ưu tiên bản sửa nhỏ nhất đủ giải quyết vấn đề. Không tự tái cấu trúc hoặc thêm thư viện khi không cần thiết cho yêu cầu.
 - Giữ các chức năng hiện có ngoài phạm vi sửa. Không tự áp đặt giới hạn dữ liệu hoặc đổi giá trị mặc định.
-- Không tự đăng tải, triển khai hoặc truyền file và dữ liệu của người dùng ra ngoài khi chưa được yêu cầu.
+- Gửi link Vercel Preview sau mỗi lần sửa ứng dụng theo mục 10 của `RULES.md`.
+- Giữ việc đăng tải và truyền file hoặc dữ liệu của người dùng trong đúng phạm vi đã được yêu cầu.
 - Kiểm tra phù hợp với thay đổi; với thay đổi mã chạy, dùng các lệnh có sẵn như `npm.cmd test` và `npm.cmd run build` khi cần.
 - Khi sửa giao diện theo yêu cầu, đối chiếu với thiết kế đã được người dùng chấp thuận. Không tuyên bố đã kiểm tra trực quan nếu chưa thực hiện được.
 - Bắt buộc tạo Git commit sau mỗi thay đổi lớn đã hoàn thành và kiểm tra, trước khi chuyển sang công việc khác hoặc báo hoàn tất. Thực hiện chủ động, không chờ người dùng nhắc; áp dụng chi tiết tại mục 7 của `RULES.md`.
