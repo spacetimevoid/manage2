@@ -4,8 +4,11 @@ import { createSubjectTags, hasSubject } from './subject-tags.js';
 import { rowSubjectTags } from './problem-label.js';
 import { fadeDeleted, revealRestored } from './deletion.js';
 import { noteTitle, readNoteFile, validNoteId } from './note-file.js';
+import motionSample from './notes-motion-sample.md?raw';
 
-export function createNotesPage({ store, deletionHistory, contextMenu, showTags }) {
+const sampleId = 'sample';
+
+export function createNotesPage({ store, deletionHistory, contextMenu, showTags, allowSample = false }) {
   const $ = id => document.getElementById(id);
   const listPage = $('notesListPage'), detailPage = $('notesDetailPage');
   const list = $('noteList'), sidebar = $('noteSubjects'), reader = $('noteRead');
@@ -200,7 +203,12 @@ export function createNotesPage({ store, deletionHistory, contextMenu, showTags 
     $('noteHeading').textContent = 'Notes';
     $('noteEditBtn').hidden = true;
     try {
-      const loaded = validNoteId(id) ? await store.read(id) : null;
+      let loaded = null;
+      if (id === sampleId && allowSample) {
+        loaded = { id: sampleId, title: 'Điểm quay quanh đường tròn', markdown: motionSample, subjects: [] };
+      } else if (validNoteId(id)) {
+        loaded = await store.read(id);
+      }
       if (version !== routeVersion) return;
       if (!loaded) { error.textContent = 'Note not found.'; return; }
       note = loaded;
@@ -275,10 +283,11 @@ export function createNotesPage({ store, deletionHistory, contextMenu, showTags 
     const version = editVersion;
     const fieldset = $('noteFields');
     try {
-      const draft = { id: note?.id ?? crypto.randomUUID(), title, markdown: markdownInput.value, subjects: tagInput.get() };
+      const existing = note?.id !== sampleId ? note : null;
+      const draft = { id: existing?.id ?? crypto.randomUUID(), title, markdown: markdownInput.value, subjects: tagInput.get() };
       saving = fieldset.disabled = true;
       error.textContent = '';
-      const saved = note ? await store.update({ ...draft, revision: note.revision }) : await store.add(draft);
+      const saved = existing ? await store.update({ ...draft, revision: existing.revision }) : await store.add(draft);
       const entryHash = readerHash('notes', saved.id);
       if (version !== editVersion) return;
       if (route !== entryHash) history.pushState(null, '', entryHash);

@@ -49,3 +49,14 @@ test('local persistence separates list metadata, rejects stale edits and restore
   assert.deepEqual(restored.subjects, ['tổ-hợp']);
   assert.equal(restored.markdown, '$n^2$');
 });
+
+test('SVG fences render as isolated images while ordinary code stays escaped', () => {
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg"><circle r="2"><animate attributeName="r" values="2;4" dur="1s"/></circle></svg>';
+  const html = renderNoteMarkdown('```svg\n' + svg + '\n```');
+  const image = html.match(/<img class="note-svg"[^>]+src="data:image\/svg\+xml;charset=utf-8,([^"]+)">/);
+  assert.ok(image);
+  assert.equal(decodeURIComponent(image[1]), svg);
+  assert.doesNotMatch(html, /<svg|<animate/);
+  assert.match(renderNoteMarkdown('```svg\nnot an SVG\n```'), /<pre><code/);
+  assert.match(renderNoteMarkdown('```xml\n' + svg + '\n```'), /&lt;svg/);
+});

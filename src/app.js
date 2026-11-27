@@ -876,7 +876,7 @@ async function initialize() {
   $('uploadPdfBtn').disabled = true;
   try {
     db = await openLibrary();
-    notesPage = createNotesPage({ store: db.notes, deletionHistory, contextMenu, showTags: showProblemTags });
+    notesPage = createNotesPage({ store: db.notes, deletionHistory, contextMenu, showTags: showProblemTags, allowSample: !db.cloud });
     libraryReady = true;
     await applyRoute();
   } catch (error) {
