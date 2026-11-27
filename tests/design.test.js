@@ -13,6 +13,8 @@ test('page markup matches the sketch apart from the requested additions', () => 
     .replace('dd/mm/yyyy', 'DD/MM/YYYY')
     .replace('>Select source</label>', '>Select PDF</label>')
     .replace(/<button[^>]*id="modalSuggestTagsBtn"[^>]*>Suggest tags<\/button>/, '')
+    .replace(/<div class="collection-actions">\s*<button[^>]*id="createPracticeExamBtn"[^>]*>[\s\S]*?<\/button>\s*(<button[^>]*id="uploadPdfBtn"[^>]*>[\s\S]*?<\/button>)\s*<\/div>/, '$1')
+    .replace(/<dialog[^>]*id="practiceExamDialog"[^>]*>[\s\S]*?<\/dialog>/, '')
     .replace(/<style>[\s\S]*?<\/style>/, '')
     .replace(/<link rel="stylesheet" href="\/src\/styles.css">/, '')
     .replace(/<link rel="stylesheet" href="\/src\/navigation.css">/, '')

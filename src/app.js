@@ -1,4 +1,5 @@
 import { problemSummary, rowSubjectTags, createProblemTagsPopover } from './problem-label.js';
+import { installPracticeExam } from './practice-exam.js';
 import { subjectLabel } from './subject-picker.js';
 import { installBrowsePaste } from './browse-paste.js';
 import { suggestProblemTags } from './problem-tag-suggestions.js';
@@ -87,6 +88,8 @@ function renderFiles(animate = true) {
 }
 function renderView() {
   const problems = activeView === 'problems';
+  $('createPracticeExamBtn').hidden = !problems;
+  $('createPracticeExamBtn').disabled = !libraryReady;
   app.classList.toggle('is-problems', problems);
   document.querySelector('[data-sort="name"] span').textContent = problems ? 'Problem' : 'File name';
   $('breadcrumbReset').textContent = viewName();
@@ -842,6 +845,11 @@ installBrowsePaste($('uploadModalBackdrop'), {
     if (!$('modalPathFileNameInput').value.trim()) $('modalPathFileNameInput').value = documentTitle(file.name);
   },
   onError(message) { $('modalErrorMsg').textContent = message; },
+});
+
+installPracticeExam($('createPracticeExamBtn'), $('practiceExamDialog'), {
+  getProblems: () => queryFiles(collectionFiles(files, 'problems'), { subject: activeSubject, sortKey, sortDir }).allItems,
+  loadProblem: file => mediaLoader.load(file),
 });
 
 async function initialize() {

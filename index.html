@@ -45,7 +45,10 @@
                         <button type="button" class="breadcrumb-root" id="breadcrumbReset" title="View all documents">Sources</button>
                         <span id="breadcrumbDynamic" hidden><span class="breadcrumb-sep">/</span><span class="breadcrumb-subject" id="breadcrumbSubject"></span></span>
                     </h1>
-                    <button type="button" class="upload-link-btn" id="uploadPdfBtn">Upload</button>
+                    <div class="collection-actions">
+                        <button type="button" class="upload-link-btn" id="createPracticeExamBtn" hidden disabled>Create practice exam</button>
+                        <button type="button" class="upload-link-btn" id="uploadPdfBtn">Upload</button>
+                    </div>
                 </div>
                 <hr class="divider">
             </header>
@@ -97,6 +100,28 @@
     </div>
 
     </div>
+    <dialog class="apple-modal practice-exam-dialog" id="practiceExamDialog" aria-labelledby="practiceExamTitle">
+        <h2 class="modal-breadcrumb" id="practiceExamTitle">Practice exam</h2>
+        <form id="practiceExamForm">
+            <fieldset class="practice-exam-picker">
+                <legend class="modal-label">Select problems</legend>
+                <div id="practiceExamChoices"></div>
+            </fieldset>
+            <p class="modal-error" id="practiceExamError" role="alert"></p>
+            <div class="modal-actions">
+                <button type="submit" class="classic-aqua-btn is-primary">Create</button>
+                <button type="button" class="classic-cancel-link" data-close-exam>Cancel</button>
+            </div>
+        </form>
+        <section id="practiceExamPreview" hidden>
+            <ol id="practiceExamQuestions"></ol>
+            <div class="modal-actions">
+                <button type="button" class="classic-aqua-btn" id="practiceExamBack">Back</button>
+                <button type="button" class="classic-cancel-link" data-close-exam>Close</button>
+            </div>
+        </section>
+    </dialog>
+
     <!-- Compact Vintage Mac OS X Upload Modal -->
     <div class="modal-backdrop" id="uploadModalBackdrop" aria-hidden="true">
         <div class="apple-modal" role="dialog" aria-modal="true" aria-labelledby="uploadModalTitle">
