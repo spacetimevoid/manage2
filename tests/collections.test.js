@@ -63,7 +63,7 @@ test('runtime navigation and reload keep headings, columns, counts and records i
         { id: 'p', kind: 'problem', name: 'Problem.pdf', subject: 'math', topic: 'Problem topic', addedDate: '15/11/2026', difficulty: 'hard' },
       ],
       location: { hash }, $, queryFiles, collectionFiles, subjectNames, normalizedDifficulty, dateOf, esc: escapeHtml, viewFromHash, readerHash, readerRoute, problemTitle,
-      libraryReady: true, routeSequence: 0, viewerClosing: false, viewerClosePromise: null,
+      libraryReady: true, documentsReady: Promise.resolve(), notesPage: { canNavigate: () => true, leave() {} }, routeSequence: 0, viewerClosing: false, viewerClosePromise: null,
       history: {
         state: null,
         replaceState(state, _title, hash) { this.state = state; context.location.hash = hash; },

@@ -3,8 +3,8 @@ import { documentSubjects, hasSubject, problemCode } from './subject-tags.js';
 export const PAGE_SIZE = 10;
 export function readerRoute(hash) {
   const [section, encodedId] = hash.replace(/^#/, '').split('/');
-  const view = section === 'problems' ? 'problems' : 'sources';
-  if (!['sources', 'problems'].includes(section)) return { view, id: null };
+  const view = ['problems', 'notes'].includes(section) ? section : 'sources';
+  if (section !== view) return { view, id: null };
   try { return { view, id: encodedId ? decodeURIComponent(encodedId) : null }; }
   catch { return { view, id: null }; }
 }

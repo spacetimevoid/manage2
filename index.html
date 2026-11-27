@@ -17,8 +17,9 @@
         <span class="manage-name">Manage</span><span class="manage-nav-divider" aria-hidden="true">|</span>
         <a href="#sources" data-view="sources">Sources</a>
         <a href="#problems" data-view="problems">Problems</a>
+        <a href="#notes" data-view="notes">Notes</a>
     </nav>
-    <div class="app-layout">
+    <div class="app-layout" id="documentListPage">
         <!-- Left column: Subject directory sidebar with instant search -->
         <aside class="sidebar" aria-label="Subjects directory">
             <div class="sidebar-label">Subjects</div>
@@ -95,6 +96,75 @@
             </nav>
         </main>
     </div>
+
+    <div class="app-layout" id="notesListPage" hidden>
+        <aside class="sidebar" aria-label="Note subjects">
+            <div class="sidebar-label">Subjects</div>
+            <nav class="subject-list" id="noteSubjects" aria-label="Filter notes by subject"></nav>
+        </aside>
+        <main class="main-content">
+            <header class="header-row">
+                <h1 class="breadcrumb-title">Notes</h1>
+                <div class="notes-actions">
+                    <button type="button" class="upload-link-btn" id="noteNewBtn">New</button>
+                    <button type="button" class="upload-link-btn" id="noteUploadBtn">Upload</button>
+                    <input type="file" id="noteFileInput" accept=".md" hidden>
+                </div>
+            </header>
+            <hr class="divider">
+            <div class="notes-message" id="noteListStatus" role="status"></div>
+            <section class="file-list" id="noteList" aria-label="Notes"></section>
+            <nav class="pagination-bar" id="notePagination" aria-label="Note pagination" hidden>
+                <button type="button" class="page-btn" id="notePrevPage" aria-label="Previous page">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><polyline points="10 3.5 5.5 8 10 12.5"></polyline></svg>
+                </button>
+                <span class="pagination-info" id="notePageInfo">1 / 1</span>
+                <button type="button" class="page-btn" id="noteNextPage" aria-label="Next page">
+                    <svg viewBox="0 0 16 16" aria-hidden="true"><polyline points="6 3.5 10.5 8 6 12.5"></polyline></svg>
+                </button>
+            </nav>
+        </main>
+    </div>
+    <main class="notes-detail" id="notesDetailPage" hidden>
+        <a class="notes-back" id="noteBackLink" href="#notes">Back to Notes</a>
+        <header class="header-row">
+            <h1 class="breadcrumb-title" id="noteHeading">Notes</h1>
+            <button type="button" class="upload-link-btn" id="noteEditBtn" hidden>Edit</button>
+        </header>
+        <hr class="divider">
+        <div class="notes-message" id="noteError" role="alert"></div>
+        <div id="noteRead" hidden>
+            <div class="notes-read-tags" id="noteReadTags"></div>
+            <article class="notes-markdown" id="noteContent"></article>
+        </div>
+        <form id="noteForm" hidden novalidate>
+            <fieldset class="notes-fields" id="noteFields">
+                <div class="modal-field">
+                    <label class="modal-label" for="noteTitleInput">Title</label>
+                    <input type="text" class="classic-input" id="noteTitleInput" required>
+                </div>
+                <div id="noteTagField"></div>
+                <div class="notes-tabs" id="noteTabs" role="tablist" aria-label="Note editor">
+                    <button type="button" role="tab" id="noteEditTab" aria-controls="noteEditPane" aria-selected="true">Edit</button>
+                    <button type="button" role="tab" id="notePreviewTab" aria-controls="notePreviewPane" aria-selected="false" tabindex="-1">Preview</button>
+                </div>
+                <div class="notes-editors" id="noteEditors" data-pane="edit">
+                    <div class="notes-pane" id="noteEditPane">
+                        <label class="modal-label" for="noteMarkdownInput">Markdown</label>
+                        <textarea class="notes-editor-input" id="noteMarkdownInput"></textarea>
+                    </div>
+                    <div class="notes-pane" id="notePreviewPane">
+                        <div class="modal-label" id="notePreviewLabel">Preview</div>
+                        <div class="notes-markdown notes-preview" id="notePreview" role="region" aria-labelledby="notePreviewLabel" tabindex="0"></div>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button type="submit" class="classic-aqua-btn" id="noteSaveBtn">Save</button>
+                    <button type="button" class="classic-cancel-link" id="noteCancelBtn">Cancel</button>
+                </div>
+            </fieldset>
+        </form>
+    </main>
 
     </div>
     <!-- Compact Vintage Mac OS X Upload Modal -->

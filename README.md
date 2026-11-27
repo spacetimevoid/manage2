@@ -22,6 +22,10 @@ Without Supabase environment variables, the app uses the original browser-local 
 
 Uploads, notes, difficulty, completion status and solutions are saved to Supabase. Existing non-sample records on the same browser origin are imported without overwriting cloud records. Data on localhost or a different deployment URL remains on that origin and is not automatically transferred across origins.
 
+## Notes
+
+Notes uses the library sign-in. Apply the `create_library_notes` migration after the base cloud schema when provisioning a Notes-enabled environment. Local development without cloud configuration stores Notes in a separate IndexedDB database.
+
 ## Problem tag suggestions
 
 In Upload Problem, **Suggest tags** sends the selected image and available subject labels to `gemini-3.5-flash-lite` through Google's Gemini API. Suggestions join the editable Subjects field and are saved only when you choose **Save**. PDF uploads use manual tags.

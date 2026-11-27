@@ -3,11 +3,13 @@ import { cloudClient } from './cloud.js';
 import { createCloudStorage } from './cloud-storage.js';
 import { createAttachmentCache } from './attachment-cache.js';
 import { requirePrivateSession } from './auth.js';
+import { createCloudNotes, createLocalNotes } from './notes-storage.js';
 
 export async function openLibrary() {
-  if (!cloudClient) return local.openLibrary();
+  if (!cloudClient) return Object.assign(await local.openLibrary(), { notes: createLocalNotes() });
   const user = await requirePrivateSession(cloudClient);
-  return createCloudStorage(cloudClient, user, createAttachmentCache(`${import.meta.env.VITE_SUPABASE_URL}/${user.id}`));
+  const db = createCloudStorage(cloudClient, user, createAttachmentCache(`${import.meta.env.VITE_SUPABASE_URL}/${user.id}`));
+  return { ...db, notes: createCloudNotes(cloudClient, user.id) };
 }
 export async function readDocuments(db) {
   if (!db.cloud) return local.readDocuments(db);

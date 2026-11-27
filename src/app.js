@@ -27,12 +27,15 @@ import './context-menu.css';
 import { problemTitle } from './problem-data.js';
 import { escapeHtml as esc, parseDate, queryFiles, validatePdf, viewFromHash, collectionFiles, dateOf, readerRoute, readerHash, snapshotDocument, subjectNames, subjectRecords, makeSubject, reorderedSubjects } from './library.js';
 import { openLibrary, readDocuments, saveDocuments, deleteDocuments } from './storage.js';
+import { createNotesPage } from './notes.js';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 const $ = id => document.getElementById(id);
 const app = document.querySelector('.manage-shell');
 const showProblemTags = createProblemTagsPopover();
 let activeView = viewFromHash(location.hash);
+if (activeView === 'notes') activeView = 'sources';
+let notesPage, documentsReady;
 const viewName = () => activeView === 'problems' ? 'Problems' : 'Sources';
 const visibleFiles = () => collectionFiles(files, activeView);
 let db, files = [], activeSubject = 'all', searchQuery = '', sortKey = null, sortDir = 'asc', currentPage = 1;
@@ -85,16 +88,19 @@ function renderFiles(animate = true) {
   if (!readerRoute(location.hash).id) mediaLoader.warm(result.items);
   finishMotion();
 }
+function selectNavigation(view) {
+  document.querySelectorAll('[data-view]').forEach(link => {
+    if (link.dataset.view === view) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
+  });
+}
 function renderView() {
   const problems = activeView === 'problems';
   app.classList.toggle('is-problems', problems);
   document.querySelector('[data-sort="name"] span').textContent = problems ? 'Problem' : 'File name';
   $('breadcrumbReset').textContent = viewName();
   document.title = viewName();
-  document.querySelectorAll('[data-view]').forEach(link => {
-    if (link.dataset.view === activeView) link.setAttribute('aria-current', 'page');
-    else link.removeAttribute('aria-current');
-  });
+  selectNavigation(activeView);
   document.querySelector('[data-sort="date"] span').textContent = problems ? 'Added Date' : 'Due Date';
   const status = document.querySelector('.footer-status');
   status.dataset.sort = problems ? 'difficulty' : 'status';
@@ -116,10 +122,22 @@ function forgetReader(file) {
 }
 async function applyRoute() {
   if (!libraryReady) return;
-  const route = readerRoute(location.hash), sequence = ++routeSequence;
+  const hash = location.hash;
+  const route = readerRoute(hash), sequence = ++routeSequence;
+  if (!notesPage.canNavigate(hash)) return;
   if (problemDetail.isOpen && (route.view !== 'problems' || route.id !== problemDetail.activeId)) await problemDetail.close();
   if (activeFile && (route.view !== 'sources' || route.id !== activeFile.id)) await closeViewer();
   if (viewerClosing) await viewerClosePromise;
+  if (sequence !== routeSequence) return;
+  if (route.view === 'notes') {
+    $('documentListPage').hidden = true;
+    selectNavigation('notes');
+    return notesPage.open(route.id, hash);
+  }
+  notesPage.leave();
+  $('documentListPage').hidden = false;
+  documentsReady ??= loadLibraryDocuments();
+  await documentsReady;
   if (sequence !== routeSequence) return;
   if (activeView !== route.view) {
     activeView = route.view; activeSubject = 'all'; currentPage = 1; sortKey = null; sortDir = 'asc';
@@ -844,20 +862,29 @@ installBrowsePaste($('uploadModalBackdrop'), {
   onError(message) { $('modalErrorMsg').textContent = message; },
 });
 
+async function loadLibraryDocuments() {
+  Promise.resolve().then(() => pdfSession.warm()).catch(() => {});
+  try {
+    files = await readDocuments(db);
+    files.sort((a, b) => b.createdAt - a.createdAt);
+    $('uploadPdfBtn').disabled = false;
+  } catch (error) {
+    console.error('Unable to load library documents:', error);
+  }
+}
 async function initialize() {
   $('uploadPdfBtn').disabled = true;
   try {
     db = await openLibrary();
-    Promise.resolve().then(() => pdfSession.warm()).catch(() => {});
-    files = await readDocuments(db);
-    files.sort((a, b) => b.createdAt - a.createdAt);
+    notesPage = createNotesPage({ store: db.notes, deletionHistory, contextMenu, showTags: showProblemTags });
     libraryReady = true;
-    $('uploadPdfBtn').disabled = false;
-  } catch {
-    console.error('Browser storage is unavailable. Enable site storage, then reload to use your library.');
+    await applyRoute();
+  } catch (error) {
+    console.error('Unable to open the library:', error);
+    if (!libraryReady) renderView();
+  } finally {
+    syncToolbar();
+    document.body.classList.remove('is-starting');
   }
-  renderView(); syncToolbar();
-  try { if (libraryReady) await applyRoute(); }
-  finally { document.body.classList.remove('is-starting'); }
 }
 initialize();

@@ -21,6 +21,8 @@ test('page markup matches the sketch apart from the requested additions', () => 
     .replace(/<link rel="stylesheet" href="\/src\/transitions.css">/, '')
     .replace(/<dialog class="image-zoom-dialog"[\s\S]*?<\/dialog>/, '')
     .replace(/<section class="problem-detail-page"[\s\S]*?(?=<script type="module" src="\/src\/app.js">)/, '')
+    .replace(/<div class="app-layout" id="notesListPage"[\s\S]*?<\/main>(?=\s*<\/div>\s*<!-- Compact Vintage Mac)/, '')
+    .replace(' id="documentListPage"', '')
     .replace(/<div class="manage-shell">\s*<nav class="manage-nav"[\s\S]*?<\/nav>/, '')
     .replace(/<\/div>\s*<\/div>\s*(<!-- Compact Vintage Mac OS X Upload Modal -->)/, '</div> $1')
     .replace(/(<button[^>]*id="uploadPdfBtn"[^>]*>)Upload<\/button>/, '$1Upload PDF</button>')
@@ -40,7 +42,7 @@ test('page markup matches the sketch apart from the requested additions', () => 
 });
 test('styles match the sketch with only the hidden-state logic fix', () => {
   const originalCss = original.match(/<style>([\s\S]*?)<\/style>/)[1];
-  assert.equal(css, originalCss + '\n/* Honor logical visibility even when an element has a display rule. */\n[hidden] { display: none !important; }\n');
+  assert.equal(css.replace(/\r\n/g, '\n'), originalCss.replace(/\r\n/g, '\n') + '\n/* Honor logical visibility even when an element has a display rule. */\n[hidden] { display: none !important; }\n');
 });
 test('removed additions are absent from the runtime', () => {
   for (const addition of ['library-notice', 'document-search', 'Demo PDF', 'Demo documents are included', 'Saved locally', 'toBlob(', '.png', 'maxLength', '50 MB']) {
