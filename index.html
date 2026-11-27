@@ -139,11 +139,17 @@
         </div>
         <form id="noteForm" hidden novalidate>
             <fieldset class="notes-fields" id="noteFields">
-                <div class="modal-field">
-                    <label class="modal-label" for="noteTitleInput">Title</label>
-                    <input type="text" class="classic-input" id="noteTitleInput" required>
+                <div class="notes-edit-header">
+                    <div class="modal-field">
+                        <label class="modal-label" for="noteTitleInput">Title</label>
+                        <input type="text" class="classic-input" id="noteTitleInput" required>
+                    </div>
+                    <div id="noteTagField"></div>
+                    <div class="modal-actions">
+                        <button type="submit" class="classic-aqua-btn" id="noteSaveBtn">Save</button>
+                        <button type="button" class="classic-cancel-link" id="noteCancelBtn">Cancel</button>
+                    </div>
                 </div>
-                <div id="noteTagField"></div>
                 <div class="notes-tabs" id="noteTabs" role="tablist" aria-label="Note editor">
                     <button type="button" role="tab" id="noteEditTab" aria-controls="noteEditPane" aria-selected="true">Edit</button>
                     <button type="button" role="tab" id="notePreviewTab" aria-controls="notePreviewPane" aria-selected="false" tabindex="-1">Preview</button>
@@ -157,10 +163,6 @@
                         <div class="modal-label" id="notePreviewLabel">Preview</div>
                         <div class="notes-markdown notes-preview" id="notePreview" role="region" aria-labelledby="notePreviewLabel" tabindex="0"></div>
                     </div>
-                </div>
-                <div class="modal-actions">
-                    <button type="submit" class="classic-aqua-btn" id="noteSaveBtn">Save</button>
-                    <button type="button" class="classic-cancel-link" id="noteCancelBtn">Cancel</button>
                 </div>
             </fieldset>
         </form>

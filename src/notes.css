@@ -25,14 +25,14 @@ body:has(#noteForm:not([hidden])) { overflow: hidden; }
   z-index: 20;
   display: flex;
   flex-direction: column;
-  padding: 16px 24px;
   background: #fff;
   overflow: auto;
 }
 .notes-detail:has(#noteForm:not([hidden])) > :not(#noteForm) { flex-shrink: 0; }
-.notes-detail:has(#noteForm:not([hidden])) .notes-back { align-self: flex-start; margin-bottom: 8px; }
+.notes-detail:has(#noteForm:not([hidden])) > :is(.notes-back, .header-row, .divider) { display: none; }
+.notes-detail:has(#noteForm:not([hidden])) > .notes-message { margin-inline: 16px; }
 
-#noteForm, #noteContent { margin-top: 14px; }
+#noteContent { margin-top: 14px; }
 #noteForm, .notes-fields {
   display: flex;
   flex: 1;
@@ -41,6 +41,16 @@ body:has(#noteForm:not([hidden])) { overflow: hidden; }
 }
 .notes-fields > :not(.notes-editors) { flex-shrink: 0; }
 .notes-fields { border: 0; min-width: 0; padding: 0; margin: 0; }
+.notes-edit-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+  align-items: end;
+  gap: 12px;
+  padding: 8px 16px;
+  border-bottom: 1px solid #d2d2d7;
+}
+.notes-edit-header .modal-field, .notes-edit-header .modal-actions { margin: 0; }
+.notes-edit-header .modal-actions { align-self: end; padding-bottom: 2px; }
 .notes-fields .classic-input { width: 100%; }
 .notes-fields .subject-tags { border: 1px solid #d2d2d7; border-radius: 6px; padding: 5px 8px; }
 .notes-read-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0; }
@@ -54,19 +64,24 @@ body:has(#noteForm:not([hidden])) { overflow: hidden; }
   grid-template-columns: repeat(2, minmax(0, 1fr));
   flex: 1;
   min-height: 8rem;
-  gap: 16px;
-  margin-top: 14px;
 }
 .notes-pane { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
-.notes-pane .modal-label { margin-bottom: 6px; }
+.notes-pane + .notes-pane { border-inline-start: 1px solid #d2d2d7; }
+.notes-pane .modal-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
 .notes-editor-input, .notes-preview {
   width: 100%;
   flex: 1;
   min-height: 0;
   margin: 0;
-  border: 1px solid #d2d2d7;
-  border-radius: 7px;
-  padding: 14px;
+  border: 0;
+  border-radius: 0;
+  padding: 16px;
   overflow: auto;
 }
 .notes-editor-input {
@@ -76,6 +91,7 @@ body:has(#noteForm:not([hidden])) { overflow: hidden; }
   font: 13px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace;
   resize: none;
 }
+.notes-editor-input:focus-visible, .notes-preview:focus-visible { outline: 1px solid #a5b9cb; outline-offset: -1px; }
 .notes-markdown { font-size: 15px; line-height: 1.65; overflow-wrap: anywhere; }
 .notes-markdown > :first-child { margin-top: 0; }
 .notes-markdown > :last-child { margin-bottom: 0; }
@@ -88,10 +104,15 @@ body:has(#noteForm:not([hidden])) { overflow: hidden; }
 .notes-markdown blockquote { margin-inline: 0; padding-inline-start: 14px; border-inline-start: 2px solid #d2d2d7; }
 .notes-markdown table { display: block; border-collapse: collapse; }
 .notes-markdown :is(th, td) { border: 1px solid #d2d2d7; padding: 4px 9px; text-align: start; }
-.notes-fields .modal-actions { margin-top: 12px; }
 
 @media (max-width: 700px) {
-  .notes-tabs { display: flex; gap: 4px; margin-top: 12px; }
+  .notes-edit-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 8px 12px;
+  }
+  #noteTagField { grid-column: 1 / -1; grid-row: 2; }
+  .notes-tabs { display: flex; gap: 4px; padding: 4px 12px; border-bottom: 1px solid #d2d2d7; }
   .notes-tabs button {
     font: inherit;
     font-size: 13px;
@@ -103,9 +124,8 @@ body:has(#noteForm:not([hidden])) { overflow: hidden; }
     cursor: pointer;
   }
   .notes-tabs [aria-selected="true"] { background: #f2f2f4; color: #1d1d1f; }
-  .notes-detail:has(#noteForm:not([hidden])) { padding: 12px 16px; }
-  .notes-editors { grid-template-columns: minmax(0, 1fr); margin-top: 8px; }
-  .notes-pane .modal-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .notes-editors { grid-template-columns: minmax(0, 1fr); }
+  .notes-pane + .notes-pane { border-inline-start: 0; }
   .notes-editors[data-pane="edit"] #notePreviewPane,
   .notes-editors[data-pane="preview"] #noteEditPane { display: none; }
 }
